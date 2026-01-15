@@ -8,6 +8,7 @@
 #include <numeric>
 #include <unordered_set>
 #include <vector>
+#include <map>
 
 namespace mlir {
 namespace accelgen {
@@ -16,40 +17,43 @@ namespace accelgen {
 #include "accelgen/Passes/KernelSchedulePass.h.inc"
 
 class GenericOpCluster {
-public:
-  // std::unordered_set<GenericOpCluster *> consumerSet;
-  // std::unordered_map<
-  //     mlir::Operation*,
-  //     std::unordered_map<llvm::StringRef, llvm::SmallVector<unsigned int>>>
-  //     parameter;
-  llvm::DenseMap<
-      mlir::Operation *,
-      llvm::DenseMap<llvm::StringRef, llvm::SmallVector<int>>>
-      parameter;
-
+ public:
   GenericOpCluster();
-  GenericOpCluster(linalg::GenericOp *genericOpStart,
-                   linalg::GenericOp *genericOpEnd);
+  GenericOpCluster(linalg::GenericOp* genericOpStart,
+                   linalg::GenericOp* genericOpEnd);
+  virtual ~GenericOpCluster() = default;
 
-  bool isMember(mlir::Operation *opToCehck);
+  bool isMember(mlir::Operation* opToCehck);
 
-  unsigned int solveBestSchedule();
+  virtual unsigned int solveBestSchedule() = 0;
 
   void attachAttribute(mlir::MLIRContext* ctx);
 
   auto begin();
   auto end();
 
-private:
+ protected:
   unsigned int nInD = 0;
   unsigned int nCycles = 0;
   unsigned int memAccess = 0;
   unsigned int cost = 0;
-  std::unordered_set<mlir::Operation *> nodeSet;
+  std::unordered_set<mlir::Operation*> nodeSet;
+  std::vector<mlir::Operation*> nodeSetTopOrder;
+  std::unordered_map<
+      mlir::Operation*,
+      std::unordered_map<std::string, llvm::SmallVector<unsigned int>>>
+      parameter;
 };
 
+class GenericOpClusterBruteForce : public GenericOpCluster {
+ public:
+  using GenericOpCluster::GenericOpCluster;
+  unsigned int solveBestSchedule() override;
+};
+
+template <typename _Cluster>
 class ScheduledGenericOpCluster {
-public:
+ public:
   ~ScheduledGenericOpCluster();
   void insertGenericOp(linalg::GenericOp genericOp);
   void schedule(mlir::MLIRContext* ctx);
@@ -57,9 +61,9 @@ public:
   auto begin();
   auto end();
 
-private:
+ private:
   std::vector<linalg::GenericOp> genericOps;
-  std::vector<GenericOpCluster *> clusters;
+  std::vector<_Cluster*> clusters;
   std::vector<linalg::GenericOp> getTopSortedNodes();
 };
 
@@ -90,8 +94,8 @@ private:
 // void mergeCluster(ScheduledGenericOp* genericOp0,
 //                   ScheduledGenericOp* genericOp1);
 
-} // namespace accelgen
+}  // namespace accelgen
 
-} // namespace mlir
+}  // namespace mlir
 
-#endif // KERNEL_SCHEDULE_PASS_H
+#endif  // KERNEL_SCHEDULE_PASS_H

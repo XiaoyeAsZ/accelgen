@@ -24,32 +24,40 @@ namespace mlir::accelgen {
 // ============================
 
 GenericOpCluster::GenericOpCluster() {};
-GenericOpCluster::GenericOpCluster(linalg::GenericOp *genericOpStart,
-                                   linalg::GenericOp *genericOpEnd)
-    : nodeSet(genericOpStart, genericOpEnd) {}
-
-bool GenericOpCluster::isMember(mlir::Operation *opToCehck) {
-  return nodeSet.find(opToCehck) != nodeSet.end();
-}
-
-void GenericOpCluster::attachAttribute(mlir::MLIRContext *ctx) {
-  for (auto op : nodeSet) {
-    for (auto attr : parameter[op]) {
-      op->setAttr(attr.first, mlir::DenseI32ArrayAttr::get(ctx, attr.second));
-      op->dump();
-    }
+GenericOpCluster::GenericOpCluster(linalg::GenericOp* genericOpStart,
+                                   linalg::GenericOp* genericOpEnd)
+    : nodeSet(genericOpStart, genericOpEnd),
+      nodeSetTopOrder(genericOpStart, genericOpEnd) {
+  for (auto iter = genericOpStart; iter != genericOpEnd; iter++) {
+    parameter[*iter]["tiling_size"] =
+        llvm::SmallVector<unsigned int>((*iter).getNumLoops(), 1);
+    parameter[*iter]["unroll_factor"] =
+        llvm::SmallVector<unsigned int>((*iter).getNumLoops(), 1);
+    parameter[*iter]["outer_order"] =
+        llvm::SmallVector<unsigned int>((*iter).getNumLoops());
+    std::iota(parameter[*iter]["outer_order"].begin(),
+              parameter[*iter]["outer_order"].end(), 0);
+    parameter[*iter]["inner_order"] =
+        llvm::SmallVector<unsigned int>((*iter).getNumLoops());
+    std::iota(parameter[*iter]["inner_order"].begin(),
+              parameter[*iter]["inner_order"].end(), 0);
   }
 }
 
-unsigned int GenericOpCluster::solveBestSchedule() {
-  if (nodeSet.size() > 1)
-    return 100;
-  else {
-    auto op = *nodeSet.begin();
-    auto &attrMap = parameter[op];
-    attrMap["tiling_size"] = llvm::SmallVector<int>{1, 128, 128, 64};
-    attrMap["unroll_factor"] = llvm::SmallVector<int>{1, 64, 64, 1};
-    return 0;
+bool GenericOpCluster::isMember(mlir::Operation* opToCehck) {
+  return nodeSet.find(opToCehck) != nodeSet.end();
+}
+
+void GenericOpCluster::attachAttribute(mlir::MLIRContext* ctx) {
+  for (auto op : nodeSet) {
+    for (auto namedAttr : parameter[op]) {
+      llvm::SmallVector<mlir::Attribute> attrVec;
+      for (auto attr : namedAttr.second)
+        attrVec.push_back(mlir::IntegerAttr::get(
+            mlir::IntegerType::get(ctx, 32, mlir::IntegerType::Unsigned),
+            attr));
+      op->setAttr(namedAttr.first, mlir::ArrayAttr::get(ctx, attrVec));
+    }
   }
 }
 
@@ -61,30 +69,45 @@ auto GenericOpCluster::end() { return nodeSet.end(); }
 // ============================
 
 // ============================
-// CLASS: ScheduledGenericOpCluster
+// CLASS: GenericOpClusterBruteForce
 // ============================
-ScheduledGenericOpCluster::~ScheduledGenericOpCluster() {
-  for (auto cluster : clusters)
-    delete cluster;
+
+unsigned int GenericOpClusterBruteForce::solveBestSchedule() {
+  if (nodeSet.size() > 1)
+    return 100;
+  else {
+    return 0;
+  }
 }
 
-std::vector<linalg::GenericOp> ScheduledGenericOpCluster::getTopSortedNodes() {
+// ============================
+// END OF GenericOpClusterBruteForce
+// ============================
+
+// ============================
+// CLASS: ScheduledGenericOpCluster
+// ============================
+template <typename _Cluster>
+ScheduledGenericOpCluster<_Cluster>::~ScheduledGenericOpCluster() {
+  for (auto cluster : clusters) delete cluster;
+}
+
+template <typename _Cluster>
+std::vector<linalg::GenericOp>
+ScheduledGenericOpCluster<_Cluster>::getTopSortedNodes() {
   std::vector<linalg::GenericOp> topOrderNodes;
-  std::unordered_map<mlir::Operation *, unsigned int> inD;
-  for (mlir::Operation *op : genericOps)
-    inD.insert({op, 0});
-  for (mlir::Operation *op : genericOps) {
+  std::unordered_map<mlir::Operation*, unsigned int> inD;
+  for (mlir::Operation* op : genericOps) inD.insert({op, 0});
+  for (mlir::Operation* op : genericOps) {
     for (auto user : op->getUsers()) {
-      if (inD.find(user) != inD.end())
-        inD[user]++;
+      if (inD.find(user) != inD.end()) inD[user]++;
     }
   }
-  std::queue<mlir::Operation *> nodesWithoutInD;
+  std::queue<mlir::Operation*> nodesWithoutInD;
   for (auto [op, ind] : inD) {
     if (ind == 0) {
       nodesWithoutInD.push(op);
-      if (!mlir::dyn_cast<linalg::GenericOp>(op))
-        op->dump();
+      if (!mlir::dyn_cast<linalg::GenericOp>(op)) op->dump();
     }
   }
   while (!nodesWithoutInD.empty()) {
@@ -96,24 +119,25 @@ std::vector<linalg::GenericOp> ScheduledGenericOpCluster::getTopSortedNodes() {
     topOrderNodes.push_back(genericOp);
     for (auto user : op->getUsers()) {
       // if (inD.find(user) != inD.end()) inD[user]--;
-      if (inD.find(user) == inD.end())
-        continue;
+      if (inD.find(user) == inD.end()) continue;
       inD[user]--;
       if (inD[user] == 0) {
         nodesWithoutInD.push(user);
-        if (!mlir::dyn_cast<linalg::GenericOp>(user))
-          user->dump();
+        if (!mlir::dyn_cast<linalg::GenericOp>(user)) user->dump();
       }
     }
   }
   return topOrderNodes;
 }
 
-void ScheduledGenericOpCluster::insertGenericOp(linalg::GenericOp genericOp) {
+template <typename _Cluster>
+void ScheduledGenericOpCluster<_Cluster>::insertGenericOp(
+    linalg::GenericOp genericOp) {
   genericOps.push_back(genericOp);
 }
 
-void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx) {
+template <typename _Cluster>
+void ScheduledGenericOpCluster<_Cluster>::schedule(mlir::MLIRContext* ctx) {
   std::vector<linalg::GenericOp> genericOpsTopOrder = getTopSortedNodes();
 
   assert(genericOpsTopOrder.size() >= 1);
@@ -129,11 +153,9 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx) {
     unsigned int minCost = 0xffffffff;
     unsigned int index = 0;
     for (unsigned j = 1; j <= i; j++) {
-
-      unsigned int mergedCost =
-          GenericOpCluster(genericOpsTopOrder.data() + j - 1,
-                           genericOpsTopOrder.data() + i)
-              .solveBestSchedule();
+      unsigned int mergedCost = _Cluster(genericOpsTopOrder.data() + j - 1,
+                                         genericOpsTopOrder.data() + i)
+                                    .solveBestSchedule();
 
       if (dpStatus[j - 1] + mergedCost < minCost) {
         minCost = dpStatus[j] + mergedCost;
@@ -146,22 +168,26 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx) {
 
   auto p = genericOps.size();
   while (1) {
-    auto cluster =
-        new GenericOpCluster(genericOpsTopOrder.data() + cutIndex[p] - 1,
-                             genericOpsTopOrder.data() + p);
+    auto cluster = new _Cluster(genericOpsTopOrder.data() + cutIndex[p] - 1,
+                                genericOpsTopOrder.data() + p);
     cluster->solveBestSchedule();
     clusters.push_back(cluster);
-    if (cutIndex[p] == 1)
-      break;
+    if (cutIndex[p] == 1) break;
     p = cutIndex[p] - 1;
   }
 
-  for (auto c : clusters)
-    c->attachAttribute(ctx);
+  for (auto c : clusters) c->attachAttribute(ctx);
 }
 
-auto ScheduledGenericOpCluster::begin() { return clusters.begin(); }
-auto ScheduledGenericOpCluster::end() { return clusters.end(); }
+template <typename _Cluster>
+auto ScheduledGenericOpCluster<_Cluster>::begin() {
+  return clusters.begin();
+}
+
+template <typename _Cluster>
+auto ScheduledGenericOpCluster<_Cluster>::end() {
+  return clusters.end();
+}
 
 // ============================
 // END OF ScheduledGenericOpCluster
@@ -170,16 +196,16 @@ auto ScheduledGenericOpCluster::end() { return clusters.end(); }
 namespace {
 
 class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
-public:
+ public:
   using impl::KernelScheduleBase<KernelSchedule>::KernelScheduleBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext &ctx = getContext();
+    mlir::MLIRContext& ctx = getContext();
     mlir::func::FuncOp func = getOperation();
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
     // GenericOpClusterDAG clusterDAG;
-    ScheduledGenericOpCluster scheduledCluster;
+    ScheduledGenericOpCluster<GenericOpClusterBruteForce> scheduledCluster;
     func.walk([&](mlir::linalg::GenericOp genericOp) {
       scheduledCluster.insertGenericOp(genericOp);
     });
@@ -204,20 +230,17 @@ public:
           if (!cluster->isMember(operand.getDefiningOp()))
             clusterInput.insert(operand);
         }
-        for (auto constValue : constSet)
-          clusterInput.insert(constValue);
+        for (auto constValue : constSet) clusterInput.insert(constValue);
         for (auto operand : genericOp.getOutputs()) {
           bool flag = true;
           for (auto use : operand.getUsers()) {
-            if (use == genericOp)
-              continue;
+            if (use == genericOp) continue;
             if (cluster->isMember(use)) {
               flag = false;
               break;
             }
           }
-          if (flag)
-            clusterOutput.insert(operand);
+          if (flag) clusterOutput.insert(operand);
         }
       }
 
@@ -234,20 +257,19 @@ public:
 
       // clusterFuncOp.setPrivate();
 
-      mlir::Block *entry = clusterFuncOp.addEntryBlock();
+      mlir::Block* entry = clusterFuncOp.addEntryBlock();
       builder.setInsertionPointToStart(entry);
 
       IRMapping mapper;
       for (auto [arg, input] : llvm::zip(entry->getArguments(), clusterInput))
         mapper.map(input, arg);
 
-      for (Operation *op : *cluster) {
+      for (Operation* op : *cluster) {
         builder.clone(*op, mapper);
       }
 
       llvm::SmallVector<Value> retVals;
-      for (Value out : clusterOutput)
-        retVals.push_back(mapper.lookup(out));
+      for (Value out : clusterOutput) retVals.push_back(mapper.lookup(out));
 
       builder.create<func::ReturnOp>(clusterFuncOp.getLoc(), retVals);
     }
@@ -256,5 +278,5 @@ public:
   }
 };
 
-} // namespace
-} // namespace mlir::accelgen
+}  // namespace
+}  // namespace mlir::accelgen
