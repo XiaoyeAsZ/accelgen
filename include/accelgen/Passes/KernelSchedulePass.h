@@ -16,6 +16,54 @@ namespace accelgen {
 #define GEN_PASS_DECL
 #include "accelgen/Passes/KernelSchedulePass.h.inc"
 
+class CostModelInterface {
+ public:
+  CostModelInterface() = default;
+  virtual ~CostModelInterface() = default;
+
+  virtual unsigned int evaluate(
+      std::vector<mlir::Operation*>* topoOrder,
+      std::unordered_map<
+          mlir::Operation*,
+          std::unordered_map<std::string, llvm::SmallVector<int64_t>>>*
+          parameter) = 0;
+};
+
+class OverallCost : public CostModelInterface {
+ public:
+  unsigned int evaluate(
+      std::vector<mlir::Operation*>* topoOrder,
+      std::unordered_map<
+          mlir::Operation*,
+          std::unordered_map<std::string, llvm::SmallVector<int64_t>>>*
+          parameter) override;
+};
+
+class ParameterSolvingInterface {
+ public:
+  ParameterSolvingInterface() = default;
+  virtual ~ParameterSolvingInterface() = default;
+
+  virtual unsigned int solve(
+      std::vector<mlir::Operation*>* topoOrder,
+      std::unordered_map<
+          mlir::Operation*,
+          std::unordered_map<std::string, llvm::SmallVector<int64_t>>>*
+          parameter,
+      CostModelInterface* evaluator) = 0;
+};
+
+class BruteForceSolver : public ParameterSolvingInterface {
+ public:
+  unsigned int solve(
+      std::vector<mlir::Operation*>* topoOrder,
+      std::unordered_map<
+          mlir::Operation*,
+          std::unordered_map<std::string, llvm::SmallVector<int64_t>>>*
+          parameter,
+      CostModelInterface* evaluator) override;
+};
+
 class GenericOpCluster {
  public:
   GenericOpCluster();
@@ -25,14 +73,17 @@ class GenericOpCluster {
 
   bool isMember(mlir::Operation* opToCehck);
 
-  virtual unsigned int solveBestSchedule() = 0;
+  unsigned int solveBestSchedule(CostModelInterface* evaluator,
+                                 ParameterSolvingInterface* solver);
 
   void attachAttribute(mlir::MLIRContext* ctx);
+
+  void evaluate();
 
   auto begin();
   auto end();
 
- protected:
+ private:
   unsigned int nInD = 0;
   unsigned int nCycles = 0;
   unsigned int memAccess = 0;
@@ -41,19 +92,24 @@ class GenericOpCluster {
   std::vector<mlir::Operation*> nodeSetTopOrder;
   std::unordered_map<
       mlir::Operation*,
-      std::unordered_map<std::string, llvm::SmallVector<unsigned int>>>
+      std::unordered_map<std::string, llvm::SmallVector<int64_t>>>
       parameter;
+  std::unordered_map<mlir::Operation*, std::unordered_map<std::string, int64_t>>
+      metric;
+
+  void factorForwardHelp(mlir::Operation* op, int64_t factor);
 };
 
-class GenericOpClusterBruteForce : public GenericOpCluster {
- public:
-  using GenericOpCluster::GenericOpCluster;
-  unsigned int solveBestSchedule() override;
-};
+// class GenericOpClusterBruteForce : public GenericOpCluster {
+//  public:
+//   using GenericOpCluster::GenericOpCluster;
+//   unsigned int solveBestSchedule() override;
+// };
 
-template <typename _Cluster>
 class ScheduledGenericOpCluster {
  public:
+  ScheduledGenericOpCluster() = default;
+  ScheduledGenericOpCluster(llvm::StringRef evaluator, llvm::StringRef solver);
   ~ScheduledGenericOpCluster();
   void insertGenericOp(linalg::GenericOp genericOp);
   void schedule(mlir::MLIRContext* ctx);
@@ -63,8 +119,11 @@ class ScheduledGenericOpCluster {
 
  private:
   std::vector<linalg::GenericOp> genericOps;
-  std::vector<_Cluster*> clusters;
+  std::vector<GenericOpCluster*> clusters;
   std::vector<linalg::GenericOp> getTopSortedNodes();
+
+  CostModelInterface* evaluator;
+  ParameterSolvingInterface* solver;
 };
 
 // class GenericOpClusterDAG {
