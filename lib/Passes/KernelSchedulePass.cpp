@@ -12,6 +12,7 @@
 #include <queue>
 #include <span>
 #include <vector>
+#include <variant>
 
 #include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
@@ -21,68 +22,27 @@ namespace mlir::accelgen {
 #include "accelgen/Passes/KernelSchedulePass.h.inc"
 
 // ============================
-// CLASS: OverallCost
-// ============================
-
-unsigned int OverallCost::evaluate(
-    std::vector<mlir::Operation*>* topoOrder,
-    std::unordered_map<
-        mlir::Operation*,
-        std::unordered_map<std::string, llvm::SmallVector<int64_t>>>*
-        parameter) {
-  std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t, 4>>
-      currentCost;  // [0]:flops [1]:externel access [2]:sram access [3]:cycles
-  for (auto kv : *parameter)
-    currentCost.emplace(kv.first, llvm::SmallVector<int64_t, 4>({1, 1, 1, 1}));
-  for (auto riter = topoOrder->rbegin(); riter != topoOrder->rend(); riter++) {
-    auto genericOp = mlir::dyn_cast<linalg::GenericOp>(*riter);
-    assert(genericOp);
-
-    auto affineMapOutput = genericOp.getIndexingMapsArray().back();
-    auto outputDims = std::unordered_set<int64_t>();
-    for (auto expr : affineMapOutput.getResults()) {
-      if (auto dimExpr = mlir::dyn_cast<mlir::AffineDimExpr>(expr))
-        outputDims.insert(dimExpr.getPosition());
-    }
-
-    auto dimOrder = (*parameter)[*riter]["outer_order"];
-    auto tilingSize = (*parameter)[*riter]["tiling_size"];
-    auto loopBound = (*parameter)[*riter]["loop_bound"];
-    auto iteratorTypes = genericOp.getIteratorTypesArray();
-
-    int64_t firstReductionDimIndex = -1;
-    for (auto item : llvm::enumerate(dimOrder)) {
-      if (iteratorTypes[item.value()] == mlir::utils::IteratorType::reduction)
-        firstReductionDimIndex = item.index();
-    }
-
-    auto analysisTileSize = std::unordered_map<int64_t, int64_t>();
-    for (auto item : llvm::enumerate(dimOrder)) {
-      if (outputDims.find(item.value()) != outputDims.end()) {
-        if (item.index() < firstReductionDimIndex)
-          analysisTileSize[item.value()] = tilingSize[item.value()];
-        else
-          analysisTileSize[item.value()] = loopBound[item.value()];
-      }
-    }
-  }
-}
-
-// ============================
-// END OF OverallCost
-// ============================
-
-// ============================
 // CLASS: BruteForceSolver
 // ============================
-unsigned int BruteForceSolver::solve(
-    std::vector<mlir::Operation*>* topoOrder,
-    std::unordered_map<
-        mlir::Operation*,
-        std::unordered_map<std::string, llvm::SmallVector<int64_t>>>* parameter,
-    CostModelInterface* evaluator) {
-  return evaluator->evaluate(topoOrder, parameter);
+unsigned int BruteForceSolver::solve(GenericOpCluster* cluster) {
+  using ParameterVariant = std::variant<llvm::SmallVector<int64_t>, int64_t>;
+  auto parGen = ParameterGenerator<ParameterVariant>();
+  std::vector<std::pair<mlir::Operation*, std::string>> parameterMap;
+  for (auto [op, parSet] : *cluster->getParameter()) {
+    parameterMap.push_back({op, "tiling_size"});
+  }
+  return 0;
 }
+
+void BruteForceSolver::generateParSet(linalg::GenericOp genericOp) {
+  std::vector<int64_t> order;
+  std::iota(order.begin(), order.end(), 0);
+  std::vector<std::vector<int64_t>> orderSet;
+  do {
+    orderSet.push_back(order);
+  } while (std::next_permutation(order.begin(), order.end()));
+}
+
 // ============================
 // END OF BruteForceSolver
 // ============================
@@ -117,10 +77,10 @@ bool GenericOpCluster::isMember(mlir::Operation* opToCehck) {
   return nodeSet.find(opToCehck) != nodeSet.end();
 }
 
-unsigned int GenericOpCluster::solveBestSchedule(
-    CostModelInterface* evaluator, ParameterSolvingInterface* solver) {
-  return solver->solve(&nodeSetTopOrder, &parameter, evaluator);
-}
+// unsigned int GenericOpCluster::solveBestSchedule(
+//     CostModelInterface* evaluator, ParameterSolvingInterface* solver) {
+//   return solver->solve(&nodeSetTopOrder, &parameter, evaluator);
+// }
 
 void GenericOpCluster::attachAttribute(mlir::MLIRContext* ctx) {
   for (auto op : nodeSet) {
@@ -249,6 +209,8 @@ void GenericOpCluster::factorForwardHelp(mlir::Operation* op, int64_t factor) {
 auto GenericOpCluster::begin() { return nodeSet.begin(); }
 auto GenericOpCluster::end() { return nodeSet.end(); }
 
+auto GenericOpCluster::getParameter() { return &parameter; }
+
 // ============================
 // END OF GenericOpCluster
 // ============================
@@ -257,12 +219,7 @@ auto GenericOpCluster::end() { return nodeSet.end(); }
 // CLASS: ScheduledGenericOpCluster
 // ============================
 
-ScheduledGenericOpCluster::ScheduledGenericOpCluster(llvm::StringRef evaluator,
-                                                     llvm::StringRef solver) {
-  this->evaluator = llvm::StringSwitch<CostModelInterface*>(evaluator)
-                        .Case("overall", new OverallCost())
-                        .Default(nullptr);
-
+ScheduledGenericOpCluster::ScheduledGenericOpCluster(llvm::StringRef solver) {
   this->solver = llvm::StringSwitch<ParameterSolvingInterface*>(solver)
                      .Case("brute_force", new BruteForceSolver())
                      .Default(nullptr);
@@ -270,7 +227,6 @@ ScheduledGenericOpCluster::ScheduledGenericOpCluster(llvm::StringRef evaluator,
 
 ScheduledGenericOpCluster::~ScheduledGenericOpCluster() {
   for (auto cluster : clusters) delete cluster;
-  delete evaluator;
   delete solver;
 }
 
@@ -330,10 +286,12 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx) {
     unsigned int minCost = 0xffffffff;
     unsigned int index = 0;
     for (unsigned j = 1; j <= i; j++) {
-      unsigned int mergedCost =
-          GenericOpCluster(genericOpsTopOrder.data() + j - 1,
-                           genericOpsTopOrder.data() + i)
-              .solveBestSchedule(evaluator, solver);
+      auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data() + j - 1,
+                                            genericOpsTopOrder.data() + i);
+      unsigned int mergedCost = solver->solve(&mergedCluster);
+      // GenericOpCluster(genericOpsTopOrder.data() + j - 1,
+      //                  genericOpsTopOrder.data() + i)
+      //     .solveBestSchedule(evaluator, solver);
 
       if (dpStatus[j - 1] + mergedCost < minCost) {
         minCost = dpStatus[j] + mergedCost;
@@ -349,7 +307,8 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx) {
     auto cluster =
         new GenericOpCluster(genericOpsTopOrder.data() + cutIndex[p] - 1,
                              genericOpsTopOrder.data() + p);
-    cluster->solveBestSchedule(evaluator, solver);
+    // cluster->solveBestSchedule(evaluator, solver);
+    solver->solve(cluster);
     clusters.push_back(cluster);
     if (cutIndex[p] == 1) break;
     p = cutIndex[p] - 1;
@@ -378,7 +337,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
     // GenericOpClusterDAG clusterDAG;
-    ScheduledGenericOpCluster scheduledCluster("overall", "brute_force");
+    ScheduledGenericOpCluster scheduledCluster("brute_force");
     func.walk([&](mlir::linalg::GenericOp genericOp) {
       scheduledCluster.insertGenericOp(genericOp);
     });
