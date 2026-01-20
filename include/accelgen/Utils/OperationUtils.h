@@ -7,7 +7,7 @@
 
 namespace mlir {
 namespace accelgen {
-std::vector<mlir::Operation*> getTopoOrder(std::vector<mlir::Operation*>& ops);
+std::vector<mlir::Operation*> getTopoOrder(std::vector<mlir::Operation*> ops);
 }
 }  // namespace mlir
 

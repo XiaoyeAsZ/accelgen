@@ -5,17 +5,21 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+#include <any>
+#include <map>
 #include <numeric>
 #include <unordered_set>
 #include <vector>
-#include <map>
-#include <any>
 
 namespace mlir {
 namespace accelgen {
 
 #define GEN_PASS_DECL
 #include "accelgen/Passes/KernelSchedulePass.h.inc"
+
+using ParameterVariant = std::variant<llvm::SmallVector<int64_t>, int64_t>;
+using ParameterPointerVariant =
+    std::variant<llvm::SmallVector<int64_t>*, int64_t*>;
 
 class GenericOpCluster {
  public:
@@ -33,7 +37,12 @@ class GenericOpCluster {
   auto begin();
   auto end();
 
-  auto getParameter();
+  std::vector<mlir::Operation*>& getNodeSetTopOrder();
+  std::unordered_map<
+      mlir::Operation*,
+      std::unordered_map<std::string, llvm::SmallVector<int64_t>>>&
+  getParameter();
+  // auto getMetric();
 
  private:
   unsigned int nInD = 0;
@@ -46,8 +55,10 @@ class GenericOpCluster {
       mlir::Operation*,
       std::unordered_map<std::string, llvm::SmallVector<int64_t>>>
       parameter;
-  std::unordered_map<mlir::Operation*, std::unordered_map<std::string, int64_t>>
-      metric;
+  // std::unordered_map<mlir::Operation*, std::unordered_map<std::string,
+  // int64_t>>
+
+  //     metric;
 
   void factorForwardHelp(mlir::Operation* op, int64_t factor);
 };
@@ -57,6 +68,23 @@ class GenericOpCluster {
 //   using GenericOpCluster::GenericOpCluster;
 //   unsigned int solveBestSchedule() override;
 // };
+
+class ArchConfig {
+ public:
+  size_t bandwidth;     // GB/s
+  size_t sramCapacity;  // B
+  size_t mulCnt;        // #
+};
+
+class EvaluationMetric {
+ public:
+  double_t throughput;
+};
+
+class PerfModel {
+ public:
+  EvaluationMetric evaluate(GenericOpCluster& cluster, ArchConfig& cfg);
+};
 
 class ParameterSolvingInterface {
  public:
@@ -72,50 +100,57 @@ class ParameterSolvingInterface {
   //           parameter,
   //       CostModelInterface* evaluator) = 0;
 
-  virtual unsigned int solve(GenericOpCluster* cluster) = 0;
+  virtual unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
+                             ArchConfig& archCfg) = 0;
 
   //  private:
   //   GenericOpCluster& cluster;
 };
 
-template <typename T>
 class ParameterGenerator {
  public:
-  void addVariable(std::vector<T> values) {
-    std::vector<std::any> v;
+  void addVariable(std::vector<ParameterVariant> values) {
+    std::vector<ParameterVariant> v;
     for (auto& x : values) v.emplace_back(x);
-    candidates_.push_back(std::move(v));
-    indices_.push_back(0);
+    candidates.push_back(std::move(v));
+    indices.push_back(0);
   }
 
-  bool hasNext() const { return hasNext_; }
+  bool hasNext() const { return _hasNext; }
 
-  std::vector<std::any> next() {
-    auto result = current();
+  void next() {
+    // auto result = current();
+    for (auto x : indices) llvm::errs() << x << " ";
+    llvm::errs() << "\n";
     advance();
-    return result;
+    return;
   }
+
+  size_t size() { return candidates.size(); }
+
+  std::vector<std::vector<ParameterVariant>> candidates;
+  std::vector<size_t> indices;
 
  private:
-  std::vector<std::vector<std::any>> candidates_;
-  std::vector<size_t> indices_;
-  bool hasNext_ = true;
+  bool _hasNext = true;
 
-  std::vector<std::any> current() const {
-    std::vector<std::any> res;
-    for (size_t i = 0; i < candidates_.size(); i++) {
-      res.push_back(candidates_[i][indices_[i]]);
+  std::vector<ParameterVariant> current() const {
+    std::vector<ParameterVariant> res;
+    for (size_t i = 0; i < candidates.size(); i++) {
+      // llvm::errs() << i << " " << indices[i] << " " << candidates.size()
+      //              << "\n";
+      res.push_back(candidates[i][indices[i]]);
     }
     return res;
   }
 
   void advance() {
-    for (int i = indices_.size() - 1; i >= 0; i--) {
-      indices_[i]++;
-      if (indices_[i] < candidates_[i].size()) return;
-      indices_[i] = 0;
+    for (int i = indices.size() - 1; i >= 0; i--) {
+      indices[i]++;
+      if (indices[i] < candidates[i].size()) return;
+      indices[i] = 0;
       if (i == 0) {
-        hasNext_ = false;
+        _hasNext = false;
         return;
       }
     }
@@ -124,11 +159,13 @@ class ParameterGenerator {
 
 class BruteForceSolver : public ParameterSolvingInterface {
  public:
-  unsigned int solve(GenericOpCluster* cluster) override;
+  unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
+                     ArchConfig& archCfg) override;
 
  private:
   void generateParSet(linalg::GenericOp genericOp);
-  bool checkConstraint();
+  bool checkConstraint(GenericOpCluster& cluster, ArchConfig& archCfg);
+  inline void assignParameter(ParameterVariant& v, ParameterPointerVariant& p);
 };
 
 class ScheduledGenericOpCluster {
@@ -137,7 +174,7 @@ class ScheduledGenericOpCluster {
   ScheduledGenericOpCluster(llvm::StringRef solver);
   ~ScheduledGenericOpCluster();
   void insertGenericOp(linalg::GenericOp genericOp);
-  void schedule(mlir::MLIRContext* ctx);
+  void schedule(mlir::MLIRContext* ctx, PerfModel& model, ArchConfig& archCfg);
 
   auto begin();
   auto end();

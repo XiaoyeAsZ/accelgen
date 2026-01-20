@@ -1,8 +1,8 @@
 #include "accelgen/Utils/AffineMapUtils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 
-llvm::SmallVector<int64_t> mlir::accelgen::getAffineMapAccessDims(
-    mlir::AffineMap& affineMap) {
+namespace mlir::accelgen {
+llvm::SmallVector<int64_t> getAffineMapAccessDims(mlir::AffineMap &affineMap) {
   llvm::SmallVector<int64_t> accessDims;
   for (auto expr : affineMap.getResults()) {
     expr.walk([&](AffineExpr e) {
@@ -13,3 +13,4 @@ llvm::SmallVector<int64_t> mlir::accelgen::getAffineMapAccessDims(
   }
   return accessDims;
 }
+} // namespace mlir::accelgen

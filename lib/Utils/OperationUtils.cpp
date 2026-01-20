@@ -3,7 +3,7 @@
 #include <queue>
 
 std::vector<mlir::Operation*> mlir::accelgen::getTopoOrder(
-    std::vector<mlir::Operation*>& ops) {
+    std::vector<mlir::Operation*> ops) {
   std::vector<mlir::Operation*> topOrderNodes;
   std::unordered_map<mlir::Operation*, unsigned int> inD;
   for (mlir::Operation* op : ops) inD[op] = 0;

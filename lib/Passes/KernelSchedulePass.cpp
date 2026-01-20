@@ -11,41 +11,16 @@
 #include <assert.h>
 #include <queue>
 #include <span>
-#include <vector>
 #include <variant>
+#include <vector>
 
 #include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
+#include "accelgen/Utils/OperationUtils.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_KERNELSCHEDULE
 #include "accelgen/Passes/KernelSchedulePass.h.inc"
-
-// ============================
-// CLASS: BruteForceSolver
-// ============================
-unsigned int BruteForceSolver::solve(GenericOpCluster* cluster) {
-  using ParameterVariant = std::variant<llvm::SmallVector<int64_t>, int64_t>;
-  auto parGen = ParameterGenerator<ParameterVariant>();
-  std::vector<std::pair<mlir::Operation*, std::string>> parameterMap;
-  for (auto [op, parSet] : *cluster->getParameter()) {
-    parameterMap.push_back({op, "tiling_size"});
-  }
-  return 0;
-}
-
-void BruteForceSolver::generateParSet(linalg::GenericOp genericOp) {
-  std::vector<int64_t> order;
-  std::iota(order.begin(), order.end(), 0);
-  std::vector<std::vector<int64_t>> orderSet;
-  do {
-    orderSet.push_back(order);
-  } while (std::next_permutation(order.begin(), order.end()));
-}
-
-// ============================
-// END OF BruteForceSolver
-// ============================
 
 // ============================
 // CLASS: GenericOpCluster
@@ -57,7 +32,7 @@ GenericOpCluster::GenericOpCluster(linalg::GenericOp* genericOpStart,
     : nodeSet(genericOpStart, genericOpEnd),
       nodeSetTopOrder(genericOpStart, genericOpEnd) {
   for (auto iter = genericOpStart; iter != genericOpEnd; iter++) {
-    parameter[*iter]["loop_bound"] = genericOpStart->getStaticLoopRanges();
+    parameter[*iter]["loop_bound"] = iter->getStaticLoopRanges();
     parameter[*iter]["tiling_size"] =
         llvm::SmallVector<int64_t>((*iter).getNumLoops(), 1);
     parameter[*iter]["unroll_factor"] =
@@ -95,14 +70,154 @@ void GenericOpCluster::attachAttribute(mlir::MLIRContext* ctx) {
   }
 }
 
-void GenericOpCluster::evaluate() {
+// void GenericOpCluster::evaluate() {
+//   for (auto kv : parameter) {
+//     metric[kv.first]["factor"] = 1;
+//     metric[kv.first]["flops"] = 0;
+//     metric[kv.first]["external_access"] = 0;
+//     metric[kv.first]["sram_access"] = 0;
+//     metric[kv.first]["cycles"] = 0;
+//   }
+//   for (auto riter = nodeSetTopOrder.rbegin(); riter !=
+//   nodeSetTopOrder.rend();
+//        riter++) {
+//     auto genericOp = mlir::dyn_cast<linalg::GenericOp>(*riter);
+//     assert(genericOp);
+
+//     auto indexingMaps = genericOp.getIndexingMapsArray();
+
+//     // auto dimOrder = (*parameter)[*riter]["outer_order"];
+//     auto tilingSize = parameter[*riter]["tiling_size"];
+//     auto loopBound = parameter[*riter]["loop_bound"];
+//     auto unrollFactor = parameter[*riter]["unroll_factor"];
+//     auto iteratorTypes = genericOp.getIteratorTypesArray();
+
+//     auto analysisTileSize =
+//     llvm::SmallVector<int64_t>(genericOp.getNumLoops()); for (size_t i = 0; i
+//     < analysisTileSize.size(); i++) {
+//       switch (iteratorTypes[i]) {
+//         case mlir::utils::IteratorType::reduction:
+//           analysisTileSize[i] = loopBound[i];
+//           break;
+//         case mlir::utils::IteratorType::parallel:
+//           analysisTileSize[i] = tilingSize[i];
+//           break;
+//         default:
+//           llvm::errs() << "Unknown iterator types.\n";
+//           break;
+//       }
+//     }
+
+//     auto flops =
+//         std::accumulate(analysisTileSize.begin(), analysisTileSize.end(),
+//                         int64_t(1), std::multiplies<>());
+
+//     auto externalAccess = 0;
+//     for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
+//       auto producer = operand.getDefiningOp();
+//       // Input from
+//       if (!isMember(producer)) {
+//         auto accessDims = getAffineMapAccessDims(indexingMaps[index]);
+//         int64_t partial = 1;
+//         for (auto dim : accessDims) partial *= analysisTileSize[dim];
+//         externalAccess += partial;
+//       }
+//     }
+
+//     for (auto [index, result] : llvm::enumerate(genericOp.getResults())) {
+//       bool flag = true;
+//       for (auto user : result.getUsers()) {
+//         if (isMember(user)) {
+//           flag = false;
+//           break;
+//         }
+//       }
+//       if (flag) {
+//         auto accessDims = getAffineMapAccessDims(
+//             indexingMaps[genericOp.getInputs().size() + index]);
+//         int64_t partial = 1;
+//         for (auto dim : accessDims) partial *= analysisTileSize[dim];
+//         externalAccess += partial;
+//       }
+//     }
+
+//     int64_t cycles = 1;
+//     assert(analysisTileSize.size() == unrollFactor.size());
+//     for (size_t i = 0; i < analysisTileSize.size(); i++) {
+//       cycles *= (analysisTileSize[i] / unrollFactor[i]);
+//     }
+
+//     metric[*riter]["flops"] = flops;
+//     metric[*riter]["external_access"] = externalAccess;
+//     metric[*riter]["cycles"] = cycles;
+
+//     for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
+//       auto op = operand.getDefiningOp();
+//       if (!isMember(op))
+//         continue;
+//       else {
+//         int64_t factor = 1;
+//         auto accessDims = getAffineMapAccessDims(indexingMaps[index]);
+//         for (size_t i = 0; i < accessDims.size(); i++)
+//           factor *= analysisTileSize[accessDims[i]] /
+//           tilingSize[accessDims[i]];
+//         if (metric[op]["factor"] == 1)
+//           metric[op]["factor"] = factor * metric[genericOp]["factor"];
+//       }
+//     }
+//   }
+// }
+
+// void GenericOpCluster::factorForwardHelp(mlir::Operation* op, int64_t factor)
+// {
+//   if (factor == 1) return;
+//   metric[op]["flops"] *= factor;
+//   metric[op]["external_access"] *= factor;
+//   metric[op]["sram_access"] *= factor;
+//   metric[op]["cycles"] *= factor;
+//   auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
+//   assert(genericOp);
+//   for (auto operand : genericOp.getInputs()) {
+//     auto op = operand.getDefiningOp();
+//     if (isMember(op)) factorForwardHelp(op, factor);
+//   }
+// }
+
+auto GenericOpCluster::begin() { return nodeSet.begin(); }
+auto GenericOpCluster::end() { return nodeSet.end(); }
+
+std::vector<mlir::Operation*>& GenericOpCluster::getNodeSetTopOrder() {
+  return nodeSetTopOrder;
+}
+std::unordered_map<mlir::Operation*,
+                   std::unordered_map<std::string, llvm::SmallVector<int64_t>>>&
+GenericOpCluster::getParameter() {
+  return parameter;
+}
+// auto GenericOpCluster::getMetric() { return &metric; }
+
+// ============================
+// END OF GenericOpCluster
+// ============================
+
+// ============================
+// END OF PerfModel
+// ============================
+
+EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
+                                     ArchConfig& cfg) {
+  auto parameter = cluster.getParameter();
+  std::unordered_map<mlir::Operation*,
+                     std::unordered_map<std::string, double_t>>
+      statisticDat;
   for (auto kv : parameter) {
-    metric[kv.first]["factor"] = 1;
-    metric[kv.first]["flops"] = 0;
-    metric[kv.first]["external_access"] = 0;
-    metric[kv.first]["sram_access"] = 0;
-    metric[kv.first]["cycles"] = 0;
+    statisticDat[kv.first]["factor"] = 1;
+    statisticDat[kv.first]["flops"] = 0;
+    statisticDat[kv.first]["external_access"] = 0;
+    statisticDat[kv.first]["sram_access"] = 0;
+    statisticDat[kv.first]["cycles"] = 0;
   }
+  std::vector<mlir::Operation*> nodeSetTopOrder = cluster.getNodeSetTopOrder();
   for (auto riter = nodeSetTopOrder.rbegin(); riter != nodeSetTopOrder.rend();
        riter++) {
     auto genericOp = mlir::dyn_cast<linalg::GenericOp>(*riter);
@@ -138,9 +253,8 @@ void GenericOpCluster::evaluate() {
     auto externalAccess = 0;
     for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
       auto producer = operand.getDefiningOp();
-      assert(producer);
       // Input from
-      if (!isMember(producer)) {
+      if (!cluster.isMember(producer)) {
         auto accessDims = getAffineMapAccessDims(indexingMaps[index]);
         int64_t partial = 1;
         for (auto dim : accessDims) partial *= analysisTileSize[dim];
@@ -151,7 +265,7 @@ void GenericOpCluster::evaluate() {
     for (auto [index, result] : llvm::enumerate(genericOp.getResults())) {
       bool flag = true;
       for (auto user : result.getUsers()) {
-        if (isMember(user)) {
+        if (cluster.isMember(user)) {
           flag = false;
           break;
         }
@@ -171,48 +285,160 @@ void GenericOpCluster::evaluate() {
       cycles *= (analysisTileSize[i] / unrollFactor[i]);
     }
 
-    metric[*riter]["flops"] = flops;
-    metric[*riter]["external_access"] = externalAccess;
-    metric[*riter]["cycles"] = cycles;
+    statisticDat[*riter]["flops"] = flops;
+    statisticDat[*riter]["external_access"] = externalAccess;
+    statisticDat[*riter]["cycles"] = cycles;
 
     for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
       auto op = operand.getDefiningOp();
-      assert(op);
-      if (!isMember(op))
+      if (!cluster.isMember(op))
         continue;
       else {
         int64_t factor = 1;
         auto accessDims = getAffineMapAccessDims(indexingMaps[index]);
         for (size_t i = 0; i < accessDims.size(); i++)
           factor *= analysisTileSize[accessDims[i]] / tilingSize[accessDims[i]];
-        if (metric[op]["factor"] == 1)
-          metric[op]["factor"] = factor * metric[genericOp]["factor"];
+        if (statisticDat[op]["factor"] == 1)
+          statisticDat[op]["factor"] =
+              factor * statisticDat[genericOp]["factor"];
       }
     }
   }
-}
 
-void GenericOpCluster::factorForwardHelp(mlir::Operation* op, int64_t factor) {
-  if (factor == 1) return;
-  metric[op]["flops"] *= factor;
-  metric[op]["external_access"] *= factor;
-  metric[op]["sram_access"] *= factor;
-  metric[op]["cycles"] *= factor;
-  auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
-  assert(genericOp);
-  for (auto operand : genericOp.getInputs()) {
-    auto op = operand.getDefiningOp();
-    if (isMember(op)) factorForwardHelp(op, factor);
+  EvaluationMetric metric;
+
+  double_t externalAccess = 0;
+  double_t bottleneckCycles = 0;
+  double_t flops = 0;
+  for (auto [op, namedMetric] : statisticDat) {
+    externalAccess += namedMetric["external_access"] * namedMetric["factor"];
+    bottleneckCycles = std::max(bottleneckCycles,
+                                namedMetric["cycles"] * namedMetric["factor"]);
+    flops += namedMetric["flops"] * namedMetric["factor"];
   }
+  bottleneckCycles =
+      std::max(bottleneckCycles, ceil(externalAccess / cfg.bandwidth));
+  double_t throughput = flops / bottleneckCycles;
+
+  metric.throughput = throughput;
+
+  return metric;
 }
-
-auto GenericOpCluster::begin() { return nodeSet.begin(); }
-auto GenericOpCluster::end() { return nodeSet.end(); }
-
-auto GenericOpCluster::getParameter() { return &parameter; }
 
 // ============================
-// END OF GenericOpCluster
+// END OF PerfModel
+// ============================
+
+// ============================
+// CLASS: BruteForceSolver
+// ============================
+
+inline void BruteForceSolver::assignParameter(ParameterVariant& v,
+                                              ParameterPointerVariant& p) {
+  std::visit(
+      [&](auto&& value, auto&& ptr) {
+        using V = std::decay_t<decltype(value)>;
+        using P = std::decay_t<decltype(ptr)>;
+        if constexpr (std::is_same_v<P, V*>) {
+          *ptr = value;
+        } else {
+          llvm_unreachable("Type mismatch!");
+        }
+      },
+      v, p);
+}
+
+bool BruteForceSolver::checkConstraint(GenericOpCluster& cluster,
+                                       ArchConfig& archCfg) {
+  return false;
+}
+
+unsigned int BruteForceSolver::solve(GenericOpCluster& cluster,
+                                     PerfModel& model, ArchConfig& archCfg) {
+  auto parGen = ParameterGenerator();
+  std::vector<ParameterPointerVariant> parameterMap;
+  for (auto [op, namedPar] : cluster.getParameter()) {
+    auto bound = namedPar["loop_bound"];
+    auto tilingSize = namedPar["tiling_size"];
+
+    assert(bound.size() == tilingSize.size());
+
+    for (size_t dim = 0; dim < tilingSize.size(); dim++) {
+      parameterMap.push_back(&tilingSize[dim]);
+      std::vector<ParameterVariant> candidate;
+      for (int64_t i = 1; i < bound[dim]; i *= 2) {
+        candidate.push_back(i);
+      }
+      parGen.addVariable(candidate);
+    }
+
+    auto unrollFactor = namedPar["unroll_factor"];
+    for (size_t dim = 0; dim < unrollFactor.size(); dim++) {
+      parameterMap.push_back(&unrollFactor[dim]);
+      std::vector<ParameterVariant> candidate;
+      for (int64_t i = 1; i < bound[dim]; i *= 2) {
+        candidate.push_back(i);
+      }
+      parGen.addVariable(candidate);
+    }
+
+    llvm::SmallVector<int64_t> outerOrder;
+    std::iota(outerOrder.begin(), outerOrder.end(), 0);
+    std::vector<ParameterVariant> outerOrderSet;
+    do {
+      outerOrderSet.push_back(outerOrder);
+    } while (std::next_permutation(outerOrder.begin(), outerOrder.end()));
+    parameterMap.push_back(&namedPar["outer_order"]);
+    parGen.addVariable(outerOrderSet);
+
+    llvm::SmallVector<int64_t> innerOrder;
+    std::iota(innerOrder.begin(), innerOrder.end(), 0);
+    std::vector<ParameterVariant> innerOrderSet;
+    do {
+      innerOrderSet.push_back(innerOrder);
+    } while (std::next_permutation(innerOrder.begin(), innerOrder.end()));
+    parameterMap.push_back(&namedPar["inner_order"]);
+    parGen.addVariable(innerOrderSet);
+  }
+
+  llvm::errs() << parGen.size() << "\n";
+  for (auto x : parGen.candidates) llvm::errs() << x.size() << " ";
+  llvm::errs() << "\n";
+
+  int64_t bestThroughput = 0;
+  std::vector<ParameterVariant> parRecord;
+  while (parGen.hasNext()) {
+    parGen.next();
+    // for (auto [par, parPointer] : llvm::zip(parVec, parameterMap)) {
+    //   assignParameter(par, parPointer);
+    // }
+
+    if (!checkConstraint(cluster, archCfg)) continue;
+    // cluster->evaluate();
+    // auto metric = cluster->getMetric();
+
+    auto metric = model.evaluate(cluster, archCfg);
+
+    if (metric.throughput > bestThroughput) {
+      bestThroughput = metric.throughput;
+      // parRecord = parVec;
+    }
+  }
+
+  return bestThroughput;
+}
+
+void BruteForceSolver::generateParSet(linalg::GenericOp genericOp) {
+  std::vector<int64_t> order;
+  std::iota(order.begin(), order.end(), 0);
+  std::vector<std::vector<int64_t>> orderSet;
+  do {
+    orderSet.push_back(order);
+  } while (std::next_permutation(order.begin(), order.end()));
+}
+
+// ============================
+// END OF BruteForceSolver
 // ============================
 
 // ============================
@@ -270,7 +496,9 @@ void ScheduledGenericOpCluster::insertGenericOp(linalg::GenericOp genericOp) {
   genericOps.push_back(genericOp);
 }
 
-void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx) {
+void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
+                                         PerfModel& model,
+                                         ArchConfig& archCfg) {
   std::vector<linalg::GenericOp> genericOpsTopOrder = getTopSortedNodes();
 
   assert(genericOpsTopOrder.size() >= 1);
@@ -282,13 +510,15 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx) {
   dpStatus[0] = 0;
   cutIndex[0] = 0;
   for (unsigned int i = 1; i <= genericOpsTopOrder.size(); i++) {
-    // llvm::errs() << i << "\n";
+    llvm::errs() << "outer" << i << "\n";
     unsigned int minCost = 0xffffffff;
     unsigned int index = 0;
     for (unsigned j = 1; j <= i; j++) {
+      llvm::errs() << "inner" << j << "\n";
       auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data() + j - 1,
                                             genericOpsTopOrder.data() + i);
-      unsigned int mergedCost = solver->solve(&mergedCluster);
+
+      unsigned int mergedCost = solver->solve(mergedCluster, model, archCfg);
       // GenericOpCluster(genericOpsTopOrder.data() + j - 1,
       //                  genericOpsTopOrder.data() + i)
       //     .solveBestSchedule(evaluator, solver);
@@ -308,7 +538,7 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx) {
         new GenericOpCluster(genericOpsTopOrder.data() + cutIndex[p] - 1,
                              genericOpsTopOrder.data() + p);
     // cluster->solveBestSchedule(evaluator, solver);
-    solver->solve(cluster);
+    solver->solve(*cluster, model, archCfg);
     clusters.push_back(cluster);
     if (cutIndex[p] == 1) break;
     p = cutIndex[p] - 1;
@@ -336,6 +566,10 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     mlir::func::FuncOp func = getOperation();
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
+    PerfModel model = PerfModel();
+    ArchConfig archCfg;
+    archCfg.bandwidth = 128;
+
     // GenericOpClusterDAG clusterDAG;
     ScheduledGenericOpCluster scheduledCluster("brute_force");
     func.walk([&](mlir::linalg::GenericOp genericOp) {
@@ -344,7 +578,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     // clusterDAG.constructDAG();
     // clusterDAG.optimizeDAG();
 
-    scheduledCluster.schedule(&ctx);
+    scheduledCluster.schedule(&ctx, model, archCfg);
 
     mlir::OpBuilder builder(module);
 
