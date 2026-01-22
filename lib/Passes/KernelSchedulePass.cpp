@@ -194,7 +194,23 @@ std::unordered_map<mlir::Operation*,
 GenericOpCluster::getParameter() {
   return parameter;
 }
+
+void GenericOpCluster::clearParameter() {
+  for (auto [op, par] : parameter) par.clear();
+}
+
 // auto GenericOpCluster::getMetric() { return &metric; }
+
+TileParameter GenericOpCluster::extractDimRelation() {
+  for (auto op : nodeSet) {
+    auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
+    assert(genericOp);
+    llvm::SmallVector<bool> dimFree(genericOp.getNumLoops(), true);
+    for (auto operand : genericOp.getInputs()) {
+      auto if (!isMember(operand.getDefiningOp())) continue;
+    }
+  }
+}
 
 // ============================
 // END OF GenericOpCluster
@@ -327,6 +343,19 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
 
 // ============================
 // END OF PerfModel
+// ============================
+
+// ============================
+// CLASS: PruningSolver
+// ============================
+
+unsigned int PruningSolver::solve(GenericOpCluster& cluster, PerfModel& model,
+                                  ArchConfig& archCfg) {
+  auto tile = cluster.extractDimRelation();
+}
+
+// ============================
+// END OF PruningSolver
 // ============================
 
 // ============================

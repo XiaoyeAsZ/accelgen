@@ -21,6 +21,28 @@ using ParameterVariant = std::variant<llvm::SmallVector<int64_t>, int64_t>;
 using ParameterPointerVariant =
     std::variant<llvm::SmallVector<int64_t>*, int64_t*>;
 
+class ParameterWrapper {
+ public:
+  ParameterWrapper();
+  std::string parName;
+  void* data;
+};
+
+class Int64Parameter : public ParameterWrapper {
+ public:
+  int64_t data;
+  int64_t lowBound;
+  int64_t upBound;
+};
+
+class TileParameter {
+ public:
+  std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> order;
+  std::unordered_map<mlir::Operation*, llvm::SmallVector<ParameterWrapper*>>
+      mapping;
+  std::vector<ParameterWrapper*> parameterVec;
+};
+
 class GenericOpCluster {
  public:
   GenericOpCluster();
@@ -37,12 +59,16 @@ class GenericOpCluster {
   auto begin();
   auto end();
 
+  void clearParameter();
+
   std::vector<mlir::Operation*>& getNodeSetTopOrder();
   std::unordered_map<
       mlir::Operation*,
       std::unordered_map<std::string, llvm::SmallVector<int64_t>>>&
   getParameter();
   // auto getMetric();
+
+  TileParameter extractDimRelation();
 
  private:
   unsigned int nInD = 0;
@@ -166,6 +192,12 @@ class BruteForceSolver : public ParameterSolvingInterface {
   void generateParSet(linalg::GenericOp genericOp);
   bool checkConstraint(GenericOpCluster& cluster, ArchConfig& archCfg);
   inline void assignParameter(ParameterVariant& v, ParameterPointerVariant& p);
+};
+
+class PruningSolver : public ParameterSolvingInterface {
+ public:
+  unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
+                     ArchConfig& archCfg) override;
 };
 
 class ScheduledGenericOpCluster {
