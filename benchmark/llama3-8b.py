@@ -18,4 +18,4 @@ dummy_input = (
     torch.randn(1, 32, 1, 1, dtype=torch.bfloat16),
 )
 
-dump_to_mlir("./mlir/llama3.mlir", model, dummy_input)
+dump_to_mlir("./mlir/llama3-8b.mlir", model, dummy_input)

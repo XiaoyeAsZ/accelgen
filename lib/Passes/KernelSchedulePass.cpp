@@ -202,13 +202,7 @@ void GenericOpCluster::clearParameter() {
 // auto GenericOpCluster::getMetric() { return &metric; }
 
 TileParameter GenericOpCluster::extractDimRelation() {
-  for (auto op : nodeSet) {
-    auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
-    assert(genericOp);
-    llvm::SmallVector<bool> dimFree(genericOp.getNumLoops(), true);
-    for (auto operand : genericOp.getInputs()) {
-      auto if (!isMember(operand.getDefiningOp())) continue;
-    }
+  for (auto op : nodeSetTopOrder) {
   }
 }
 

@@ -35,11 +35,18 @@ class Int64Parameter : public ParameterWrapper {
   int64_t upBound;
 };
 
+enum DimRelationType { EQUAL, COMPOSE };
+
+class DimensionRelation {
+ public:
+  DimRelationType relation;
+  std::vector<ParameterWrapper*> dims;
+  ParameterWrapper parameter;
+};
+
 class TileParameter {
  public:
-  std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> order;
-  std::unordered_map<mlir::Operation*, llvm::SmallVector<ParameterWrapper*>>
-      mapping;
+  std::unordered_map<ParameterWrapper*, DimensionRelation*> dimensionMapping;
   std::vector<ParameterWrapper*> parameterVec;
 };
 
@@ -198,6 +205,8 @@ class PruningSolver : public ParameterSolvingInterface {
  public:
   unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
                      ArchConfig& archCfg) override;
+
+  void generateCandidateTileParameter();
 };
 
 class ScheduledGenericOpCluster {
