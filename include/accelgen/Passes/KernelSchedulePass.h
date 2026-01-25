@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+#include "accelgen/Utils/Types.h"
 #include <any>
 #include <map>
 #include <numeric>
@@ -20,125 +21,6 @@ namespace accelgen {
 using ParameterVariant = std::variant<llvm::SmallVector<int64_t>, int64_t>;
 using ParameterPointerVariant =
     std::variant<llvm::SmallVector<int64_t>*, int64_t*>;
-
-class ParameterWrapper {
- public:
-  ParameterWrapper();
-  std::string parName;
-  void* data;
-};
-
-class Int64Parameter : public ParameterWrapper {
- public:
-  int64_t data;
-  int64_t lowBound;
-  int64_t upBound;
-};
-
-enum DimRelationType { EQUAL, COMPOSE };
-
-class DimensionRelation {
- public:
-  DimRelationType relation;
-  std::vector<ParameterWrapper*> dims;
-  ParameterWrapper parameter;
-};
-
-class TileParameter {
- public:
-  std::unordered_map<ParameterWrapper*, DimensionRelation*> dimensionMapping;
-  std::vector<ParameterWrapper*> parameterVec;
-};
-
-class GenericOpCluster {
- public:
-  GenericOpCluster();
-  GenericOpCluster(linalg::GenericOp* genericOpStart,
-                   linalg::GenericOp* genericOpEnd);
-  virtual ~GenericOpCluster() = default;
-
-  bool isMember(mlir::Operation* opToCehck);
-
-  void attachAttribute(mlir::MLIRContext* ctx);
-
-  void evaluate();
-
-  auto begin();
-  auto end();
-
-  void clearParameter();
-
-  std::vector<mlir::Operation*>& getNodeSetTopOrder();
-  std::unordered_map<
-      mlir::Operation*,
-      std::unordered_map<std::string, llvm::SmallVector<int64_t>>>&
-  getParameter();
-  // auto getMetric();
-
-  TileParameter extractDimRelation();
-
- private:
-  unsigned int nInD = 0;
-  unsigned int nCycles = 0;
-  unsigned int memAccess = 0;
-  unsigned int cost = 0;
-  std::unordered_set<mlir::Operation*> nodeSet;
-  std::vector<mlir::Operation*> nodeSetTopOrder;
-  std::unordered_map<
-      mlir::Operation*,
-      std::unordered_map<std::string, llvm::SmallVector<int64_t>>>
-      parameter;
-  // std::unordered_map<mlir::Operation*, std::unordered_map<std::string,
-  // int64_t>>
-
-  //     metric;
-
-  void factorForwardHelp(mlir::Operation* op, int64_t factor);
-};
-
-// class GenericOpClusterBruteForce : public GenericOpCluster {
-//  public:
-//   using GenericOpCluster::GenericOpCluster;
-//   unsigned int solveBestSchedule() override;
-// };
-
-class ArchConfig {
- public:
-  size_t bandwidth;     // GB/s
-  size_t sramCapacity;  // B
-  size_t mulCnt;        // #
-};
-
-class EvaluationMetric {
- public:
-  double_t throughput;
-};
-
-class PerfModel {
- public:
-  EvaluationMetric evaluate(GenericOpCluster& cluster, ArchConfig& cfg);
-};
-
-class ParameterSolvingInterface {
- public:
-  ParameterSolvingInterface() = default;
-  //   ParameterSolvingInterface(GenericOpCluster& cluster);
-  virtual ~ParameterSolvingInterface() = default;
-
-  //   virtual unsigned int solve(
-  //       std::vector<mlir::Operation*>* topoOrder,
-  //       std::unordered_map<
-  //           mlir::Operation*,
-  //           std::unordered_map<std::string, llvm::SmallVector<int64_t>>>*
-  //           parameter,
-  //       CostModelInterface* evaluator) = 0;
-
-  virtual unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
-                             ArchConfig& archCfg) = 0;
-
-  //  private:
-  //   GenericOpCluster& cluster;
-};
 
 class ParameterGenerator {
  public:
@@ -189,71 +71,6 @@ class ParameterGenerator {
     }
   }
 };
-
-class BruteForceSolver : public ParameterSolvingInterface {
- public:
-  unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
-                     ArchConfig& archCfg) override;
-
- private:
-  void generateParSet(linalg::GenericOp genericOp);
-  bool checkConstraint(GenericOpCluster& cluster, ArchConfig& archCfg);
-  inline void assignParameter(ParameterVariant& v, ParameterPointerVariant& p);
-};
-
-class PruningSolver : public ParameterSolvingInterface {
- public:
-  unsigned int solve(GenericOpCluster& cluster, PerfModel& model,
-                     ArchConfig& archCfg) override;
-
-  void generateCandidateTileParameter();
-};
-
-class ScheduledGenericOpCluster {
- public:
-  ScheduledGenericOpCluster() = default;
-  ScheduledGenericOpCluster(llvm::StringRef solver);
-  ~ScheduledGenericOpCluster();
-  void insertGenericOp(linalg::GenericOp genericOp);
-  void schedule(mlir::MLIRContext* ctx, PerfModel& model, ArchConfig& archCfg);
-
-  auto begin();
-  auto end();
-
- private:
-  std::vector<linalg::GenericOp> genericOps;
-  std::vector<GenericOpCluster*> clusters;
-  std::vector<linalg::GenericOp> getTopSortedNodes();
-
-  ParameterSolvingInterface* solver;
-};
-
-// class GenericOpClusterDAG {
-//  public:
-//   std::unordered_set<linalg::GenericOp> genericOps;
-//   std::unordered_set<GenericOpCluster*> clusters;
-//   std::unordered_map<GenericOpCluster*, std::vector<GenericOpCluster*>>
-//       consumerList;
-//   GenericOpClusterDAG();
-//   ~GenericOpClusterDAG();
-//   void insertCluster(GenericOpCluster* cluster);
-//   void constructDAG();
-//   void optimizeDAG();
-
-//  private:
-//   bool checkDependency(GenericOpCluster* cluster0, GenericOpCluster*
-//   cluster1);
-
-//   unsigned int pipeCost(std::vector<GenericOpCluster*> clusters, unsigned int
-//   s,
-//                         unsigned int e);
-// };
-
-// bool checkCluster(ScheduledGenericOp* genericOp0,
-//                   ScheduledGenericOp* genericOp1);
-
-// void mergeCluster(ScheduledGenericOp* genericOp0,
-//                   ScheduledGenericOp* genericOp1);
 
 }  // namespace accelgen
 
