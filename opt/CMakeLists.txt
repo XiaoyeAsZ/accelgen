@@ -4,6 +4,7 @@ set(LIBS
     MLIRRegisterAllDialects
     MLIRRegisterAllPasses
     MLIRAccelgen
+    MLIRAccelgenDSE
     MLIRAccelgenUtils
     MLIRSpeDialect
     MLIRTileGraphDialect

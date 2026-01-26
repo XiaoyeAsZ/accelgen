@@ -39,7 +39,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     archCfg.bandwidth = 128;
 
     // GenericOpClusterDAG clusterDAG;
-    ScheduledGenericOpCluster scheduledCluster("brute_force");
+    ScheduledGenericOpCluster scheduledCluster("pruning_brute_force");
     func.walk([&](mlir::linalg::GenericOp genericOp) {
       scheduledCluster.insertGenericOp(genericOp);
     });

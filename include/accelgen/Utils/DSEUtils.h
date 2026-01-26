@@ -8,6 +8,23 @@
 namespace mlir {
 namespace accelgen {
 
+class ParameterGenerator {
+ public:
+  void addVariable(std::vector<int64_t> values);
+  bool hasNext() const;
+  std::vector<int64_t> next();
+  size_t size();
+
+  std::vector<std::vector<int64_t>> candidates;
+  std::vector<size_t> indices;
+
+ private:
+  bool _hasNext = true;
+
+  std::vector<int64_t> current() const;
+  void advance();
+};
+
 template <typename _T>
 class DecisionVariable {
  private:

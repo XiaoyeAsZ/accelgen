@@ -1,7 +1,5 @@
-add_mlir_dialect_library(MLIRAccelgenUtils
-        AffineMapUtils.cpp
-        OperationUtils.cpp
-        DSEUtils.cpp
+add_mlir_dialect_library(MLIRAccelgenDSE
+        KernelScheduleDSE.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/accelgen
