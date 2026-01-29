@@ -18,6 +18,10 @@ set(LLVM_TARGET_DEFINITIONS KernelSchedulePass.td)
 mlir_tablegen(KernelSchedulePass.h.inc --gen-pass-decls)
 add_public_tablegen_target(MLIRKernelSchedulePassIncGen)
 
+set(LLVM_TARGET_DEFINITIONS MarkGenericPass.td)
+mlir_tablegen(MarkGenericPass.h.inc --gen-pass-decls)
+add_public_tablegen_target(MLIRMarkGenericPassIncGen)
+
 
 # set(LLVM_TARGET_DEFINITIONS SpeFissionPass.td)
 # mlir_tablegen(SpeFissionPass.h.inc --gen-pass-decls)

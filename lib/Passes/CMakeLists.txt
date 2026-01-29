@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRAccelgen
         # SpeFissionPass.cpp
         ConstructTileGraphPass.cpp
         KernelSchedulePass.cpp
+        MarkGenericPass.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/accelgen
@@ -16,6 +17,7 @@ add_mlir_dialect_library(MLIRAccelgen
         # MLIRSpeFissionPassIncGen
         MLIRConstructTileGraphPassIncGen
         MLIRKernelSchedulePassIncGen
+        MLIRMarkGenericPassIncGen
 
         LINK_LIBS PUBLIC
         MLIRIR

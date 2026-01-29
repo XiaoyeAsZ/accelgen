@@ -1,9 +1,5 @@
 #include <memory>
 
-#include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
 #include "mlir/Conversion/TosaToArith/TosaToArith.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
@@ -18,6 +14,10 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 
 // #include "accelgen/Dialect/Spe/SpeDialect.h"
 // #include "accelgen/Dialect/Spe/SpeOps.h"
@@ -28,6 +28,7 @@
 #include "accelgen/Dialect/TileGraph/TileGraphOps.h"
 #include "accelgen/Passes/ConstructTileGraphPass.h"
 #include "accelgen/Passes/KernelSchedulePass.h"
+#include "accelgen/Passes/MarkGenericPass.h"
 
 int main(int argc, char** argv) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
@@ -110,7 +111,9 @@ int main(int argc, char** argv) {
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::createLinalgGeneralizeNamedOpsPass());
 
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::accelgen::createKernelSchedule());
+  pm.addPass(mlir::accelgen::createMarkGenericPass());
+
+  // pm.addNestedPass<mlir::func::FuncOp>(mlir::accelgen::createKernelSchedule());
 
   // pm.addPass(mlir::createCanonicalizerPass());
   // pm.addPass(mlir::createSymbolDCEPass());

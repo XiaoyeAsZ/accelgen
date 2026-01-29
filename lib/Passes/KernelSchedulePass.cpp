@@ -3,6 +3,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -14,8 +15,8 @@
 #include <variant>
 #include <vector>
 
-#include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/DSE/KernelScheduleDSE.h"
+#include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
 #include "accelgen/Utils/OperationUtils.h"
 
@@ -26,11 +27,11 @@ namespace mlir::accelgen {
 namespace {
 
 class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
- public:
+public:
   using impl::KernelScheduleBase<KernelSchedule>::KernelScheduleBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext& ctx = getContext();
+    mlir::MLIRContext &ctx = getContext();
     mlir::func::FuncOp func = getOperation();
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
@@ -40,9 +41,26 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
 
     // GenericOpClusterDAG clusterDAG;
     ScheduledGenericOpCluster scheduledCluster("pruning_brute_force");
-    func.walk([&](mlir::linalg::GenericOp genericOp) {
-      scheduledCluster.insertGenericOp(genericOp);
-    });
+    // func.walk([&](mlir::linalg::GenericOp genericOp) {
+    //   scheduledCluster.insertGenericOp(genericOp);
+    // });
+    for (auto &block : func.getBlocks()) {
+      for (auto &op : block.getOperations())
+        if (mlir::dyn_cast<linalg::GenericOp>(op) ||
+            mlir::dyn_cast<tensor::CollapseShapeOp>(op) ||
+            mlir::dyn_cast<tensor::ExpandShapeOp>(op) ||
+            mlir::dyn_cast<tensor::ConcatOp>(op) ||
+            mlir::dyn_cast<tensor::ExtractSliceOp>(op) ||
+            mlir::dyn_cast<tensor::EmptyOp>(op))
+          scheduledCluster.insertOp(&op);
+        else if (mlir::dyn_cast<func::ReturnOp>(op) ||
+                 mlir::dyn_cast<arith::ConstantOp>(op)) {
+          continue;
+        } else {
+          op.dump();
+          assert(0);
+        }
+    }
     // clusterDAG.constructDAG();
     // clusterDAG.optimizeDAG();
 
@@ -64,17 +82,20 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
           if (!cluster->isMember(operand.getDefiningOp()))
             clusterInput.insert(operand);
         }
-        for (auto constValue : constSet) clusterInput.insert(constValue);
+        for (auto constValue : constSet)
+          clusterInput.insert(constValue);
         for (auto operand : genericOp.getOutputs()) {
           bool flag = true;
           for (auto use : operand.getUsers()) {
-            if (use == genericOp) continue;
+            if (use == genericOp)
+              continue;
             if (cluster->isMember(use)) {
               flag = false;
               break;
             }
           }
-          if (flag) clusterOutput.insert(operand);
+          if (flag)
+            clusterOutput.insert(operand);
         }
       }
 
@@ -91,19 +112,20 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
 
       // clusterFuncOp.setPrivate();
 
-      mlir::Block* entry = clusterFuncOp.addEntryBlock();
+      mlir::Block *entry = clusterFuncOp.addEntryBlock();
       builder.setInsertionPointToStart(entry);
 
       IRMapping mapper;
       for (auto [arg, input] : llvm::zip(entry->getArguments(), clusterInput))
         mapper.map(input, arg);
 
-      for (Operation* op : *cluster) {
+      for (Operation *op : *cluster) {
         builder.clone(*op, mapper);
       }
 
       llvm::SmallVector<Value> retVals;
-      for (Value out : clusterOutput) retVals.push_back(mapper.lookup(out));
+      for (Value out : clusterOutput)
+        retVals.push_back(mapper.lookup(out));
 
       builder.create<func::ReturnOp>(clusterFuncOp.getLoc(), retVals);
     }
@@ -112,5 +134,5 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
   }
 };
 
-}  // namespace
-}  // namespace mlir::accelgen
+} // namespace
+} // namespace mlir::accelgen
