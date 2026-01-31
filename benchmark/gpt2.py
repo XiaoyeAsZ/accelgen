@@ -1,37 +1,35 @@
 import torch
 import torch.nn as nn
 from transformers import AutoConfig
+from transformers.pytorch_utils import Conv1D
 from torch_to_mlir import dump_to_mlir
 
 
-class Conv1D(nn.Module):
-    """
-    1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
-    Basically works like a linear layer but the weights are transposed.
-    """
-    def __init__(self, nf, nx):
+class GPT2MLP(nn.Module):
+    """GPT-2 MLP (Feed-Forward Network)"""
+    def __init__(self, config):
         super().__init__()
-        self.nf = nf
-        w = torch.empty(nx, nf)
-        nn.init.normal_(w, std=0.02)
-        self.weight = nn.Parameter(w)
-        self.bias = nn.Parameter(torch.zeros(nf))
-
-    def forward(self, x):
-        size_out = x.size()[:-1] + (self.nf,)
-        x = torch.addmm(self.bias, x.view(-1, x.size(-1)), self.weight)
-        x = x.view(size_out)
-        return x
-
-
-class TensorizedGPT2Attention(nn.Module):
-    """GPT2 Attention with all original computations, integers as tensors for MLIR export"""
+        embed_dim = config.hidden_size
+        intermediate_size = config.n_inner if config.n_inner is not None else 4 * embed_dim
+        
+        self.c_fc = Conv1D(intermediate_size, embed_dim)
+        self.c_proj = Conv1D(embed_dim, intermediate_size)
+        self.act = nn.GELU(approximate='tanh')  # GPT-2 uses tanh approximation
+        self.dropout = nn.Dropout(config.resid_pdrop)
     
+    def forward(self, hidden_states):
+        hidden_states = self.c_fc(hidden_states)
+        hidden_states = self.act(hidden_states)
+        hidden_states = self.c_proj(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+        return hidden_states
+
+
+class GPT2Attention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
         
-        # 原始整数值
         max_positions = config.max_position_embeddings
         embed_dim = config.hidden_size
         num_heads = config.num_attention_heads
@@ -70,7 +68,6 @@ class TensorizedGPT2Attention(nn.Module):
         self.layer_idx = None
         self.reorder_and_upcast_attn = config.reorder_and_upcast_attn
         
-        # 使用 Conv1D（与原始 GPT2 一致）
         self.c_attn = Conv1D(3 * self.embed_dim, self.embed_dim)
         self.c_proj = Conv1D(self.embed_dim, self.embed_dim)
         
@@ -90,10 +87,9 @@ class TensorizedGPT2Attention(nn.Module):
         if self.scale_attn_by_inverse_layer_idx and self.layer_idx is not None:
             attn_weights = attn_weights / float(self.layer_idx + 1)
         
-        # 应用 causal mask（保留完整逻辑）
+        # 应用 causal mask（保留）
         if not self.is_cross_attention:
-            # query_length, key_length = query.size(-2), key.size(-2)
-            # 直接使用张量操作获取长度
+            # 使用张量操作获取长度
             query_length = query.shape[-2]
             key_length = key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
@@ -137,7 +133,7 @@ class TensorizedGPT2Attention(nn.Module):
     
     def forward(self, hidden_states, attention_mask=None, head_mask=None):
         """
-        完整的 forward，保留所有计算但去掉 cache 和 cross-attention
+        完整的 forward, 保留所有计算但去掉 cache 和 cross-attention
         hidden_states: [batch, seq_len, embed_dim]
         """
         # QKV 投影
@@ -168,18 +164,49 @@ class TensorizedGPT2Attention(nn.Module):
         return attn_output, attn_weights
 
 
+class GPT2Block(nn.Module):
+    """完整的 GPT-2 Transformer Block: LayerNorm -> Attention -> Residual -> LayerNorm -> MLP -> Residual"""
+    def __init__(self, config):
+        super().__init__()
+        hidden_size = config.hidden_size
+        
+        self.ln_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
+        self.attn = GPT2Attention(config)
+        self.ln_2 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
+        self.mlp = GPT2MLP(config)
+    
+    def forward(self, hidden_states, attention_mask=None, head_mask=None):
+        """
+        完整的 Transformer Block forward
+        hidden_states: [batch, seq_len, embed_dim]
+        """
+        # Pre-LN: LayerNorm -> Attention
+        residual = hidden_states
+        hidden_states = self.ln_1(hidden_states)
+        attn_output, attn_weights = self.attn(hidden_states, attention_mask, head_mask)
+        # Residual connection
+        hidden_states = attn_output + residual
+        
+        # Pre-LN: LayerNorm -> MLP
+        residual = hidden_states
+        hidden_states = self.ln_2(hidden_states)
+        mlp_output = self.mlp(hidden_states)
+        # Residual connection
+        hidden_states = mlp_output + residual
+        
+        return hidden_states, attn_weights
+
+
 # 配置和模型
 config = AutoConfig.from_pretrained("gpt2", attn_implementation="eager")
 config.use_cache = False
 config._use_sdpa = False
 
-# 使用自定义的 Attention 类
-model = TensorizedGPT2Attention(config)
+model = GPT2Block(config)
 model.eval()
 
 print(f"Model config: embed_dim={config.hidden_size}, num_heads={config.num_attention_heads}")
 
-# 输入: [batch=1, seq_len=16, hidden_size=768]
 dummy_input = (torch.randn(1, 16, 768, dtype=torch.bfloat16),)
 
-dump_to_mlir("./mlir/gpt2_attn.mlir", model, dummy_input)
+dump_to_mlir("./mlir/gpt2.mlir", model, dummy_input)
