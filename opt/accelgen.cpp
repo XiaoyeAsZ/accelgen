@@ -27,10 +27,11 @@
 #include "accelgen/Dialect/TileGraph/TileGraphDialect.h"
 #include "accelgen/Dialect/TileGraph/TileGraphOps.h"
 #include "accelgen/Passes/ConstructTileGraphPass.h"
+#include "accelgen/Passes/FuseGenericPass.h"
 #include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Passes/MarkGenericPass.h"
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
       llvm::MemoryBuffer::getFile(argv[1]);
   if (!fileOrErr) {
@@ -112,8 +113,8 @@ int main(int argc, char** argv) {
       mlir::createLinalgGeneralizeNamedOpsPass());
 
   pm.addPass(mlir::accelgen::createMarkGenericPass());
-
-  // pm.addNestedPass<mlir::func::FuncOp>(mlir::accelgen::createKernelSchedule());
+  pm.addPass(mlir::accelgen::createFuseGenericPass());
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::accelgen::createKernelSchedule());
 
   // pm.addPass(mlir::createCanonicalizerPass());
   // pm.addPass(mlir::createSymbolDCEPass());

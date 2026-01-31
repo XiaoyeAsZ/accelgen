@@ -340,10 +340,11 @@ public:
 
   DimensionRelationNetwork extractDimRelation();
 
-  void applyOrderTiling(
-      const std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>>
-          &order,
+  void applyTiling(
       const std::unordered_map<Dimension, int64_t, Dimension::Hash> &tiling);
+  void applyOrder(
+      const std::unordered_map<Operation *, llvm::SmallVector<int64_t>> &order);
+  bool checkOrder();
 
 private:
   unsigned int nInD = 0;
@@ -358,6 +359,10 @@ private:
       parameter;
 
   void factorForwardHelp(mlir::Operation *op, int64_t factor);
+
+  bool checkReuseDistance(llvm::SmallVector<int64_t> &order,
+                          llvm::SmallVector<int64_t> &dims,
+                          llvm::SmallVector<int64_t> &mask);
 };
 
 class ArchConfig {

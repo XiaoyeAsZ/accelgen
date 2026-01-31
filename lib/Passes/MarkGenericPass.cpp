@@ -69,6 +69,33 @@ class ExpandGenericPattern : public mlir::OpRewritePattern<linalg::GenericOp> {
   }
 };
 
+class TransposeGenericPattern
+    : public mlir::OpRewritePattern<linalg::GenericOp> {
+  using mlir::OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      linalg::GenericOp genericOp,
+      mlir::PatternRewriter& rewriter) const override {
+    if (!genericOp->hasAttr("accelgen.memory_transformation"))
+      return mlir::failure();
+    if (genericOp->hasAttr("accelgen.transpose")) return mlir::failure();
+    if (!mlir::dyn_cast<TensorType>(genericOp.getInputs()[0].getType()))
+      return mlir::failure();
+    auto shapeIns = getOperandShape(genericOp.getInputs()[0]);
+    auto shapeOuts = getOperandShape(genericOp.getOutputs()[0]);
+    int64_t rIns = 1;
+    for (auto s : shapeIns) rIns *= s;
+    int64_t rOuts = 1;
+    for (auto s : shapeOuts) rOuts *= s;
+    if (shapeIns.size() == shapeOuts.size() && rOuts == rIns) {
+      genericOp->setAttr("accelgen.transpose",
+                         BoolAttr::get(rewriter.getContext(), true));
+      return mlir::success();
+    } else
+      return mlir::failure();
+  }
+};
+
 class MemoryTransformationPattern
     : public mlir::OpRewritePattern<linalg::GenericOp> {
   using mlir::OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
@@ -102,6 +129,7 @@ class MarkGenericPass : public impl::MarkGenericPassBase<MarkGenericPass> {
     patterns.add<MemoryTransformationPattern>(&ctx);
     patterns.add<ExpandGenericPattern>(&ctx);
     patterns.add<ConstFillGenericPattern>(&ctx);
+    patterns.add<TransposeGenericPattern>(&ctx);
     if (mlir::failed(applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {
       signalPassFailure();
