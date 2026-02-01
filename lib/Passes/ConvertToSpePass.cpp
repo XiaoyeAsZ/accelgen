@@ -8,13 +8,14 @@
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "accelgen/Passes/ConvertToSpePass.h"
+// #include "accelgen/Passes/ConvertToSpePass.h"
 #include "accelgen/Dialect/Spe/SpeDialect.h"
 #include "accelgen/Dialect/Spe/SpeOps.h"
-
+#include "accelgen/Passes/AccelgenPasses.h"
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_CONVERTTOSPE
-#include "accelgen/Passes/ConvertToSpePass.h.inc"
+// #include "accelgen/Passes/ConvertToSpePass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 
@@ -23,7 +24,7 @@ class MacPattern : public mlir::OpRewritePattern<mlir::arith::AddFOp> {
 
   mlir::LogicalResult matchAndRewrite(
       mlir::arith::AddFOp addfOp,
-      mlir::PatternRewriter &rewriter) const override {
+      mlir::PatternRewriter& rewriter) const override {
     auto lhsAddfOp = addfOp.getLhs();
     auto rhsAddfOp = addfOp.getRhs();
     auto lhsDefiningOp =
@@ -65,7 +66,7 @@ class ExpPattern : public mlir::OpRewritePattern<mlir::math::ExpOp> {
 
   mlir::LogicalResult matchAndRewrite(
       mlir::math::ExpOp mathExpOp,
-      mlir::PatternRewriter &rewriter) const override {
+      mlir::PatternRewriter& rewriter) const override {
     rewriter.setInsertionPoint(mathExpOp);
 
     auto speExpOp = rewriter.create<mlir::spe::ExpOp>(
@@ -82,7 +83,7 @@ class NegPattern : public mlir::OpRewritePattern<mlir::arith::NegFOp> {
 
   mlir::LogicalResult matchAndRewrite(
       mlir::arith::NegFOp arithNegOp,
-      mlir::PatternRewriter &rewriter) const override {
+      mlir::PatternRewriter& rewriter) const override {
     rewriter.setInsertionPoint(arithNegOp);
 
     auto speNegOp = rewriter.create<mlir::spe::NegOp>(
@@ -99,7 +100,7 @@ class DivPattern : public mlir::OpRewritePattern<mlir::arith::DivFOp> {
 
   mlir::LogicalResult matchAndRewrite(
       mlir::arith::DivFOp arithDivOp,
-      mlir::PatternRewriter &rewriter) const override {
+      mlir::PatternRewriter& rewriter) const override {
     auto lhsDefiningOp = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
         arithDivOp.getLhs().getDefiningOp());
     auto constValue =
@@ -131,7 +132,7 @@ class AddPattern : public mlir::OpRewritePattern<mlir::arith::AddFOp> {
 
   mlir::LogicalResult matchAndRewrite(
       mlir::arith::AddFOp arithAddfOp,
-      mlir::PatternRewriter &rewriter) const override {
+      mlir::PatternRewriter& rewriter) const override {
     rewriter.setInsertionPoint(arithAddfOp);
     auto speAddOp = rewriter.create<mlir::spe::AddOp>(
         arithAddfOp.getLoc(),
@@ -148,7 +149,7 @@ class MulPattern : public mlir::OpRewritePattern<mlir::arith::MulFOp> {
 
   mlir::LogicalResult matchAndRewrite(
       mlir::arith::MulFOp arithMulfOp,
-      mlir::PatternRewriter &rewriter) const override {
+      mlir::PatternRewriter& rewriter) const override {
     rewriter.setInsertionPoint(arithMulfOp);
     auto speMulOp = rewriter.create<mlir::spe::MulOp>(
         arithMulfOp.getLoc(),
@@ -165,7 +166,7 @@ class ConvertToSpe : public impl::ConvertToSpeBase<ConvertToSpe> {
   using impl::ConvertToSpeBase<ConvertToSpe>::ConvertToSpeBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext *ctx = &getContext();
+    mlir::MLIRContext* ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
 
     patterns.add<MacPattern>(ctx);

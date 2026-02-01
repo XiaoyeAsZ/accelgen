@@ -10,8 +10,8 @@ namespace accelgen {
 #define GEN_PASS_DECL
 #include "accelgen/Passes/MarkGenericPass.h.inc"
 
-} // namespace accelgen
+}  // namespace accelgen
 
-} // namespace mlir
+}  // namespace mlir
 
-#endif // MARK_GENERIC_PASS_H
+#endif  // MARK_GENERIC_PASS_H

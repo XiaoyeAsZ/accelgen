@@ -1,4 +1,4 @@
-#include "accelgen/Passes/LinalgOpFusePass.h"
+
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -11,10 +11,12 @@
 
 #include "accelgen/Dialect/TileGraph/TileGraphDialect.h"
 #include "accelgen/Dialect/TileGraph/TileGraphOps.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_CONSTRUCTTILEGRAPH
-#include "accelgen/Passes/ConstructTileGraphPass.h.inc"
+// #include "accelgen/Passes/ConstructTileGraphPass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 

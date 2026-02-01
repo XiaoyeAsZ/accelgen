@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRAccelgen
+        AccelgenPasses.cpp
         LinalgLoopReorderPass.cpp
         LinalgOpFusePass.cpp
         ConvertToSpePass.cpp
@@ -8,18 +9,20 @@ add_mlir_dialect_library(MLIRAccelgen
         MarkGenericPass.cpp
         FuseGenericPass.cpp
 
+
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/accelgen
 
         DEPENDS
-        MLIRLinalgLoopReorderPassIncGen
-        MLIRLinalgOpFusePassIncGen
-        MLIRConvertToSpePassIncGen
-        # MLIRSpeFissionPassIncGen
-        MLIRConstructTileGraphPassIncGen
-        MLIRKernelSchedulePassIncGen
-        MLIRMarkGenericPassIncGen
-        MLIRFuseGenericPassIncGen
+        # MLIRLinalgLoopReorderPassIncGen
+        # MLIRLinalgOpFusePassIncGen
+        # MLIRConvertToSpePassIncGen
+        # # MLIRSpeFissionPassIncGen
+        # MLIRConstructTileGraphPassIncGen
+        # MLIRKernelSchedulePassIncGen
+        # MLIRMarkGenericPassIncGen
+        # MLIRFuseGenericPassIncGen
+        MLIRAccelgenPassesIncGen
 
         LINK_LIBS PUBLIC
         MLIRIR

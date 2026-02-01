@@ -1,6 +1,15 @@
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, 0)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+m n k
+C[m][n] affine_map<(m, n, k) -> (m, n)>
+A[m][k] affine_map<(m, n, k) -> (m, k)>
+B[k][n] affine_map<(m, n, k) -> (k, n)>
+
+
+
+
 #map3 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3, d4)>
 #map4 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
 #map5 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
@@ -84,7 +93,7 @@ module {
     return %arg3 : tensor<8x32x1024x1024xf32>
   }
   func.func @Cluster_8(%arg0: bf16, %arg1: f32, %arg2: tensor<8x1024x4096xbf16>, %arg3: tensor<8x1024x4096xbf16>, %arg4: tensor<8x4096x4096xbf16>, %arg5: i64, %arg6: f32, %arg7: f64) -> tensor<8x1024x4096xbf16> {
-    %0 = linalg.generic {indexing_maps = [#map5, #map6, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg3, %arg4 : tensor<8x1024x4096xbf16>, tensor<8x4096x4096xbf16>) outs(%arg2 : tensor<8x1024x4096xbf16>) attrs =  {inner_order = [0 : ui32, 1 : ui32, 2 : ui32, 3 : ui32], outer_order = [0 : ui32, 1 : ui32, 2 : ui32, 3 : ui32], tiling_size = [1 : ui32, 1 : ui32, 1 : ui32, 1 : ui32], unroll_factor = [1 : ui32, 1 : ui32, 1 : ui32, 1 : ui32]} {
+    %0 = linalg.generic {indexing_maps = [#map5, #map6, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg3, %arg4 : tensor<8x1024x4096xbf16>, tensor<8x4096x4096xbf16>) outs(%arg2 : tensor<8x1024x4096xbf16>) attrs =  {inner_order = [0 : ui32, 1 : ui32, 2 : ui32, 3 : ui32], outer_order = [0 : ui32, 1 : ui32, 2 : ui32, 3 : ui32], tiling_size = [1 : ui32, 1 : ui32, 1 : ui32, 1 : ui32], unroll_factor = [1 : ui32, 64 : ui32, 64 : ui32, 1 : ui32]} {
     ^bb0(%in: bf16, %in_0: bf16, %out: bf16):
       %1 = arith.mulf %in, %in_0 : bf16
       %2 = arith.addf %out, %1 : bf16

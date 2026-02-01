@@ -51,6 +51,7 @@ public:
   bool set(int64_t value);
   bool setConst(int64_t value);
   void unsetConst();
+  void inValid();
   bool isConst();
   bool valid();
   int64_t value();
@@ -95,6 +96,7 @@ public:
   bool setUndeterminedPars(const std::vector<int64_t> &undeterminedPars);
   const std::unordered_map<Dimension, int64_t, Dimension::Hash> &
   getDimensionValueMapping();
+  void clearUndeterminedPars();
 
   DimensionRelationNetwork() = default;
   ~DimensionRelationNetwork();
@@ -105,7 +107,7 @@ private:
   std::unordered_map<Dimension, int64_t, Dimension::Hash> dimValue;
   std::vector<Relation *> rels;
   std::vector<Parameter *> pars;
-  std::map<Parameter *, size_t> _indPars;
+  std::unordered_map<Parameter *, size_t> _indPars;
 };
 
 // class Parameter {
@@ -313,11 +315,32 @@ private:
 //   void clearValue();
 // };
 
+class ArchConfig {
+public:
+  size_t bandwidth;    // GB/s
+  size_t sramCapacity; // B
+  size_t mulCnt;       // #
+};
+
+class EvaluationMetric {
+public:
+  double_t throughput;
+  double_t computeDensity;
+  double_t externalAccess;
+  double_t flops;
+  EvaluationMetric() = default;
+  EvaluationMetric(double_t throughput, double_t computeDensity,
+                   double_t externalAccess, double_t flops)
+      : throughput(throughput), computeDensity(computeDensity),
+        externalAccess(externalAccess), flops(flops) {}
+};
+
 class GenericOpCluster {
 public:
   GenericOpCluster();
   GenericOpCluster(linalg::GenericOp *genericOpStart,
                    linalg::GenericOp *genericOpEnd);
+  // GenericOpCluster(const GenericOpCluster &src);
   virtual ~GenericOpCluster() = default;
 
   bool isMember(mlir::Operation *opToCehck);
@@ -345,6 +368,7 @@ public:
   void applyOrder(
       const std::unordered_map<Operation *, llvm::SmallVector<int64_t>> &order);
   bool checkOrder();
+  bool checkArchConstraint(const ArchConfig &cfg);
 
 private:
   unsigned int nInD = 0;
@@ -365,19 +389,6 @@ private:
                           llvm::SmallVector<int64_t> &mask);
 };
 
-class ArchConfig {
-public:
-  size_t bandwidth;    // GB/s
-  size_t sramCapacity; // B
-  size_t mulCnt;       // #
-};
-
-class EvaluationMetric {
-public:
-  double_t throughput;
-  double_t computeDensity;
-};
-
 class PerfModel {
 public:
   EvaluationMetric evaluate(GenericOpCluster &cluster, ArchConfig &cfg);
@@ -389,8 +400,8 @@ public:
   //   ParameterSolvingInterface(GenericOpCluster& cluster);
   virtual ~ParameterSolvingInterface() = default;
 
-  virtual unsigned int solve(GenericOpCluster &cluster, PerfModel &model,
-                             ArchConfig &archCfg) = 0;
+  virtual EvaluationMetric solve(GenericOpCluster &cluster, PerfModel &model,
+                                 ArchConfig &archCfg) = 0;
 
   //  private:
   //   GenericOpCluster& cluster;
@@ -398,8 +409,8 @@ public:
 
 class PruningSolver : public ParameterSolvingInterface {
 public:
-  unsigned int solve(GenericOpCluster &cluster, PerfModel &model,
-                     ArchConfig &archCfg) override;
+  EvaluationMetric solve(GenericOpCluster &cluster, PerfModel &model,
+                         ArchConfig &archCfg) override;
 
   void generateCandidateNetworks(
       std::vector<mlir::Operation *>::iterator curp,

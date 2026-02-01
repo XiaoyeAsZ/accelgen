@@ -1,5 +1,6 @@
 
 
+#include "accelgen/Passes/AccelgenPasses.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Attributes.h"
@@ -13,13 +14,15 @@
 #include <queue>
 #include <vector>
 
-#include "accelgen/Passes/FuseGenericPass.h"
+// #include "accelgen/Passes/Passes.h"
+// #include "accelgen/Passes/FuseGenericPass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
 #include "accelgen/Utils/OperationUtils.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_FUSEGENERICPASS
-#include "accelgen/Passes/FuseGenericPass.h.inc"
+// #include "accelgen/Passes/FuseGenericPass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 
@@ -81,7 +84,7 @@ class ExpandGenericPattern : public mlir::OpRewritePattern<linalg::GenericOp> {
         return mlir::failure();
     }
 
-    genericOp.dump();
+    // genericOp.dump();
 
     auto ctx = rewriter.getContext();
 
@@ -102,8 +105,8 @@ class ExpandGenericPattern : public mlir::OpRewritePattern<linalg::GenericOp> {
     auto realDims = getAffineMapAccessDims(affineMapExpand);
     llvm::SmallVector<AffineExpr> expr;
     for (auto [i, e] : llvm::enumerate(affineMapConsumer.getResults())) {
-      llvm::errs() << i << "\n";
-      e.dump();
+      // llvm::errs() << i << "\n";
+      // e.dump();
       if (std::find(realDims.begin(), realDims.end(), i) == realDims.end()) {
         // expr[i] = getAffineConstantExpr(0, ctx);
         continue;
@@ -118,8 +121,8 @@ class ExpandGenericPattern : public mlir::OpRewritePattern<linalg::GenericOp> {
     indexingMaps[valueIdx] = affineMap;
     auto iteratorTypes = consumerGeneric.getIteratorTypesArray();
 
-    for (auto x : indexingMaps)
-      x.dump();
+    // for (auto x : indexingMaps)
+    //   x.dump();
 
     rewriter.setInsertionPointAfter(consumerGeneric);
     auto fusedGeneric = rewriter.create<linalg::GenericOp>(

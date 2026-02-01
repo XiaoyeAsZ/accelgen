@@ -15,11 +15,14 @@
 
 #include "accelgen/Utils/OperationUtils.h"
 
-#include "accelgen/Passes/MarkGenericPass.h"
+#include "accelgen/Passes/AccelgenPasses.h"
+
+// #include "accelgen/Passes/MarkGenericPass.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_MARKGENERICPASS
-#include "accelgen/Passes/MarkGenericPass.h.inc"
+// #include "accelgen/Passes/MarkGenericPass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 

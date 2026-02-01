@@ -17,10 +17,6 @@ namespace accelgen {
 #define GEN_PASS_DECL
 #include "accelgen/Passes/KernelSchedulePass.h.inc"
 
-using ParameterVariant = std::variant<llvm::SmallVector<int64_t>, int64_t>;
-using ParameterPointerVariant =
-    std::variant<llvm::SmallVector<int64_t>*, int64_t*>;
-
 }  // namespace accelgen
 
 }  // namespace mlir

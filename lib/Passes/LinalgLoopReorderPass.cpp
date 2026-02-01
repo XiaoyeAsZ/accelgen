@@ -1,4 +1,4 @@
-#include "accelgen/Passes/LinalgLoopReorderPass.h"
+// #include "accelgen/Passes/LinalgLoopReorderPass.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -9,10 +9,11 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
+#include "accelgen/Passes/AccelgenPasses.h"
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_LINALGLOOPREORDER
-#include "accelgen/Passes/LinalgLoopReorderPass.h.inc"
+// #include "accelgen/Passes/LinalgLoopReorderPass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 class LinalgLoopReorder
@@ -21,11 +22,11 @@ class LinalgLoopReorder
   using impl::LinalgLoopReorderBase<LinalgLoopReorder>::LinalgLoopReorderBase;
   void runOnOperation() final {
     mlir::ModuleOp moduleOp = getOperation();
-    auto *ctx = &getContext();
+    auto* ctx = &getContext();
     mlir::OpBuilder builder(ctx);
 
     moduleOp.walk([&](mlir::linalg::LinalgOp linalgOp) {
-      mlir::TypeSwitch<mlir::Operation *>(linalgOp)
+      mlir::TypeSwitch<mlir::Operation*>(linalgOp)
           .Case<mlir::linalg::BatchMatmulOp>([&](mlir::linalg::BatchMatmulOp
                                                      batchMatmul) {
             mlir::OpBuilder::InsertionGuard guard(builder);
@@ -77,7 +78,7 @@ class LinalgLoopReorder
                 /*iteratorTypes=*/builder.getArrayAttr(iteratorTypes),
                 /*docString=*/nullptr,
                 /*libraryCall=*/nullptr,
-                [&](OpBuilder &b, Location loc, ValueRange args) {
+                [&](OpBuilder& b, Location loc, ValueRange args) {
                   Value a = args[0];
                   Value bVal = args[1];
                   Value c = args[2];
@@ -90,7 +91,7 @@ class LinalgLoopReorder
             batchMatmul.replaceAllUsesWith(genericOp.getResults());
             batchMatmul.erase();
           })
-          .Default([](mlir::Operation *other) {
+          .Default([](mlir::Operation* other) {
             // ignore or log
           });
     });

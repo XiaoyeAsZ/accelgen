@@ -20,18 +20,25 @@ module {
     %cst_0 = arith.constant 0xFF800000 : f32
     %cst_1 = arith.constant 0.000000e+00 : f32
     %cst_2 = arith.constant 0.088388347648318447 : f64
-    %0 = tensor.empty() : tensor<8x1024x4096xbf16>
-    %1 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%cst : bf16) outs(%0 : tensor<8x1024x4096xbf16>) attrs =  {accelgen.const_broadcast = true, accelgen.memory_transformation = true} {
+    %5 = tensor.empty() : tensor<8x1024x1024xbf16>
+    %6 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%cst : bf16) outs(%5 : tensor<8x1024x1024xbf16>) attrs =  {accelgen.const_broadcast = true, accelgen.memory_transformation = true} {
     ^bb0(%in: bf16, %out: bf16):
       linalg.yield %in : bf16
-    } -> tensor<8x1024x4096xbf16>
-    %2 = linalg.generic {indexing_maps = [#map2, #map3, #map4], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg4 : tensor<8x1024x4096xbf16>, tensor<4096x4096xbf16>) outs(%1 : tensor<8x1024x4096xbf16>) {
+    } -> tensor<8x1024x1024xbf16>
+    %7 = linalg.generic {indexing_maps = [#map2, #map3, #map4], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg5 : tensor<8x1024x4096xbf16>, tensor<4096x1024xbf16>) outs(%6 : tensor<8x1024x1024xbf16>) {
     ^bb0(%in: bf16, %in_19: bf16, %out: bf16):
       %53 = arith.mulf %in, %in_19 : bf16
       %54 = arith.addf %out, %53 : bf16
       linalg.yield %54 : bf16
-    } -> tensor<8x1024x4096xbf16>
-    return 
+    } -> tensor<8x1024x1024xbf16>
+    %10 = linalg.generic {indexing_maps = [#map2, #map3, #map4], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg6 : tensor<8x1024x4096xbf16>, tensor<4096x1024xbf16>) outs(%6 : tensor<8x1024x1024xbf16>) {
+    ^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+      %53 = arith.mulf %in, %in_19 : bf16
+      %54 = arith.addf %out, %53 : bf16
+      linalg.yield %54 : bf16
+    } -> tensor<8x1024x1024xbf16>
+   
+    return
   }
 }
 

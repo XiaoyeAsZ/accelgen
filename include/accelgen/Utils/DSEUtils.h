@@ -31,6 +31,11 @@ public:
   std::vector<std::vector<_DType>> candidates;
   std::vector<size_t> indices;
 
+  void reset() {
+    for (auto &e : indices)
+      e = 0;
+  }
+
 private:
   bool _hasNext = true;
 

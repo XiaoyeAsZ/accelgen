@@ -1,4 +1,4 @@
-#include "accelgen/Passes/LinalgOpFusePass.h"
+// #include "accelgen/Passes/LinalgOpFusePass.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -8,10 +8,12 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_LINALGOPFUSE
-#include "accelgen/Passes/LinalgOpFusePass.h.inc"
+// #include "accelgen/Passes/LinalgOpFusePass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 
@@ -21,8 +23,8 @@ class FuseTransposeExpandBatchMatmulPattern
 
   mlir::LogicalResult matchAndRewrite(
       linalg::BatchMatmulOp matmulOp,
-      mlir::PatternRewriter &rewriter) const override {
-    mlir::MLIRContext *ctx = rewriter.getContext();
+      mlir::PatternRewriter& rewriter) const override {
+    mlir::MLIRContext* ctx = rewriter.getContext();
 
     mlir::tensor::ExpandShapeOp expandShapeOpOrErr =
         mlir::dyn_cast_or_null<mlir::tensor::ExpandShapeOp>(
@@ -116,7 +118,7 @@ class FuseTransposeExpandBatchMatmulPattern
         matmulOp.getLoc(), matmulOp.getResultTypes(),
         ValueRange{matmulOp.getOperand(0), fusedRhs},
         ValueRange{fillTensorOp.getResult(0)}, indexingMaps, iteratorTypes,
-        nullptr, nullptr, [&](OpBuilder &b, Location loc, ValueRange args) {
+        nullptr, nullptr, [&](OpBuilder& b, Location loc, ValueRange args) {
           Value a = args[0];
           Value bVal = args[1];
           Value c = args[2];
@@ -138,7 +140,7 @@ class LinalgOpFuse : public impl::LinalgOpFuseBase<LinalgOpFuse> {
   using impl::LinalgOpFuseBase<LinalgOpFuse>::LinalgOpFuseBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext *ctx = &getContext();
+    mlir::MLIRContext* ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
 
     // Register your rewrite pattern

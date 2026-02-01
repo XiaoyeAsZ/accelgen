@@ -16,13 +16,15 @@
 #include <vector>
 
 #include "accelgen/DSE/KernelScheduleDSE.h"
-#include "accelgen/Passes/KernelSchedulePass.h"
+#include "accelgen/Passes/AccelgenPasses.h"
+// #include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
 #include "accelgen/Utils/OperationUtils.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_KERNELSCHEDULE
-#include "accelgen/Passes/KernelSchedulePass.h.inc"
+// #include "accelgen/Passes/KernelSchedulePass.h.inc"
+#include "accelgen/Passes/AccelgenPasses.h.inc"
 
 namespace {
 
@@ -38,6 +40,7 @@ public:
     PerfModel model = PerfModel();
     ArchConfig archCfg;
     archCfg.bandwidth = 128;
+    archCfg.sramCapacity = 128 * 1024;
 
     // GenericOpClusterDAG clusterDAG;
     ScheduledGenericOpCluster scheduledCluster("pruning_brute_force");
