@@ -46,6 +46,54 @@ std::vector<mlir::Operation*> getTopoOrder(
   return topOrderNodes;
 }
 
+std::vector<mlir::Operation*> getTopoOrderALSP(
+    const std::vector<mlir::Operation*>& ops) {
+  std::vector<mlir::Operation*> topOrderNodes(ops.size());
+  std::unordered_map<mlir::Operation*, unsigned int> inD;
+  std::unordered_map<mlir::Operation*, unsigned int> outD;
+  for (mlir::Operation* op : ops) {
+    inD[op] = 0;
+    outD[op] = 0;
+  }
+  for (mlir::Operation* op : ops) {
+    for (auto user : op->getUsers()) {
+      assert(inD.find(user) != inD.end());
+      inD[user]++;
+      outD[op]++;
+    }
+  }
+  std::queue<mlir::Operation*> nodesWithoutOutD;
+  for (auto [op, outd] : outD) {
+    if (outd == 0) {
+      nodesWithoutOutD.push(op);
+    }
+  }
+  size_t index = topOrderNodes.size() - 1;
+  while (!nodesWithoutOutD.empty()) {
+    auto op = nodesWithoutOutD.front();
+    nodesWithoutOutD.pop();
+    topOrderNodes[index--] = op;
+
+    std::vector<mlir::Operation*> nodes;
+    for (auto operand : op->getOperands()) {
+      // if (inD.find(user) != inD.end()) inD[user]--;
+      auto defOp = operand.getDefiningOp();
+      assert(inD.find(defOp) != inD.end());
+
+      outD[defOp]--;
+      if (outD[defOp] == 0) {
+        nodes.push_back(defOp);
+      }
+    }
+    std::sort(nodes.begin(), nodes.end(),
+              [&](mlir::Operation* a, mlir::Operation* b) {
+                return inD[a] < inD[b];
+              });
+    for (auto op : nodes) nodesWithoutOutD.push(op);
+  }
+  return topOrderNodes;
+}
+
 std::vector<linalg::GenericOp> getProducerGeneric(mlir::Value operand) {
   std::vector<linalg::GenericOp> producers;
   auto definingOp = operand.getDefiningOp();

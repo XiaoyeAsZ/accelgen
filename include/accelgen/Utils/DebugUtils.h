@@ -5,8 +5,8 @@
 
 #ifdef ACCELGEN_DEBUG
 #define ECHO(content, split) llvm::errs() << content << split;
-#define ECHO_LIST(list, split)                                                 \
-  llvm::interleave(list, llvm::errs(), split);                                 \
+#define ECHO_LIST(list, split)                 \
+  llvm::interleave(list, llvm::errs(), split); \
   llvm::errs() << "\n";
 #else
 #define ECHO(content, split) ;

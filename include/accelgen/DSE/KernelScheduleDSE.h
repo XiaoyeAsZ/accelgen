@@ -13,25 +13,24 @@ namespace mlir {
 namespace accelgen {
 
 class Dimension {
-public:
-  mlir::Operation *op;
+ public:
+  mlir::Operation* op;
   int64_t dim;
 
-  Dimension(mlir::Operation *op, int64_t dim) : op(op), dim(dim) {};
+  Dimension(mlir::Operation* op, int64_t dim) : op(op), dim(dim) {};
 
-  bool operator<(const Dimension &other) const {
-    if (op != other.op)
-      return op < other.op;
+  bool operator<(const Dimension& other) const {
+    if (op != other.op) return op < other.op;
     return dim < other.dim;
   }
 
-  bool operator==(const Dimension &other) const {
+  bool operator==(const Dimension& other) const {
     return op == other.op && dim == other.dim;
   }
 
   struct Hash {
-    std::size_t operator()(const Dimension &d) const noexcept {
-      size_t h1 = std::hash<mlir::Operation *>()(d.op);
+    std::size_t operator()(const Dimension& d) const noexcept {
+      size_t h1 = std::hash<mlir::Operation*>()(d.op);
       size_t h2 = std::hash<int64_t>()(d.dim);
 
       return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
@@ -43,11 +42,11 @@ class Parameter;
 class Relation;
 
 class Parameter {
-public:
+ public:
   Parameter(int64_t bound);
-  Parameter(const Parameter &src);
+  Parameter(const Parameter& src);
 
-  void addRelation(Relation *rel);
+  void addRelation(Relation* rel);
   bool set(int64_t value);
   bool setConst(int64_t value);
   void unsetConst();
@@ -56,58 +55,58 @@ public:
   bool valid();
   int64_t value();
   int64_t bound();
-  const std::vector<Relation *> &relations();
+  const std::vector<Relation*>& relations();
 
-private:
+ private:
   bool _valid;
   bool _const;
   int64_t _value;
   int64_t _bound;
-  std::vector<Relation *> _relations;
+  std::vector<Relation*> _relations;
 };
 
 class Relation {
-public:
+ public:
   enum class DeduceType { EQUAL, COLLAPSE };
   Relation() = default;
-  Relation(const Relation &src);
-  Relation(DeduceType type, llvm::ArrayRef<Parameter *> dims);
-  const std::vector<Parameter *> &deducedParameters();
+  Relation(const Relation& src);
+  Relation(DeduceType type, llvm::ArrayRef<Parameter*> dims);
+  const std::vector<Parameter*>& deducedParameters();
   bool forward(int64_t value);
   DeduceType type();
 
-private:
+ private:
   DeduceType _relType;
-  std::vector<Parameter *> _deducedParameters;
+  std::vector<Parameter*> _deducedParameters;
 };
 
 class DimensionRelationNetwork {
-public:
-  bool addDimension(const Dimension &dim, int64_t bound);
-  bool addEqualRelation(const Dimension &dimSrc, const Dimension &dimTarget);
-  bool addCollapseRelation(const Dimension &dimSrc,
+ public:
+  bool addDimension(const Dimension& dim, int64_t bound);
+  bool addEqualRelation(const Dimension& dimSrc, const Dimension& dimTarget);
+  bool addCollapseRelation(const Dimension& dimSrc,
                            llvm::ArrayRef<Dimension> dimTarget);
-  bool setConstDimension(const Dimension &dim, int64_t value);
-  bool removeConstDimension(const Dimension &dim);
-  bool isConst(const Dimension &dim);
+  bool setConstDimension(const Dimension& dim, int64_t value);
+  bool removeConstDimension(const Dimension& dim);
+  bool isConst(const Dimension& dim);
   bool forward();
-  int64_t getValue(const Dimension &dim);
+  int64_t getValue(const Dimension& dim);
   std::vector<int64_t> getUndeterminedParsBound();
-  bool setUndeterminedPars(const std::vector<int64_t> &undeterminedPars);
-  const std::unordered_map<Dimension, int64_t, Dimension::Hash> &
+  bool setUndeterminedPars(const std::vector<int64_t>& undeterminedPars);
+  const std::unordered_map<Dimension, int64_t, Dimension::Hash>&
   getDimensionValueMapping();
   void clearUndeterminedPars();
 
   DimensionRelationNetwork() = default;
   ~DimensionRelationNetwork();
-  DimensionRelationNetwork(const DimensionRelationNetwork &src);
+  DimensionRelationNetwork(const DimensionRelationNetwork& src);
 
-private:
-  std::map<Dimension, Parameter *> dimMapping;
+ private:
+  std::map<Dimension, Parameter*> dimMapping;
   std::unordered_map<Dimension, int64_t, Dimension::Hash> dimValue;
-  std::vector<Relation *> rels;
-  std::vector<Parameter *> pars;
-  std::unordered_map<Parameter *, size_t> _indPars;
+  std::vector<Relation*> rels;
+  std::vector<Parameter*> pars;
+  std::unordered_map<Parameter*, size_t> _indPars;
 };
 
 // class Parameter {
@@ -316,14 +315,14 @@ private:
 // };
 
 class ArchConfig {
-public:
-  size_t bandwidth;    // GB/s
-  size_t sramCapacity; // B
-  size_t mulCnt;       // #
+ public:
+  size_t bandwidth;     // GB/s
+  size_t sramCapacity;  // B
+  size_t mulCnt;        // #
 };
 
 class EvaluationMetric {
-public:
+ public:
   double_t throughput;
   double_t computeDensity;
   double_t externalAccess;
@@ -331,134 +330,145 @@ public:
   EvaluationMetric() = default;
   EvaluationMetric(double_t throughput, double_t computeDensity,
                    double_t externalAccess, double_t flops)
-      : throughput(throughput), computeDensity(computeDensity),
-        externalAccess(externalAccess), flops(flops) {}
+      : throughput(throughput),
+        computeDensity(computeDensity),
+        externalAccess(externalAccess),
+        flops(flops) {}
 };
 
 class GenericOpCluster {
-public:
+ public:
   GenericOpCluster();
-  GenericOpCluster(linalg::GenericOp *genericOpStart,
-                   linalg::GenericOp *genericOpEnd);
+  GenericOpCluster(linalg::GenericOp* genericOpStart,
+                   linalg::GenericOp* genericOpEnd);
   // GenericOpCluster(const GenericOpCluster &src);
   virtual ~GenericOpCluster() = default;
 
-  bool isMember(mlir::Operation *opToCehck);
+  bool isMember(mlir::Operation* opToCehck);
 
-  void attachAttribute(mlir::MLIRContext *ctx);
+  void attachAttribute(mlir::MLIRContext* ctx);
 
   void evaluate();
 
-  std::unordered_set<mlir::Operation *>::iterator begin();
-  std::unordered_set<mlir::Operation *>::iterator end();
+  std::unordered_set<mlir::Operation*>::iterator begin();
+  std::unordered_set<mlir::Operation*>::iterator end();
 
   void clearParameter();
 
-  std::vector<mlir::Operation *> &getNodeSetTopOrder();
+  std::vector<mlir::Operation*>& getNodeSetTopOrder();
   std::unordered_map<
-      mlir::Operation *,
-      std::unordered_map<std::string, llvm::SmallVector<int64_t>>> &
+      mlir::Operation*,
+      std::unordered_map<std::string, llvm::SmallVector<int64_t>>>&
   getParameter();
   // auto getMetric();
 
   DimensionRelationNetwork extractDimRelation();
 
   void applyTiling(
-      const std::unordered_map<Dimension, int64_t, Dimension::Hash> &tiling);
+      const std::unordered_map<Dimension, int64_t, Dimension::Hash>& tiling);
   void applyOrder(
-      const std::unordered_map<Operation *, llvm::SmallVector<int64_t>> &order);
+      const std::unordered_map<Operation*, llvm::SmallVector<int64_t>>& order);
   bool checkOrder();
-  bool checkArchConstraint(const ArchConfig &cfg);
+  bool checkReuseDistance(const llvm::SmallVector<int64_t>& order,
+                          const llvm::SmallVector<int64_t>& dims,
+                          const llvm::SmallVector<int64_t>& mask);
+  bool checkArchConstraint(const ArchConfig& cfg);
+  bool checkOpOrder(mlir::Operation* op);
 
-private:
+ private:
   unsigned int nInD = 0;
   unsigned int nCycles = 0;
   unsigned int memAccess = 0;
   unsigned int cost = 0;
-  std::unordered_set<mlir::Operation *> nodeSet;
-  std::vector<mlir::Operation *> nodeSetTopOrder;
+  std::unordered_set<mlir::Operation*> nodeSet;
+  std::vector<mlir::Operation*> nodeSetTopOrder;
   std::unordered_map<
-      mlir::Operation *,
+      mlir::Operation*,
       std::unordered_map<std::string, llvm::SmallVector<int64_t>>>
       parameter;
 
-  void factorForwardHelp(mlir::Operation *op, int64_t factor);
-
-  bool checkReuseDistance(llvm::SmallVector<int64_t> &order,
-                          llvm::SmallVector<int64_t> &dims,
-                          llvm::SmallVector<int64_t> &mask);
+  void factorForwardHelp(mlir::Operation* op, int64_t factor);
+  std::vector<int64_t> getDimsInOrder(linalg::GenericOp op,
+                                      mlir::Value operand);
 };
 
 class PerfModel {
-public:
-  EvaluationMetric evaluate(GenericOpCluster &cluster, ArchConfig &cfg);
+ public:
+  EvaluationMetric evaluate(GenericOpCluster& cluster, ArchConfig& cfg);
 };
 
 class ParameterSolvingInterface {
-public:
+ public:
   ParameterSolvingInterface() = default;
   //   ParameterSolvingInterface(GenericOpCluster& cluster);
   virtual ~ParameterSolvingInterface() = default;
 
-  virtual EvaluationMetric solve(GenericOpCluster &cluster, PerfModel &model,
-                                 ArchConfig &archCfg) = 0;
+  virtual EvaluationMetric solve(GenericOpCluster& cluster, PerfModel& model,
+                                 ArchConfig& archCfg) = 0;
 
   //  private:
   //   GenericOpCluster& cluster;
 };
 
 class PruningSolver : public ParameterSolvingInterface {
-public:
-  EvaluationMetric solve(GenericOpCluster &cluster, PerfModel &model,
-                         ArchConfig &archCfg) override;
+ public:
+  EvaluationMetric solve(GenericOpCluster& cluster, PerfModel& model,
+                         ArchConfig& archCfg) override;
 
   void generateCandidateNetworks(
-      std::vector<mlir::Operation *>::iterator curp,
-      std::vector<mlir::Operation *>::iterator endp, GenericOpCluster &cluster,
-      std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>>
-          &curOrder,
-      DimensionRelationNetwork &curNetwork,
+      std::vector<mlir::Operation*>::iterator curp,
+      std::vector<mlir::Operation*>::iterator endp, GenericOpCluster& cluster,
+      std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>&
+          curOrder,
+      DimensionRelationNetwork& curNetwork,
 
       std::vector<
-          std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>>>
-          &candidateOrder,
-      std::vector<DimensionRelationNetwork> &candidateNetworks);
+          std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>>&
+          candidateOrder,
+      std::vector<DimensionRelationNetwork>& candidateNetworks);
 
-private:
+  void generateCandidateOrders(
+      GenericOpCluster& cluster, std::vector<mlir::Operation*>::iterator curOp,
+      std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>&
+          candidate,
+      std::vector<std::unordered_map<mlir::Operation*,
+                                     llvm::SmallVector<int64_t>>>& orders);
+
+ private:
   std::vector<llvm::SmallVector<int64_t>> generatePermutation(size_t n);
   std::vector<llvm::SmallVector<int64_t>> generateBitMask(size_t n);
 
-  bool checkOrder(GenericOpCluster &cluster, linalg::GenericOp &op,
-                  llvm::SmallVector<int64_t> &order,
-                  llvm::SmallVector<int64_t> &mask);
+  bool checkOrder(GenericOpCluster& cluster, linalg::GenericOp& op,
+                  llvm::SmallVector<int64_t>& order,
+                  llvm::SmallVector<int64_t>& mask);
 
-  bool checkReuseDistance(llvm::SmallVector<int64_t> &order,
-                          llvm::SmallVector<int64_t> &dims,
-                          llvm::SmallVector<int64_t> &mask);
+  bool checkReuseDistance(llvm::SmallVector<int64_t>& order,
+                          llvm::SmallVector<int64_t>& dims,
+                          llvm::SmallVector<int64_t>& mask);
 };
 
 class ScheduledGenericOpCluster {
-public:
+ public:
   ScheduledGenericOpCluster() = default;
   ScheduledGenericOpCluster(llvm::StringRef solver);
   ~ScheduledGenericOpCluster();
-  void insertOp(mlir::Operation *op);
+  void insertOp(mlir::Operation* op);
   void insertGenericOp(linalg::GenericOp genericOp);
-  void schedule(mlir::MLIRContext *ctx, PerfModel &model, ArchConfig &archCfg);
+  void schedule(mlir::MLIRContext* ctx, PerfModel& model, ArchConfig& archCfg);
 
-  std::vector<mlir::accelgen::GenericOpCluster *>::iterator begin();
-  std::vector<mlir::accelgen::GenericOpCluster *>::iterator end();
+  std::vector<mlir::accelgen::GenericOpCluster*>::iterator begin();
+  std::vector<mlir::accelgen::GenericOpCluster*>::iterator end();
 
-private:
-  std::vector<mlir::Operation *> ops;
+ private:
+  std::vector<mlir::Operation*> ops;
   std::vector<linalg::GenericOp> genericOps;
-  std::vector<GenericOpCluster *> clusters;
+  std::vector<GenericOpCluster*> clusters;
   std::vector<linalg::GenericOp> getTopSortedNodes();
 
-  ParameterSolvingInterface *solver;
+  ParameterSolvingInterface* solver;
 };
 
-} // namespace accelgen
-} // namespace mlir
+}  // namespace accelgen
+}  // namespace mlir
 
 #endif

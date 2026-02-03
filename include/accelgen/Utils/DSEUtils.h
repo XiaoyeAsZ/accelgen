@@ -32,8 +32,10 @@ public:
   std::vector<size_t> indices;
 
   void reset() {
-    for (auto &e : indices)
+    for (auto &e : indices) {
       e = 0;
+      _hasNext = true;
+    }
   }
 
 private:

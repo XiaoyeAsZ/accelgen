@@ -6,7 +6,8 @@
 
 namespace mlir {
 namespace accelgen {
-llvm::SmallVector<int64_t> getAffineMapAccessDims(mlir::AffineMap& affineMap);
+llvm::SmallVector<int64_t> getAffineMapAccessDims(
+    const mlir::AffineMap& affineMap);
 }
 }  // namespace mlir
 

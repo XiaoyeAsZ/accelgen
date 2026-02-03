@@ -2,9 +2,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 
 namespace mlir::accelgen {
-llvm::SmallVector<int64_t> getAffineMapAccessDims(mlir::AffineMap &affineMap) {
+llvm::SmallVector<int64_t> getAffineMapAccessDims(
+    const mlir::AffineMap& affineMap) {
   llvm::SmallVector<int64_t> accessDims;
-  for (auto expr : affineMap.getResults()) {
+  for (const auto& expr : affineMap.getResults()) {
     expr.walk([&](AffineExpr e) {
       if (auto dim = mlir::dyn_cast<AffineDimExpr>(e)) {
         accessDims.push_back(dim.getPosition());
@@ -13,4 +14,10 @@ llvm::SmallVector<int64_t> getAffineMapAccessDims(mlir::AffineMap &affineMap) {
   }
   return accessDims;
 }
-} // namespace mlir::accelgen
+
+std::vector<int64_t> getAccessOrder(const llvm::SmallVector<int64_t>& order,
+                                    const mlir::AffineMap& affineMap) {
+  auto accessDims = getAffineMapAccessDims(affineMap);
+}
+
+}  // namespace mlir::accelgen
