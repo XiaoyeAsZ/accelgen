@@ -6,7 +6,6 @@ from torch_to_mlir import dump_to_mlir
 
 
 class GPT2MLP(nn.Module):
-    """GPT-2 MLP (Feed-Forward Network)"""
     def __init__(self, config):
         super().__init__()
         embed_dim = config.hidden_size
@@ -14,7 +13,7 @@ class GPT2MLP(nn.Module):
         
         self.c_fc = Conv1D(intermediate_size, embed_dim)
         self.c_proj = Conv1D(embed_dim, intermediate_size)
-        self.act = nn.GELU(approximate='tanh')  # GPT-2 uses tanh approximation
+        self.act = nn.GELU(approximate='tanh')
         self.dropout = nn.Dropout(config.resid_pdrop)
     
     def forward(self, hidden_states):
@@ -40,7 +39,7 @@ class GPT2Attention(nn.Module):
                 f"`embed_dim` must be divisible by num_heads (got `embed_dim`: {embed_dim} and `num_heads`: {num_heads})."
             )
         
-        # 注册 causal mask buffer（保留原始实现）
+    
         self.register_buffer(
             "bias",
             torch.tril(torch.ones((max_positions, max_positions), dtype=torch.bool)).view(
@@ -50,13 +49,12 @@ class GPT2Attention(nn.Module):
         )
         self.register_buffer("masked_bias", torch.tensor(-1e4), persistent=False)
         
-        # 将整数配置注册为张量 buffer
+    
         self.register_buffer("embed_dim_t", torch.tensor(embed_dim, dtype=torch.int64), persistent=False)
         self.register_buffer("num_heads_t", torch.tensor(num_heads, dtype=torch.int64), persistent=False)
         self.register_buffer("head_dim_t", torch.tensor(head_dim, dtype=torch.int64), persistent=False)
         self.register_buffer("split_size_t", torch.tensor(embed_dim, dtype=torch.int64), persistent=False)
         
-        # 保留原始值用于初始化
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.head_dim = head_dim
@@ -76,7 +74,6 @@ class GPT2Attention(nn.Module):
         self.is_causal = True
     
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
-        """完整的注意力计算，包含 causal mask"""
         attn_weights = torch.matmul(query, key.transpose(-1, -2))
         
         if self.scale_attn_weights:
@@ -87,9 +84,8 @@ class GPT2Attention(nn.Module):
         if self.scale_attn_by_inverse_layer_idx and self.layer_idx is not None:
             attn_weights = attn_weights / float(self.layer_idx + 1)
         
-        # 应用 causal mask（保留）
         if not self.is_cross_attention:
-            # 使用张量操作获取长度
+            
             query_length = query.shape[-2]
             key_length = key.shape[-2]
             causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
@@ -112,52 +108,35 @@ class GPT2Attention(nn.Module):
         return attn_output, attn_weights
     
     def _split_heads(self, tensor, num_heads, head_dim):
-        """
-        将 hidden_size 拆分为 (num_heads, head_dim)
-        避免使用整数参数的 view
-        """
+
         batch_size, seq_len, hidden = tensor.shape[0], tensor.shape[1], tensor.shape[2]
-        # 使用 reshape 而不是 view，并直接用 -1 推断
+        
         tensor = tensor.reshape(batch_size, seq_len, num_heads, head_dim)
         return tensor.permute(0, 2, 1, 3)  # (batch, head, seq_length, head_dim)
     
     def _merge_heads(self, tensor, num_heads, head_dim):
-        """
-        合并 attention heads
-        避免使用整数参数
-        """
+
         tensor = tensor.permute(0, 2, 1, 3).contiguous()
         batch_size, seq_len = tensor.shape[0], tensor.shape[1]
-        # 使用 -1 让 PyTorch 自动推断最后一维
         return tensor.reshape(batch_size, seq_len, -1)
     
     def forward(self, hidden_states, attention_mask=None, head_mask=None):
-        """
-        完整的 forward, 保留所有计算但去掉 cache 和 cross-attention
-        hidden_states: [batch, seq_len, embed_dim]
-        """
-        # QKV 投影
         qkv = self.c_attn(hidden_states)  # [batch, seq_len, 3*embed_dim]
         
-        # 手动分割 QKV，避免使用 .split() 和整数常量
-        # 使用张量切片而不是 split
-        dim_size = qkv.shape[-1] // 3  # 这会在编译时计算
+        dim_size = qkv.shape[-1] // 3 
         query = qkv[..., :dim_size]
         key = qkv[..., dim_size:2*dim_size]
         value = qkv[..., 2*dim_size:]
         
-        # 分割 heads
+       
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
         value = self._split_heads(value, self.num_heads, self.head_dim)
-        
-        # 注意力计算（包含 causal mask）
+          
         attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
         
-        # 合并 heads
         attn_output = self._merge_heads(attn_output, self.num_heads, self.head_dim)
         
-        # 输出投影
         attn_output = self.c_proj(attn_output)
         attn_output = self.resid_dropout(attn_output)
         
@@ -165,7 +144,6 @@ class GPT2Attention(nn.Module):
 
 
 class GPT2Block(nn.Module):
-    """完整的 GPT-2 Transformer Block: LayerNorm -> Attention -> Residual -> LayerNorm -> MLP -> Residual"""
     def __init__(self, config):
         super().__init__()
         hidden_size = config.hidden_size
@@ -176,28 +154,21 @@ class GPT2Block(nn.Module):
         self.mlp = GPT2MLP(config)
     
     def forward(self, hidden_states, attention_mask=None, head_mask=None):
-        """
-        完整的 Transformer Block forward
-        hidden_states: [batch, seq_len, embed_dim]
-        """
-        # Pre-LN: LayerNorm -> Attention
+       
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
         attn_output, attn_weights = self.attn(hidden_states, attention_mask, head_mask)
-        # Residual connection
+
         hidden_states = attn_output + residual
         
-        # Pre-LN: LayerNorm -> MLP
         residual = hidden_states
         hidden_states = self.ln_2(hidden_states)
         mlp_output = self.mlp(hidden_states)
-        # Residual connection
+        
         hidden_states = mlp_output + residual
         
         return hidden_states, attn_weights
 
-
-# 配置和模型
 config = AutoConfig.from_pretrained("gpt2", attn_implementation="eager")
 config.use_cache = False
 config._use_sdpa = False
@@ -209,4 +180,4 @@ print(f"Model config: embed_dim={config.hidden_size}, num_heads={config.num_atte
 
 dummy_input = (torch.randn(1, 16, 768, dtype=torch.bfloat16),)
 
-dump_to_mlir("./mlir/gpt2.mlir", model, dummy_input)
+dump_to_mlir("./mlir/gpt2_wo_cache.mlir", model, dummy_input)
