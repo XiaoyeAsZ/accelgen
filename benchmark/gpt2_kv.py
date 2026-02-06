@@ -5,7 +5,7 @@ from transformers.pytorch_utils import Conv1D
 from transformers.cache_utils import DynamicCache, EncoderDecoderCache
 from torch_to_mlir import dump_to_mlir
 
-KV_CACHE = True
+KV_CACHE = False
 
 class GPT2MLP(nn.Module):
     def __init__(self, config):
