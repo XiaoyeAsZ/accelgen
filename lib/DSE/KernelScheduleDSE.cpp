@@ -25,21 +25,19 @@ namespace mlir::accelgen {
 
 Parameter::Parameter(int64_t bound)
     : _bound(bound), _valid(false), _const(false) {}
-Parameter::Parameter(const Parameter &src)
+Parameter::Parameter(const Parameter& src)
     : _const(src._const), _value(src._value), _bound(src._bound) {}
-void Parameter::addRelation(Relation *rel) { _relations.push_back(rel); }
+void Parameter::addRelation(Relation* rel) { _relations.push_back(rel); }
 
 bool Parameter::set(int64_t value) {
-  if ((_valid | _const) && value != _value)
-    return false;
+  if ((_valid | _const) && value != _value) return false;
   this->_value = value;
   this->_valid = true;
   return true;
 }
 
 bool Parameter::setConst(int64_t value) {
-  if (_const && value != _value)
-    return false;
+  if (_const && value != _value) return false;
   _const = true;
   _valid = true;
   this->_value = value;
@@ -55,61 +53,55 @@ bool Parameter::isConst() { return _const; }
 bool Parameter::valid() { return _valid; }
 void Parameter::inValid() { _valid = false; }
 
-const std::vector<Relation *> &Parameter::relations() { return _relations; }
+const std::vector<Relation*>& Parameter::relations() { return _relations; }
 
 int64_t Parameter::value() { return _value; }
 int64_t Parameter::bound() { return _bound; }
 
-Relation::Relation(Relation::DeduceType type, llvm::ArrayRef<Parameter *> dims)
+Relation::Relation(Relation::DeduceType type, llvm::ArrayRef<Parameter*> dims)
     : _relType(type) {
-  for (auto dim : dims)
-    _deducedParameters.push_back(dim);
+  for (auto dim : dims) _deducedParameters.push_back(dim);
 }
 
-const std::vector<Parameter *> &Relation::deducedParameters() {
+const std::vector<Parameter*>& Relation::deducedParameters() {
   return _deducedParameters;
 };
 
 bool Relation::forward(int64_t value) {
   switch (this->_relType) {
-  case DeduceType::EQUAL: {
-    for (auto &p : this->_deducedParameters) {
-      if (!p->set(value))
-        return false;
-    }
-  } break;
-  case DeduceType::COLLAPSE: {
-    auto factor = value;
-    auto iter = _deducedParameters.rbegin();
-    for (; iter != _deducedParameters.rend(); iter++) {
-      auto d = factor / (*iter)->bound();
-      auto r = factor % (*iter)->bound();
-      if (d > 0) {
-        if (r != 0)
-          return false;
-        factor = d;
-        if (!((*iter)->set((*iter)->bound())))
-          return false;
-      } else if (d == 0) {
-        if (!((*iter)->set(r)))
-          return false;
-        iter++;
-        break;
-      } else
-        assert(0);
-    }
-    for (; iter != _deducedParameters.rend(); iter++) {
-      if (!((*iter)->set(1)))
-        return false;
-    }
-  } break;
-  default:
-    assert(0);
-    break;
+    case DeduceType::EQUAL: {
+      for (auto& p : this->_deducedParameters) {
+        if (!p->set(value)) return false;
+      }
+    } break;
+    case DeduceType::COLLAPSE: {
+      auto factor = value;
+      auto iter = _deducedParameters.rbegin();
+      for (; iter != _deducedParameters.rend(); iter++) {
+        auto d = factor / (*iter)->bound();
+        auto r = factor % (*iter)->bound();
+        if (d > 0) {
+          if (r != 0) return false;
+          factor = d;
+          if (!((*iter)->set((*iter)->bound()))) return false;
+        } else if (d == 0) {
+          if (!((*iter)->set(r))) return false;
+          iter++;
+          break;
+        } else
+          assert(0);
+      }
+      for (; iter != _deducedParameters.rend(); iter++) {
+        if (!((*iter)->set(1))) return false;
+      }
+    } break;
+    default:
+      assert(0);
+      break;
   }
   return true;
 }
-Relation::Relation(const Relation &src) : _relType(src._relType) {}
+Relation::Relation(const Relation& src) : _relType(src._relType) {}
 Relation::DeduceType Relation::type() { return _relType; }
 
 // ============================
@@ -117,39 +109,31 @@ Relation::DeduceType Relation::type() { return _relType; }
 // ============================
 
 DimensionRelationNetwork::~DimensionRelationNetwork() {
-  for (auto r : rels)
-    delete r;
-  for (auto p : pars)
-    delete p;
+  for (auto r : rels) delete r;
+  for (auto p : pars) delete p;
 }
 
 DimensionRelationNetwork::DimensionRelationNetwork(
-    const DimensionRelationNetwork &src) {
-  std::unordered_map<Parameter *, Parameter *> parMap;
-  for (auto p : src.pars)
-    parMap[p] = new Parameter(*p);
-  for (auto &[op, np] : parMap) {
-    for (auto &orel : op->relations()) {
-      std::vector<Parameter *> pars;
-      for (auto p : orel->deducedParameters())
-        pars.push_back(parMap[p]);
+    const DimensionRelationNetwork& src) {
+  std::unordered_map<Parameter*, Parameter*> parMap;
+  for (auto p : src.pars) parMap[p] = new Parameter(*p);
+  for (auto& [op, np] : parMap) {
+    for (auto& orel : op->relations()) {
+      std::vector<Parameter*> pars;
+      for (auto p : orel->deducedParameters()) pars.push_back(parMap[p]);
       auto nrel = new Relation(orel->type(), pars);
       np->addRelation(nrel);
       rels.push_back(nrel);
     }
   }
-  for (auto &[d, p] : src.dimMapping)
-    this->dimMapping[d] = parMap[p];
-  for (auto &[op, np] : parMap)
-    pars.push_back(np);
-  for (auto &[p, id] : src._indPars)
-    this->_indPars[parMap[p]] = id;
+  for (auto& [d, p] : src.dimMapping) this->dimMapping[d] = parMap[p];
+  for (auto& [op, np] : parMap) pars.push_back(np);
+  for (auto& [p, id] : src._indPars) this->_indPars[parMap[p]] = id;
 }
 
-bool DimensionRelationNetwork::addDimension(const Dimension &dim,
+bool DimensionRelationNetwork::addDimension(const Dimension& dim,
                                             int64_t bound) {
-  if (dimMapping.find(dim) != dimMapping.end())
-    return false;
+  if (dimMapping.find(dim) != dimMapping.end()) return false;
   auto par = new Parameter(bound);
   pars.push_back(par);
   dimMapping[dim] = par;
@@ -157,8 +141,8 @@ bool DimensionRelationNetwork::addDimension(const Dimension &dim,
   return true;
 }
 
-bool DimensionRelationNetwork::addEqualRelation(const Dimension &dimSrc,
-                                                const Dimension &dimTarget) {
+bool DimensionRelationNetwork::addEqualRelation(const Dimension& dimSrc,
+                                                const Dimension& dimTarget) {
   if (dimMapping.find(dimSrc) == dimMapping.end() ||
       dimMapping.find(dimTarget) == dimMapping.end())
     return false;
@@ -170,13 +154,11 @@ bool DimensionRelationNetwork::addEqualRelation(const Dimension &dimSrc,
 }
 
 bool DimensionRelationNetwork::addCollapseRelation(
-    const Dimension &dimSrc, llvm::ArrayRef<Dimension> dimTarget) {
-  if (dimMapping.find(dimSrc) == dimMapping.end())
-    return false;
-  std::vector<Parameter *> pars;
+    const Dimension& dimSrc, llvm::ArrayRef<Dimension> dimTarget) {
+  if (dimMapping.find(dimSrc) == dimMapping.end()) return false;
+  std::vector<Parameter*> pars;
   for (auto dim : dimTarget) {
-    if (dimMapping.find(dim) == dimMapping.end())
-      return false;
+    if (dimMapping.find(dim) == dimMapping.end()) return false;
     pars.push_back(dimMapping[dim]);
     _indPars[dimMapping[dim]]++;
   }
@@ -186,39 +168,35 @@ bool DimensionRelationNetwork::addCollapseRelation(
   return true;
 }
 
-bool DimensionRelationNetwork::setConstDimension(const Dimension &dim,
+bool DimensionRelationNetwork::setConstDimension(const Dimension& dim,
                                                  int64_t value) {
-  if (dimMapping.find(dim) == dimMapping.end())
-    return false;
+  if (dimMapping.find(dim) == dimMapping.end()) return false;
   dimMapping[dim]->set(value);
   return true;
 }
 
 bool DimensionRelationNetwork::forward() {
-  std::unordered_map<Parameter *, size_t> ind(_indPars);
-  std::queue<Parameter *> q;
+  std::unordered_map<Parameter*, size_t> ind(_indPars);
+  std::queue<Parameter*> q;
   for (auto [p, d] : ind) {
-    if (d == 0)
-      q.push(p);
+    if (d == 0) q.push(p);
   }
   while (!q.empty()) {
     auto p = q.front();
     q.pop();
     assert(p->valid());
     for (auto dr : p->relations()) {
-      if (!dr->forward(p->value()))
-        return false;
+      if (!dr->forward(p->value())) return false;
       for (auto dp : dr->deducedParameters()) {
         ind[dp]--;
-        if (ind[dp] == 0)
-          q.push(dp);
+        if (ind[dp] == 0) q.push(dp);
       }
     }
   }
   return true;
 }
 
-int64_t DimensionRelationNetwork::getValue(const Dimension &dim) {
+int64_t DimensionRelationNetwork::getValue(const Dimension& dim) {
   assert(dimMapping.find(dim) != dimMapping.end());
   assert(dimMapping[dim]->valid());
   return dimMapping[dim]->value();
@@ -232,20 +210,19 @@ std::vector<int64_t> DimensionRelationNetwork::getUndeterminedParsBound() {
   // }
   // return bounds;
   std::vector<int64_t> bounds;
-  for (auto &p : pars) {
-    if (_indPars[p] == 0 && (!p->isConst()))
-      bounds.push_back(p->bound());
+  for (auto& p : pars) {
+    if (_indPars[p] == 0 && (!p->isConst())) bounds.push_back(p->bound());
   }
   return bounds;
 }
 
-bool DimensionRelationNetwork::isConst(const Dimension &dim) {
+bool DimensionRelationNetwork::isConst(const Dimension& dim) {
   assert(dimMapping.find(dim) != dimMapping.end());
   return dimMapping[dim]->isConst();
 }
 
 bool DimensionRelationNetwork::setUndeterminedPars(
-    const std::vector<int64_t> &undeterminedPars) {
+    const std::vector<int64_t>& undeterminedPars) {
   clearUndeterminedPars();
 
   // for (auto xx : undeterminedPars) {
@@ -259,10 +236,9 @@ bool DimensionRelationNetwork::setUndeterminedPars(
   // }
   // for (auto [p, v] : llvm::zip(ups, undeterminedPars)) {
   //   assert(p->set(v));
-  std::vector<Parameter *> ups;
-  for (auto &p : pars) {
-    if (_indPars[p] == 0 && (!p->isConst()))
-      ups.push_back(p);
+  std::vector<Parameter*> ups;
+  for (auto& p : pars) {
+    if (_indPars[p] == 0 && (!p->isConst())) ups.push_back(p);
   }
   for (auto [p, v] : llvm::zip(ups, undeterminedPars)) {
     assert(p->set(v));
@@ -270,23 +246,22 @@ bool DimensionRelationNetwork::setUndeterminedPars(
 }
 
 void DimensionRelationNetwork::clearUndeterminedPars() {
-  for (auto &p : pars) {
-    if (!p->isConst())
-      p->inValid();
+  for (auto& p : pars) {
+    if (!p->isConst()) p->inValid();
   }
 }
 
-const std::unordered_map<Dimension, int64_t, Dimension::Hash> &
+const std::unordered_map<Dimension, int64_t, Dimension::Hash>&
 DimensionRelationNetwork::getDimensionValueMapping() {
   dimValue.clear();
-  for (auto &[d, p] : dimMapping) {
+  for (auto& [d, p] : dimMapping) {
     dimValue[d] = p->value();
   }
 
   return dimValue;
 }
 
-bool DimensionRelationNetwork::removeConstDimension(const Dimension &dim) {
+bool DimensionRelationNetwork::removeConstDimension(const Dimension& dim) {
   assert(dimMapping.find(dim) != dimMapping.end());
   dimMapping[dim]->unsetConst();
 }
@@ -490,8 +465,8 @@ bool DimensionRelationNetwork::removeConstDimension(const Dimension &dim) {
 // ============================
 
 GenericOpCluster::GenericOpCluster() {};
-GenericOpCluster::GenericOpCluster(linalg::GenericOp *genericOpStart,
-                                   linalg::GenericOp *genericOpEnd)
+GenericOpCluster::GenericOpCluster(linalg::GenericOp* genericOpStart,
+                                   linalg::GenericOp* genericOpEnd)
     : nodeSet(genericOpStart, genericOpEnd),
       nodeSetTopOrder(genericOpStart, genericOpEnd) {
   for (auto iter = genericOpStart; iter != genericOpEnd; iter++) {
@@ -515,11 +490,11 @@ GenericOpCluster::GenericOpCluster(linalg::GenericOp *genericOpStart,
 
 // }
 
-bool GenericOpCluster::isMember(mlir::Operation *opToCehck) {
+bool GenericOpCluster::isMember(mlir::Operation* opToCehck) {
   return nodeSet.find(opToCehck) != nodeSet.end();
 }
 
-void GenericOpCluster::attachAttribute(mlir::MLIRContext *ctx) {
+void GenericOpCluster::attachAttribute(mlir::MLIRContext* ctx) {
   for (auto op : nodeSet) {
     for (auto namedAttr : parameter[op]) {
       llvm::SmallVector<mlir::Attribute> attrVec;
@@ -532,26 +507,24 @@ void GenericOpCluster::attachAttribute(mlir::MLIRContext *ctx) {
   }
 }
 
-std::unordered_set<mlir::Operation *>::iterator GenericOpCluster::begin() {
+std::unordered_set<mlir::Operation*>::iterator GenericOpCluster::begin() {
   return nodeSet.begin();
 }
-std::unordered_set<mlir::Operation *>::iterator GenericOpCluster::end() {
+std::unordered_set<mlir::Operation*>::iterator GenericOpCluster::end() {
   return nodeSet.end();
 }
 
-std::vector<mlir::Operation *> &GenericOpCluster::getNodeSetTopOrder() {
+std::vector<mlir::Operation*>& GenericOpCluster::getNodeSetTopOrder() {
   return nodeSetTopOrder;
 }
-std::unordered_map<
-    mlir::Operation *,
-    std::unordered_map<std::string, llvm::SmallVector<int64_t>>> &
+std::unordered_map<mlir::Operation*,
+                   std::unordered_map<std::string, llvm::SmallVector<int64_t>>>&
 GenericOpCluster::getParameter() {
   return parameter;
 }
 
 void GenericOpCluster::clearParameter() {
-  for (auto [op, par] : parameter)
-    par.clear();
+  for (auto [op, par] : parameter) par.clear();
 }
 
 // auto GenericOpCluster::getMetric() { return &metric; }
@@ -594,17 +567,16 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
         }
       }
 
-      if (!operand.getDefiningOp())
-        continue;
-      mlir::TypeSwitch<mlir::Operation *>(operand.getDefiningOp())
+      if (!operand.getDefiningOp()) continue;
+      mlir::TypeSwitch<mlir::Operation*>(operand.getDefiningOp())
           .Case<linalg::GenericOp>([&](linalg::GenericOp generic) {
             if (isMember(generic)) {
               auto accessDimsProducer =
                   getAffineMapAccessDims(generic.getIndexingMapsArray().back());
               for (auto [target, src] :
                    llvm::zip(accessDims, accessDimsProducer))
-                network.addEqualRelation(Dimension(op, target),
-                                         Dimension(generic, src));
+                network.addEqualRelation(Dimension(generic, src),
+                                         Dimension(op, target));
             }
           })
           .Case<tensor::CollapseShapeOp>([&](tensor::CollapseShapeOp collapse) {
@@ -612,38 +584,177 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
                 collapse.getSrc().getDefiningOp());
             assert(producer);
 
-            auto reassociationMap = collapse.getReassociationMaps();
-            auto accessDimsProducer =
-                getAffineMapAccessDims(producer.getIndexingMapsArray().back());
+            if (isMember(producer)) {
+              auto reassociationMap = collapse.getReassociationMaps();
+              auto accessDimsProducer = getAffineMapAccessDims(
+                  producer.getIndexingMapsArray().back());
 
-            for (size_t d = 0; d < reassociationMap.size(); d++) {
-              auto collapseDims = getAffineMapAccessDims(reassociationMap[d]);
-              std::vector<Dimension> dimPtr;
-              for (auto cd : collapseDims)
-                dimPtr.push_back(Dimension(producer, accessDimsProducer[cd]));
-              network.addCollapseRelation(Dimension(op, accessDims[d]), dimPtr);
+              for (size_t d = 0; d < reassociationMap.size(); d++) {
+                auto collapseDims = getAffineMapAccessDims(reassociationMap[d]);
+                if (collapseDims.size() > 1) {
+                  std::vector<Dimension> dimPtr;
+                  for (auto cd : collapseDims)
+                    dimPtr.push_back(
+                        Dimension(producer, accessDimsProducer[cd]));
+                  network.addCollapseRelation(Dimension(op, accessDims[d]),
+                                              dimPtr);
+                } else {
+                  assert(collapseDims.size() == 1);
+                  network.addEqualRelation(
+                      Dimension(producer, accessDimsProducer[collapseDims[0]]),
+                      Dimension(op, accessDims[d]));
+                }
+              }
             }
           })
           .Case<tensor::ExpandShapeOp>([&](tensor::ExpandShapeOp expand) {
+            if (expand.getSrc().getDefiningOp() == nullptr) return;
             auto producer = mlir::dyn_cast<linalg::GenericOp>(
                 expand.getSrc().getDefiningOp());
             assert(producer);
 
-            auto reassociationMap = expand.getReassociationMaps();
-            auto accessDimsProducer =
-                getAffineMapAccessDims(producer.getIndexingMapsArray().back());
+            if (isMember(producer)) {
+              auto reassociationMap = expand.getReassociationMaps();
+              auto accessDimsProducer = getAffineMapAccessDims(
+                  producer.getIndexingMapsArray().back());
 
-            for (size_t d = 0; d < reassociationMap.size(); d++) {
-              auto expandDims = getAffineMapAccessDims(reassociationMap[d]);
-              std::vector<Dimension> dimPtr;
-              for (auto d : expandDims)
-                dimPtr.push_back(Dimension(op, accessDims[d]));
-              network.addCollapseRelation(
-                  Dimension(producer, accessDimsProducer[d]), dimPtr);
+              for (size_t d = 0; d < reassociationMap.size(); d++) {
+                auto expandDims = getAffineMapAccessDims(reassociationMap[d]);
+                if (expandDims.size() > 1) {
+                  std::vector<Dimension> dimPtr;
+                  for (auto d : expandDims)
+                    dimPtr.push_back(Dimension(op, accessDims[d]));
+                  network.addCollapseRelation(
+                      Dimension(producer, accessDimsProducer[d]), dimPtr);
+                } else {
+                  assert(expandDims.size() == 1);
+                  network.addEqualRelation(
+                      Dimension(producer, accessDimsProducer[d]),
+                      Dimension(op, accessDims[expandDims[0]]));
+                }
+              }
+            }
+          })
+          .Case<tensor::ExtractSliceOp>([&](tensor::ExtractSliceOp extract) {
+            auto producer =
+                extract.getSource().getDefiningOp<linalg::GenericOp>();
+            assert(producer);
+
+            if (isMember(producer)) {
+              auto srcShape =
+                  mlir::dyn_cast<RankedTensorType>(extract.getSourceType())
+                      .getShape();
+              auto sliceShape =
+                  mlir::dyn_cast<RankedTensorType>(extract.getType())
+                      .getShape();
+              size_t firstExtractDim;
+              for (size_t di = 0; di < srcShape.size(); di++) {
+                if (srcShape[di] != sliceShape[di]) {
+                  firstExtractDim = di;
+                  break;
+                }
+              }
+              assert(producer.getResults().size() == 1);
+              auto producerAccessDims = getAffineMapAccessDims(
+                  producer.getIndexingMapsArray().back());
+
+              std::vector<int64_t> equalDims;
+              std::vector<int64_t> constDims;
+              for (size_t di = 0; di < srcShape.size(); di++) {
+                if (di < firstExtractDim) {
+                  network.addEqualRelation(
+                      Dimension(producer, producerAccessDims[di]),
+                      Dimension(op, accessDims[di]));
+                } else {
+                  network.setConstDimension(
+                      Dimension(producer, producerAccessDims[di]),
+                      parameter[producer]["loop_bound"]
+                               [producerAccessDims[di]]);
+                  network.setConstDimension(
+                      Dimension(op, accessDims[di]),
+                      parameter[op]["loop_bound"][accessDims[di]]);
+                }
+              }
+            }
+          })
+          .Case<tensor::ConcatOp>([&](tensor::ConcatOp concat) {
+            auto concatDim = concat.getDim();
+            auto concatShape =
+                mlir::dyn_cast<RankedTensorType>(concat.getType()).getShape();
+
+            for (auto [idx, prevOperand] :
+                 llvm::enumerate(concat.getInputs())) {
+              if (auto prevOp =
+                      prevOperand.getDefiningOp<linalg::GenericOp>()) {
+                assert(prevOp);
+                if (isMember(prevOp)) {
+                  assert(prevOp.getResults().size() == 1);
+                  auto producerAccessDims = getAffineMapAccessDims(
+                      prevOp.getIndexingMapsArray().back());
+
+                  for (size_t di = 0; di < concatShape.size(); di++) {
+                    if (di < concatDim) {
+                      network.addEqualRelation(
+                          Dimension(prevOp, producerAccessDims[di]),
+                          Dimension(op, accessDims[di]));
+                    } else {
+                      network.setConstDimension(
+                          Dimension(prevOp, producerAccessDims[di]),
+                          parameter[prevOp]["loop_bound"]
+                                   [producerAccessDims[di]]);
+                      network.setConstDimension(
+                          Dimension(op, accessDims[di]),
+                          parameter[op]["loop_bound"][accessDims[di]]);
+                    }
+                  }
+                }
+              } else if (auto prevOp =
+                             prevOperand
+                                 .getDefiningOp<tensor::ExtractSliceOp>()) {
+                auto prevGeneric =
+                    prevOp.getSource().getDefiningOp<linalg::GenericOp>();
+                assert(prevGeneric);
+
+                if (isMember(prevGeneric)) {
+                  auto srcShape =
+                      mlir::dyn_cast<RankedTensorType>(prevOp.getSourceType())
+                          .getShape();
+                  auto sliceShape =
+                      mlir::dyn_cast<RankedTensorType>(prevOp.getType())
+                          .getShape();
+                  size_t firstExtractDim;
+                  for (size_t di = 0; di < srcShape.size(); di++) {
+                    if (srcShape[di] != sliceShape[di]) {
+                      firstExtractDim = di;
+                      break;
+                    }
+                  }
+                  auto firstConstDim = std::min(firstExtractDim, concatDim);
+                  auto producerAccessDims = getAffineMapAccessDims(
+                      prevGeneric.getIndexingMapsArray().back());
+
+                  for (size_t di = 0; di < concatShape.size(); di++) {
+                    if (di < firstConstDim) {
+                      network.addEqualRelation(
+                          Dimension(prevGeneric, producerAccessDims[di]),
+                          Dimension(op, accessDims[di]));
+                    } else {
+                      network.setConstDimension(
+                          Dimension(prevGeneric, producerAccessDims[di]),
+                          parameter[prevGeneric]["loop_bound"]
+                                   [producerAccessDims[di]]);
+                      network.setConstDimension(
+                          Dimension(op, accessDims[di]),
+                          parameter[op]["loop_bound"][accessDims[di]]);
+                    }
+                  }
+                }
+              } else
+                assert(0);
             }
           })
           .Case<arith::ConstantOp>([&](arith::ConstantOp constant) {})
-          .Default([](mlir::Operation *placeholder) {
+          .Default([](mlir::Operation* placeholder) {
             placeholder->dump();
             assert(0);
           });
@@ -653,20 +764,20 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
 }
 
 void GenericOpCluster::applyTiling(
-    const std::unordered_map<Dimension, int64_t, Dimension::Hash> &tiling) {
-  for (auto &[op, par] : parameter) {
+    const std::unordered_map<Dimension, int64_t, Dimension::Hash>& tiling) {
+  for (auto& [op, par] : parameter) {
     for (size_t d = 0; d < par["tiling_size"].size(); d++)
       par["tiling_size"][d] = tiling.at(Dimension(op, d));
   }
 }
 
 void GenericOpCluster::applyOrder(
-    const std::unordered_map<Operation *, llvm::SmallVector<int64_t>> &order) {
+    const std::unordered_map<Operation*, llvm::SmallVector<int64_t>>& order) {
   // for (auto& [op, par] : parameter) {
   //   assert(order.find(op) != order.end());
   //   par["outer_order"] = order.at(op);
   // }
-  for (auto &[op, ord] : order) {
+  for (auto& [op, ord] : order) {
     assert(parameter.find(op) != parameter.end());
     parameter[op]["outer_order"] = ord;
   }
@@ -740,7 +851,7 @@ void GenericOpCluster::applyOrder(
 // }
 
 bool GenericOpCluster::checkOrder() {
-  for (auto &op : nodeSetTopOrder) {
+  for (auto& op : nodeSetTopOrder) {
     auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
     assert(generic);
 
@@ -760,7 +871,7 @@ bool GenericOpCluster::checkOrder() {
     for (auto [index, operand] : llvm::enumerate(generic.getInputs())) {
       auto producers = getProducerGeneric(operand);
       bool isSharedInputRel = false;
-      std::vector<mlir::Operation *> opSharedInputs;
+      std::vector<mlir::Operation*> opSharedInputs;
       for (auto use : operand.getUsers()) {
         if (isMember(use) && (use != op)) {
           isSharedInputRel = true;
@@ -780,7 +891,7 @@ bool GenericOpCluster::checkOrder() {
   return true;
 }
 
-bool GenericOpCluster::checkOpOrder(mlir::Operation *op) {
+bool GenericOpCluster::checkOpOrder(mlir::Operation* op) {
   auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
   assert(generic);
 
@@ -826,8 +937,7 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation *op) {
             getDimsInOrder(generic, operand);
         std::vector<int64_t> producerOperandDimsOrder =
             getDimsInOrder(producer, operand);
-        if (operandDimsOrder != producerOperandDimsOrder)
-          return false;
+        if (operandDimsOrder != producerOperandDimsOrder) return false;
       }
     } else if (auto producer =
                    operand.getDefiningOp<tensor::CollapseShapeOp>()) {
@@ -853,11 +963,11 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation *op) {
             operandDimsOrderExpand.push_back(dd);
           }
         }
-        if (operandDimsOrderExpand != producerOperandDimsOrder)
-          return false;
+        if (operandDimsOrderExpand != producerOperandDimsOrder) return false;
       }
 
     } else if (auto producer = operand.getDefiningOp<tensor::ExpandShapeOp>()) {
+      if (producer.getSrc().getDefiningOp() == nullptr) continue;
       auto producerGeneric =
           producer.getSrc().getDefiningOp<linalg::GenericOp>();
       assert(producerGeneric);
@@ -880,35 +990,69 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation *op) {
             producerOperandDimsOrderExpand.push_back(dd);
           }
         }
-        if (producerOperandDimsOrderExpand != operandDimsOrder)
-          return false;
+        if (producerOperandDimsOrderExpand != operandDimsOrder) return false;
       }
 
     } else if (auto producer = operand.getDefiningOp<tensor::ConcatOp>()) {
       auto producerOperands = producer.getInputs();
       assert(producerOperands.size() == 2);
       for (auto proOperand : producerOperands) {
-        auto producerGeneric = proOperand.getDefiningOp<linalg::GenericOp>();
-        assert(producerGeneric);
-        if (isMember(producerGeneric)) {
-          // Check : continous access
-          auto inputDims =
-              getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
-          if (!checkReuseDistance(order, inputDims, mask)) {
-            return false;
+        if (auto producerGeneric =
+                proOperand.getDefiningOp<linalg::GenericOp>()) {
+          if (isMember(producerGeneric)) {
+            // Check : continous access
+            auto inputDims =
+                getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
+            if (!checkReuseDistance(order, inputDims, mask)) {
+              return false;
+            }
+            // Check : the same access order
+            std::vector<int64_t> operandDimsOrder =
+                getDimsInOrder(generic, operand);
+            std::vector<int64_t> producerOperandDimsOrder =
+                getDimsInOrder(producerGeneric, proOperand);
+            if (operandDimsOrder != producerOperandDimsOrder) return false;
           }
-          // Check : the same access order
-          std::vector<int64_t> operandDimsOrder =
-              getDimsInOrder(generic, operand);
-          std::vector<int64_t> producerOperandDimsOrder =
-              getDimsInOrder(producerGeneric, proOperand);
-          if (operandDimsOrder != producerOperandDimsOrder)
-            return false;
+        } else if (auto prevOp =
+                       proOperand.getDefiningOp<tensor::ExtractSliceOp>()) {
+          auto producerGeneric =
+              prevOp.getSource().getDefiningOp<linalg::GenericOp>();
+          assert(producerGeneric);
+          if (isMember(producerGeneric)) {
+            // Check : continous access
+            auto inputDims =
+                getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
+            if (!checkReuseDistance(order, inputDims, mask)) {
+              return false;
+            }
+            // Check : the same access order
+            std::vector<int64_t> operandDimsOrder =
+                getDimsInOrder(generic, operand);
+            std::vector<int64_t> producerOperandDimsOrder =
+                getDimsInOrder(producerGeneric, prevOp.getSource());
+            if (operandDimsOrder != producerOperandDimsOrder) return false;
+          }
         }
       }
     } else if (auto producer =
                    operand.getDefiningOp<tensor::ExtractSliceOp>()) {
-      assert(0);
+      auto producerGeneric =
+          producer.getSource().getDefiningOp<linalg::GenericOp>();
+      assert(producerGeneric);
+      if (isMember(producerGeneric)) {
+        // Check : continous access
+        auto inputDims =
+            getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
+        if (!checkReuseDistance(order, inputDims, mask)) {
+          return false;
+        }
+        // Check : the same access order
+        std::vector<int64_t> operandDimsOrder =
+            getDimsInOrder(generic, operand);
+        std::vector<int64_t> producerOperandDimsOrder =
+            getDimsInOrder(producerGeneric, producer.getSource());
+        if (operandDimsOrder != producerOperandDimsOrder) return false;
+      }
     } else if (auto producer = operand.getDefiningOp() == nullptr) {
       continue;
     } else
@@ -977,9 +1121,9 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation *op) {
 }
 
 bool GenericOpCluster::checkReuseDistance(
-    const llvm::SmallVector<int64_t> &order,
-    const llvm::SmallVector<int64_t> &dims,
-    const llvm::SmallVector<int64_t> &mask) {
+    const llvm::SmallVector<int64_t>& order,
+    const llvm::SmallVector<int64_t>& dims,
+    const llvm::SmallVector<int64_t>& mask) {
   assert(order.size() == mask.size());
   // llvm::interleave(order, llvm::errs(), ",");
   // llvm::errs() << "\n";
@@ -991,15 +1135,13 @@ bool GenericOpCluster::checkReuseDistance(
 
   // If one dim tiling=bound, free constraint
   for (auto d : dims) {
-    if (mask[d])
-      dimsSet.erase(d);
+    if (mask[d]) dimsSet.erase(d);
   }
   // ECHO_LIST(dimsSet, ",")
   for (size_t i = 0; i < order.size(); i++) {
     // ECHO("checking ", "\n")
     // ECHO(i, "\n")
-    if (dimsSet.find(order[i]) != dimsSet.end())
-      continue;
+    if (dimsSet.find(order[i]) != dimsSet.end()) continue;
     bool flag = false;
     for (size_t j = i + 1; j < order.size(); j++) {
       if (dimsSet.find(order[j]) != dimsSet.end()) {
@@ -1023,7 +1165,7 @@ bool GenericOpCluster::checkReuseDistance(
   return true;
 }
 
-bool GenericOpCluster::checkArchConstraint(const ArchConfig &cfg) {
+bool GenericOpCluster::checkArchConstraint(const ArchConfig& cfg) {
   // #Check : Sram capacity
   size_t sramOcc = 0;
   llvm::DenseSet<mlir::Value> usedValues;
@@ -1035,8 +1177,16 @@ bool GenericOpCluster::checkArchConstraint(const ArchConfig &cfg) {
     size_t sramUsage = 0;
     for (auto [operand, affinemap] :
          llvm::zip(generic.getOperands(), generic.getIndexingMapsArray())) {
-      if (usedValues.contains(operand))
-        continue;
+      if (usedValues.contains(operand)) continue;
+      bool isPipelineBuffer = false;
+      for (auto user : operand.getUsers()) {
+        if (isMember(user) &&
+            argwhere(nodeSetTopOrder, user) < argwhere(nodeSetTopOrder, op)) {
+          isPipelineBuffer = true;
+          break;
+        }
+      }
+      if (isPipelineBuffer) continue;
       usedValues.insert(operand);
       auto tensorType = mlir::dyn_cast<TensorType>(operand.getType());
       assert(tensorType);
@@ -1046,9 +1196,8 @@ bool GenericOpCluster::checkArchConstraint(const ArchConfig &cfg) {
       size_t valueBytes = valueBitwdith / 8;
       auto accessDims = getAffineMapAccessDims(affinemap);
       size_t sramSize = valueBytes;
-      for (auto d : accessDims)
-        sramSize *= tiling[d];
-      sramUsage += sramSize;
+      for (auto d : accessDims) sramSize *= tiling[d];
+      sramUsage += sramSize * 2;  // Double buffer
     }
     sramOcc += sramUsage;
     // ECHO_LIST(tiling, ",")
@@ -1065,12 +1214,12 @@ bool GenericOpCluster::checkArchConstraint(const ArchConfig &cfg) {
 
 std::vector<int64_t> GenericOpCluster::getDimsInOrder(linalg::GenericOp op,
                                                       mlir::Value operand) {
-  OpOperand *opOperand = nullptr;
+  OpOperand* opOperand = nullptr;
   assert(op.getResults().size() == 1);
   if (op.getResults()[0] == operand)
     opOperand = &op->getOpOperands().back();
   else {
-    for (OpOperand &o : op->getOpOperands()) {
+    for (OpOperand& o : op->getOpOperands()) {
       if (o.get() == operand) {
         opOperand = &o;
         break;
@@ -1083,10 +1232,28 @@ std::vector<int64_t> GenericOpCluster::getDimsInOrder(linalg::GenericOp op,
   auto accDimsSet = llvm::DenseSet<int64_t>(accDims.begin(), accDims.end());
   std::vector<int64_t> orders;
   for (auto d : parameter[op]["outer_order"]) {
-    if (accDimsSet.contains(d))
-      orders.push_back(d);
+    if (accDimsSet.contains(d)) orders.push_back(d);
   }
   return orders;
+}
+
+bool GenericOpCluster::checkConnectivity() {
+  MergedSet<mlir::Operation*> connectivity;
+  for (auto& op : nodeSetTopOrder) connectivity.insert(op);
+  for (auto& op : nodeSetTopOrder) {
+    auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
+    assert(generic);
+    for (auto operand : generic.getInputs()) {
+      auto producers = getProducerGeneric(operand);
+      for (auto p : producers) {
+        if (isMember(p)) connectivity.merge(p, generic);
+      }
+      for (auto user : operand.getUsers()) {
+        if (isMember(user)) connectivity.merge(user, generic);
+      }
+    }
+  }
+  return connectivity.getNumSet() == 1;
 }
 
 // ============================
@@ -1097,10 +1264,10 @@ std::vector<int64_t> GenericOpCluster::getDimsInOrder(linalg::GenericOp op,
 // CLASS: PerfModel
 // ============================
 
-EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
-                                     ArchConfig &cfg) {
+EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
+                                     ArchConfig& cfg) {
   auto parameter = cluster.getParameter();
-  std::unordered_map<mlir::Operation *,
+  std::unordered_map<mlir::Operation*,
                      std::unordered_map<std::string, double_t>>
       statisticDat;
   for (auto kv : parameter) {
@@ -1110,7 +1277,7 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
     statisticDat[kv.first]["sram_access"] = 0;
     statisticDat[kv.first]["cycles"] = 0;
   }
-  std::vector<mlir::Operation *> nodeSetTopOrder = cluster.getNodeSetTopOrder();
+  std::vector<mlir::Operation*> nodeSetTopOrder = cluster.getNodeSetTopOrder();
   for (auto riter = nodeSetTopOrder.rbegin(); riter != nodeSetTopOrder.rend();
        riter++) {
     auto genericOp = mlir::dyn_cast<linalg::GenericOp>(*riter);
@@ -1127,15 +1294,15 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
     auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
     for (size_t i = 0; i < analysisTileSize.size(); i++) {
       switch (iteratorTypes[i]) {
-      case mlir::utils::IteratorType::reduction:
-        analysisTileSize[i] = loopBound[i];
-        break;
-      case mlir::utils::IteratorType::parallel:
-        analysisTileSize[i] = tilingSize[i];
-        break;
-      default:
-        // llvm::errs() << "Unknown iterator types.\n";
-        break;
+        case mlir::utils::IteratorType::reduction:
+          analysisTileSize[i] = loopBound[i];
+          break;
+        case mlir::utils::IteratorType::parallel:
+          analysisTileSize[i] = tilingSize[i];
+          break;
+        default:
+          // llvm::errs() << "Unknown iterator types.\n";
+          break;
       }
     }
 
@@ -1204,7 +1371,7 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
 
   double_t externalAccess = 0;
   llvm::DenseMap<mlir::Value, double_t> externalOperandAccess;
-  for (auto &op : cluster.getNodeSetTopOrder()) {
+  for (auto& op : cluster.getNodeSetTopOrder()) {
     auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
     assert(genericOp);
     auto indexingMaps = genericOp.getIndexingMapsArray();
@@ -1237,13 +1404,11 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
         // ECHO_LIST(accDims, ",")
         // ECHO_LIST(dimMask, ",")
         if (cluster.checkReuseDistance(order, accDims, dimMask)) {
-          for (auto d : accDims)
-            operandAccess *= bound[d];
+          for (auto d : accDims) operandAccess *= bound[d];
           // ECHO("conti", "\n")
           // ECHO(operandAccess, "\n")
         } else {
-          for (auto d : accDims)
-            operandAccess *= tiling[d];
+          for (auto d : accDims) operandAccess *= tiling[d];
           // ECHO("set", "\n")
           // ECHO(operandAccess, "\n")
           operandAccess *= totalTiles;
@@ -1272,11 +1437,9 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
             indexingMaps[index + genericOp.getInputs().size()]);
         double_t operandAccess = 1;
         if (cluster.checkReuseDistance(order, accDims, dimMask)) {
-          for (auto d : accDims)
-            operandAccess *= bound[d];
+          for (auto d : accDims) operandAccess *= bound[d];
         } else {
-          for (auto d : accDims)
-            operandAccess *= tiling[d];
+          for (auto d : accDims) operandAccess *= tiling[d];
           operandAccess *= totalTiles;
         }
         assert(!externalOperandAccess.contains(operand));
@@ -1286,8 +1449,7 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
       }
     }
   }
-  for (auto [operand, acc] : externalOperandAccess)
-    externalAccess += acc;
+  for (auto [operand, acc] : externalOperandAccess) externalAccess += acc;
 
   double_t bottleneckCycles = 0;
   for (auto [op, namedMetric] : statisticDat) {
@@ -1298,11 +1460,10 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
   }
 
   double_t flops = 0;
-  for (auto &op : cluster.getNodeSetTopOrder()) {
+  for (auto& op : cluster.getNodeSetTopOrder()) {
     auto bound = cluster.getParameter()[op]["loop_bound"];
     double_t t = 1;
-    for (auto b : bound)
-      t *= b;
+    for (auto b : bound) t *= b;
     flops += t;
   }
 
@@ -1536,11 +1697,10 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster &cluster,
 // }
 
 void PruningSolver::generateCandidateOrders(
-    GenericOpCluster &cluster, std::vector<mlir::Operation *>::iterator curOp,
-    std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>>
-        &candidate,
-    std::vector<std::unordered_map<mlir::Operation *,
-                                   llvm::SmallVector<int64_t>>> &orders) {
+    GenericOpCluster& cluster, std::vector<mlir::Operation*>::iterator curOp,
+    std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>& candidate,
+    std::vector<std::unordered_map<mlir::Operation*,
+                                   llvm::SmallVector<int64_t>>>& orders) {
   if (curOp == cluster.getNodeSetTopOrder().end()) {
     orders.push_back(candidate);
     return;
@@ -1550,7 +1710,7 @@ void PruningSolver::generateCandidateOrders(
   auto candidateOrders = generatePermutation(generic.getNumLoops());
   for (auto order : candidateOrders) {
     cluster.applyOrder(
-        std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>>(
+        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>(
             {{*curOp, order}}));
     if (cluster.checkOpOrder(*curOp)) {
       candidate[(*curOp)] = order;
@@ -1560,12 +1720,11 @@ void PruningSolver::generateCandidateOrders(
   }
 }
 
-EvaluationMetric PruningSolver::solve(GenericOpCluster &cluster,
-                                      PerfModel &model, ArchConfig &archCfg) {
+EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
+                                      PerfModel& model, ArchConfig& archCfg) {
   llvm::errs() << "Start solving, subgraph size : "
                << cluster.getNodeSetTopOrder().size() << "\n================\n";
-  for (auto op : cluster.getNodeSetTopOrder())
-    op->dump();
+  for (auto op : cluster.getNodeSetTopOrder()) op->dump();
   llvm::errs() << "=========================\n";
 
   DimensionRelationNetwork network = cluster.extractDimRelation();
@@ -1577,8 +1736,7 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster &cluster,
   for (auto bd : parBounds) {
     // ECHO(bd, "\n")
     std::vector<int64_t> tiling;
-    for (size_t t = 1; t <= bd; t *= 2)
-      tiling.push_back(t);
+    for (size_t t = 1; t <= bd; t *= 2) tiling.push_back(t);
     tilingGen.addVariable(tiling);
   }
 
@@ -1587,7 +1745,7 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster &cluster,
 
   // double_t bestDensity = 0;
   std::vector<int64_t> bestTilingSize;
-  std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>> bestOrder;
+  std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> bestOrder;
   std::vector<int64_t> tilingVec;
   std::vector<llvm::SmallVector<int64_t>> orderVec;
   while (tilingGen.hasNext()) {
@@ -1609,28 +1767,25 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster &cluster,
     // ECHO("generating order", "\n")
 
     std::vector<
-        std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>>>
+        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>>
         orders;
-    std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>> candidate;
+    std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> candidate;
     generateCandidateOrders(cluster, cluster.getNodeSetTopOrder().begin(),
                             candidate, orders);
 
     auto nodes = cluster.getNodeSetTopOrder();
 
-    if (orders.size() == 0)
-      continue;
+    if (orders.size() == 0) continue;
 
     // ECHO(orders.size(), "\n")
 
     for (auto orderMap : orders) {
-
       assert(orderMap.size() == cluster.getNodeSetTopOrder().size());
       cluster.applyOrder(orderMap);
 
       auto metric = model.evaluate(cluster, archCfg);
 
       if (metric.computeDensity > bestMetric.computeDensity) {
-
         existProperParameter = true;
 
         bestMetric = metric;
@@ -1640,8 +1795,7 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster &cluster,
     }
   }
 
-  if (cluster.getNodeSetTopOrder().size() == 1)
-    assert(existProperParameter);
+  if (cluster.getNodeSetTopOrder().size() == 1) assert(existProperParameter);
 
   if (!existProperParameter) {
     ECHO("faile to solve parameter", "\n")
@@ -1670,14 +1824,14 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster &cluster,
 }
 
 void PruningSolver::generateCandidateNetworks(
-    std::vector<mlir::Operation *>::iterator curp,
-    std::vector<mlir::Operation *>::iterator endp, GenericOpCluster &cluster,
-    std::unordered_map<mlir::Operation *, llvm::SmallVector<int64_t>> &curOrder,
-    DimensionRelationNetwork &curNetwork,
+    std::vector<mlir::Operation*>::iterator curp,
+    std::vector<mlir::Operation*>::iterator endp, GenericOpCluster& cluster,
+    std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>& curOrder,
+    DimensionRelationNetwork& curNetwork,
 
-    std::vector<std::unordered_map<mlir::Operation *,
-                                   llvm::SmallVector<int64_t>>> &candidateOrder,
-    std::vector<DimensionRelationNetwork> &candidateNetworks) {
+    std::vector<std::unordered_map<mlir::Operation*,
+                                   llvm::SmallVector<int64_t>>>& candidateOrder,
+    std::vector<DimensionRelationNetwork>& candidateNetworks) {
   if (curp == endp) {
     candidateOrder.push_back(curOrder);
     candidateNetworks.push_back(curNetwork);
@@ -1698,8 +1852,7 @@ void PruningSolver::generateCandidateNetworks(
       // llvm::interleave(order, llvm::errs(), ", ");
       // llvm::interleave(mask, llvm::errs(), ", ");
 
-      if (!checkOrder(cluster, genericOp, order, mask))
-        continue;
+      if (!checkOrder(cluster, genericOp, order, mask)) continue;
 
       bool flag = true;
       std::vector<Dimension> newConstDims;
@@ -1732,15 +1885,14 @@ void PruningSolver::generateCandidateNetworks(
       generateCandidateNetworks(std::next(curp), endp, cluster, curOrder,
                                 curNetwork, candidateOrder, candidateNetworks);
 
-      for (auto &dim : newConstDims)
-        curNetwork.removeConstDimension(dim);
+      for (auto& dim : newConstDims) curNetwork.removeConstDimension(dim);
     }
     curOrder.erase(*curp);
   }
 }
 
-std::vector<llvm::SmallVector<int64_t>>
-PruningSolver::generatePermutation(size_t n) {
+std::vector<llvm::SmallVector<int64_t>> PruningSolver::generatePermutation(
+    size_t n) {
   std::vector<llvm::SmallVector<int64_t>> orders;
   llvm::SmallVector<int64_t> order(n);
   std::iota(order.begin(), order.end(), 0);
@@ -1750,8 +1902,8 @@ PruningSolver::generatePermutation(size_t n) {
   return orders;
 }
 
-std::vector<llvm::SmallVector<int64_t>>
-PruningSolver::generateBitMask(size_t n) {
+std::vector<llvm::SmallVector<int64_t>> PruningSolver::generateBitMask(
+    size_t n) {
   std::vector<llvm::SmallVector<int64_t>> result;
   for (size_t mask = 0; mask < (1 << n); ++mask) {
     llvm::SmallVector<int64_t> v(n);
@@ -1763,9 +1915,9 @@ PruningSolver::generateBitMask(size_t n) {
   return result;
 }
 
-bool PruningSolver::checkReuseDistance(llvm::SmallVector<int64_t> &order,
-                                       llvm::SmallVector<int64_t> &dims,
-                                       llvm::SmallVector<int64_t> &mask) {
+bool PruningSolver::checkReuseDistance(llvm::SmallVector<int64_t>& order,
+                                       llvm::SmallVector<int64_t>& dims,
+                                       llvm::SmallVector<int64_t>& mask) {
   assert(order.size() == mask.size());
   std::unordered_set<int64_t> dimsSet(dims.data(), dims.data() + dims.size());
   for (size_t i = 0; i < order.size(); i++) {
@@ -1777,11 +1929,9 @@ bool PruningSolver::checkReuseDistance(llvm::SmallVector<int64_t> &order,
       }
     }
     if (flag) {
-      if (mask[i])
-        break;
+      if (mask[i]) break;
       for (size_t j = i + 1; j < order.size(); j++) {
-        if (!mask[j])
-          return false;
+        if (!mask[j]) return false;
       }
     } else
       break;
@@ -1789,15 +1939,14 @@ bool PruningSolver::checkReuseDistance(llvm::SmallVector<int64_t> &order,
   return true;
 }
 
-bool PruningSolver::checkOrder(GenericOpCluster &cluster, linalg::GenericOp &op,
-                               llvm::SmallVector<int64_t> &order,
-                               llvm::SmallVector<int64_t> &mask) {
+bool PruningSolver::checkOrder(GenericOpCluster& cluster, linalg::GenericOp& op,
+                               llvm::SmallVector<int64_t>& order,
+                               llvm::SmallVector<int64_t>& mask) {
   // Check output reuse distance
   {
     assert(op.getOutputs().size() == 1);
     auto outputDims = getAffineMapAccessDims(op.getIndexingMapsArray().back());
-    if (!checkReuseDistance(order, outputDims, mask))
-      return false;
+    if (!checkReuseDistance(order, outputDims, mask)) return false;
   }
 
   // Check input reuse distance
@@ -1812,8 +1961,7 @@ bool PruningSolver::checkOrder(GenericOpCluster &cluster, linalg::GenericOp &op,
     }
     if (flag) {
       auto inputDims = getAffineMapAccessDims(op.getIndexingMapsArray()[index]);
-      if (!checkReuseDistance(order, inputDims, mask))
-        return false;
+      if (!checkReuseDistance(order, inputDims, mask)) return false;
     }
   }
 
@@ -1829,35 +1977,31 @@ bool PruningSolver::checkOrder(GenericOpCluster &cluster, linalg::GenericOp &op,
 // ============================
 
 ScheduledGenericOpCluster::ScheduledGenericOpCluster(llvm::StringRef solver) {
-  this->solver = llvm::StringSwitch<ParameterSolvingInterface *>(solver)
+  this->solver = llvm::StringSwitch<ParameterSolvingInterface*>(solver)
                      .Case("brute_force", new PruningSolver())
                      .Case("pruning_brute_force", new PruningSolver())
                      .Default(nullptr);
 }
 
 ScheduledGenericOpCluster::~ScheduledGenericOpCluster() {
-  for (auto cluster : clusters)
-    delete cluster;
+  for (auto cluster : clusters) delete cluster;
   delete solver;
 }
 
 std::vector<linalg::GenericOp> ScheduledGenericOpCluster::getTopSortedNodes() {
   std::vector<linalg::GenericOp> topOrderNodes;
-  std::unordered_map<mlir::Operation *, unsigned int> inD;
-  for (mlir::Operation *op : genericOps)
-    inD.insert({op, 0});
-  for (mlir::Operation *op : genericOps) {
+  std::unordered_map<mlir::Operation*, unsigned int> inD;
+  for (mlir::Operation* op : genericOps) inD.insert({op, 0});
+  for (mlir::Operation* op : genericOps) {
     for (auto user : op->getUsers()) {
-      if (inD.find(user) != inD.end())
-        inD[user]++;
+      if (inD.find(user) != inD.end()) inD[user]++;
     }
   }
-  std::queue<mlir::Operation *> nodesWithoutInD;
+  std::queue<mlir::Operation*> nodesWithoutInD;
   for (auto [op, ind] : inD) {
     if (ind == 0) {
       nodesWithoutInD.push(op);
-      if (!mlir::dyn_cast<linalg::GenericOp>(op))
-        op->dump();
+      if (!mlir::dyn_cast<linalg::GenericOp>(op)) op->dump();
     }
   }
   while (!nodesWithoutInD.empty()) {
@@ -1869,20 +2013,18 @@ std::vector<linalg::GenericOp> ScheduledGenericOpCluster::getTopSortedNodes() {
     topOrderNodes.push_back(genericOp);
     for (auto user : op->getUsers()) {
       // if (inD.find(user) != inD.end()) inD[user]--;
-      if (inD.find(user) == inD.end())
-        continue;
+      if (inD.find(user) == inD.end()) continue;
       inD[user]--;
       if (inD[user] == 0) {
         nodesWithoutInD.push(user);
-        if (!mlir::dyn_cast<linalg::GenericOp>(user))
-          user->dump();
+        if (!mlir::dyn_cast<linalg::GenericOp>(user)) user->dump();
       }
     }
   }
   return topOrderNodes;
 }
 
-void ScheduledGenericOpCluster::insertOp(mlir::Operation *op) {
+void ScheduledGenericOpCluster::insertOp(mlir::Operation* op) {
   ops.push_back(op);
 }
 
@@ -1890,12 +2032,13 @@ void ScheduledGenericOpCluster::insertGenericOp(linalg::GenericOp genericOp) {
   genericOps.push_back(genericOp);
 }
 
-void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx,
-                                         PerfModel &model,
-                                         ArchConfig &archCfg) {
-  std::vector<mlir::Operation *> opsTopOrder = getTopoOrder(ops);
+void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
+                                         PerfModel& model,
+                                         ArchConfig& archCfg) {
+  // std::vector<mlir::Operation *> opsTopOrder = getTopoOrder(ops);
+  std::vector<mlir::Operation*> opsTopOrder = getTopoOrderALSP(ops);
   std::vector<linalg::GenericOp> genericOpsTopOrder;
-  for (auto &op : opsTopOrder) {
+  for (auto& op : opsTopOrder) {
     if (auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
         (!op->hasAttr("accelgen.const_broadcast")) && generic)
       genericOpsTopOrder.push_back(generic);
@@ -1904,7 +2047,7 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx,
   /****test */
 
   // auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data(),
-  //                                       genericOpsTopOrder.data() + 4);
+  //                                       genericOpsTopOrder.data() + 2);
 
   // EvaluationMetric mergedMetric = solver->solve(mergedCluster, model,
   // archCfg);
@@ -1913,10 +2056,10 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx,
   /**** */
 
   assert(genericOpsTopOrder.size() >= 1);
-  EvaluationMetric *dpStatus =
+  EvaluationMetric* dpStatus =
       new EvaluationMetric[genericOpsTopOrder.size() + 1];
-  size_t *cutIndex = new size_t[genericOpsTopOrder.size() + 1];
-  GenericOpCluster *cutCluster =
+  size_t* cutIndex = new size_t[genericOpsTopOrder.size() + 1];
+  GenericOpCluster* cutCluster =
       new GenericOpCluster[genericOpsTopOrder.size() + 1];
   // llvm::errs() << genericOpsTopOrder.size() + 1 << "\n";
   dpStatus[0] = EvaluationMetric(0, 0, 0, 0);
@@ -1931,8 +2074,12 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx,
       auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data() + j - 1,
                                             genericOpsTopOrder.data() + i);
 
-      EvaluationMetric mergedMetric =
-          solver->solve(mergedCluster, model, archCfg);
+      EvaluationMetric mergedMetric(0, 0, 0, 0);
+      if (mergedCluster.checkConnectivity())
+        mergedMetric = solver->solve(mergedCluster, model, archCfg);
+      else {
+        mergedMetric = model.evaluate(mergedCluster, archCfg);
+      }
       // GenericOpCluster(genericOpsTopOrder.data() + j - 1,
       //                  genericOpsTopOrder.data() + i)
       //     .solveBestSchedule(evaluator, solver);
@@ -1975,22 +2122,20 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext *ctx,
     // solver->solve(*cluster, model, archCfg);
     // clusters.push_back(cluster);
     clusters.push_back(new GenericOpCluster(cutCluster[p]));
-    if (cutIndex[p] == 1)
-      break;
+    if (cutIndex[p] == 1) break;
     p = cutIndex[p] - 1;
   }
   delete dpStatus;
   delete cutIndex;
-  for (auto c : clusters)
-    c->attachAttribute(ctx);
+  for (auto c : clusters) c->attachAttribute(ctx);
 }
 
-std::vector<mlir::accelgen::GenericOpCluster *>::iterator
+std::vector<mlir::accelgen::GenericOpCluster*>::iterator
 ScheduledGenericOpCluster::begin() {
   return clusters.begin();
 }
 
-std::vector<mlir::accelgen::GenericOpCluster *>::iterator
+std::vector<mlir::accelgen::GenericOpCluster*>::iterator
 ScheduledGenericOpCluster::end() {
   return clusters.end();
 }
@@ -1999,4 +2144,4 @@ ScheduledGenericOpCluster::end() {
 // END OF ScheduledGenericOpCluster
 // ============================
 
-} // namespace mlir::accelgen
+}  // namespace mlir::accelgen

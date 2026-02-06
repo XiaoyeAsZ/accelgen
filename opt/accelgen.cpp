@@ -33,17 +33,15 @@
 // #include "accelgen/Passes/KernelSchedulePass.h"
 // #include "accelgen/Passes/MarkGenericPass.h"
 #include "accelgen/Passes/AccelgenPasses.h"
+#include "accelgen/Dialect/Dap/DapDialect.h"
 
-int main(int argc, char **argv) {
-  // 1. Register all standard MLIR dialects and passes
-  // This allows your tool to recognize 'arith', 'func', 'scf', etc.
+int main(int argc, char** argv) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
+  registry.insert<mlir::dap::DapDialect>();
   mlir::registerAllPasses();
   mlir::accelgen::registerPasses();
 
-  // 2. Invoke the standard MLIR Opt Main function
-  // This handles --pass-pipeline, input files, and -o output.
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "Custom MLIR Optimizer\n", registry));
 }

@@ -3,11 +3,13 @@ set(LIBS
     MLIROptLib
     MLIRRegisterAllDialects
     MLIRRegisterAllPasses
+    MLIRDapDialect
     MLIRAccelgen
     MLIRAccelgenDSE
     MLIRAccelgenUtils
     MLIRSpeDialect
     MLIRTileGraphDialect
+    
   )
 add_llvm_executable(accelgen-opt accelgen.cpp)
 

@@ -375,6 +375,8 @@ class GenericOpCluster {
   bool checkArchConstraint(const ArchConfig& cfg);
   bool checkOpOrder(mlir::Operation* op);
 
+  bool checkConnectivity();
+
  private:
   unsigned int nInD = 0;
   unsigned int nCycles = 0;
