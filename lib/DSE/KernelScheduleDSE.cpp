@@ -14,6 +14,7 @@
 #include <span>
 #include <variant>
 #include <vector>
+#include "llvm/Support/Parallel.h"
 
 #include "accelgen/DSE/KernelScheduleDSE.h"
 #include "accelgen/Utils/AffineMapUtils.h"
@@ -119,15 +120,15 @@ DimensionRelationNetwork::DimensionRelationNetwork(
   for (auto p : src.pars) parMap[p] = new Parameter(*p);
   for (auto& [op, np] : parMap) {
     for (auto& orel : op->relations()) {
-      std::vector<Parameter*> pars;
-      for (auto p : orel->deducedParameters()) pars.push_back(parMap[p]);
-      auto nrel = new Relation(orel->type(), pars);
+      std::vector<Parameter*> npars;
+      for (auto p : orel->deducedParameters()) npars.push_back(parMap[p]);
+      auto nrel = new Relation(orel->type(), npars);
       np->addRelation(nrel);
       rels.push_back(nrel);
     }
   }
   for (auto& [d, p] : src.dimMapping) this->dimMapping[d] = parMap[p];
-  for (auto& [op, np] : parMap) pars.push_back(np);
+  for (auto& op : src.pars) this->pars.push_back(parMap[op]);
   for (auto& [p, id] : src._indPars) this->_indPars[parMap[p]] = id;
 }
 
@@ -1388,6 +1389,10 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     auto order = cluster.getParameter()[op]["outer_order"];
     double_t totalTiles = 1;
     for (auto [t, b] : llvm::zip(tiling, bound)) {
+      if (b % t != 0) {
+        ECHO(b, "\n")
+        ECHO(t, "\n")
+      }
       assert(b % t == 0);
       totalTiles *= b / t;
     }
@@ -1740,86 +1745,97 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
     tilingGen.addVariable(tiling);
   }
 
-  bool existProperParameter = false;
-  EvaluationMetric bestMetric(0, 0, 0, 0);
+  std::vector<std::vector<int64_t>> allTilings;
+  while (tilingGen.hasNext()) allTilings.push_back(tilingGen.next());
 
-  // double_t bestDensity = 0;
-  std::vector<int64_t> bestTilingSize;
-  std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> bestOrder;
-  std::vector<int64_t> tilingVec;
-  std::vector<llvm::SmallVector<int64_t>> orderVec;
-  while (tilingGen.hasNext()) {
-    tilingVec = tilingGen.next();
+  // ECHO(allTilings.size(), "\n")
 
-    network.setUndeterminedPars(tilingVec);
-    if (!network.forward()) {
-      // ECHO("failed to forward", "\n")
-      continue;
-    }
+  bool existGlobalParameter = false;
+  EvaluationMetric globalBest(0, 0, 0, 0);
+  std::vector<int64_t> globalBestTiling;
+  std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
+      globalBestOrder;
 
-    cluster.applyTiling(network.getDimensionValueMapping());
-    if (!cluster.checkArchConstraint(archCfg)) {
-      // ECHO("failed to check arch cons", "\n")
-      // ECHO_LIST(tilingVec, ",")
-      continue;
-    }
+  std::mutex resultMutex;
+  llvm::parallelForEach(
+      allTilings.begin(), allTilings.end(),
+      [&](const std::vector<int64_t>& tilingVec) {
+        bool foundInThread = false;
+        EvaluationMetric threadBest(0, 0, 0, 0);
+        std::vector<int64_t> threadBestTiling;
+        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
+            threadBestOrder;
+        auto localCluster = cluster;
+        DimensionRelationNetwork localNetwork(network);
 
-    // ECHO("generating order", "\n")
+        localNetwork.setUndeterminedPars(tilingVec);
+        if (!localNetwork.forward())
+          return;  // Equivalent to 'continue' in parallelForEach
 
-    std::vector<
-        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>>
-        orders;
-    std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> candidate;
-    generateCandidateOrders(cluster, cluster.getNodeSetTopOrder().begin(),
-                            candidate, orders);
+        localCluster.applyTiling(localNetwork.getDimensionValueMapping());
+        if (!localCluster.checkArchConstraint(archCfg)) return;
 
-    auto nodes = cluster.getNodeSetTopOrder();
+        std::vector<
+            std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>>
+            orders;
+        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
+            candidate;
 
-    if (orders.size() == 0) continue;
+        generateCandidateOrders(localCluster,
+                                localCluster.getNodeSetTopOrder().begin(),
+                                candidate, orders);
 
-    // ECHO(orders.size(), "\n")
+        if (orders.empty()) return;
 
-    for (auto orderMap : orders) {
-      assert(orderMap.size() == cluster.getNodeSetTopOrder().size());
-      cluster.applyOrder(orderMap);
+        for (const auto& orderMap : orders) {
+          localCluster.applyOrder(orderMap);
+          auto metric = model.evaluate(localCluster, archCfg);
 
-      auto metric = model.evaluate(cluster, archCfg);
+          if (metric.computeDensity > threadBest.computeDensity) {
+            foundInThread = true;
+            threadBest = metric;
+            threadBestTiling = tilingVec;
+            threadBestOrder = orderMap;
+          }
+        }
 
-      if (metric.computeDensity > bestMetric.computeDensity) {
-        existProperParameter = true;
+        if (foundInThread) {
+          std::lock_guard<std::mutex> lock(resultMutex);
+          existGlobalParameter = true;
+          if (threadBest.computeDensity > globalBest.computeDensity) {
+            globalBest = threadBest;
+            globalBestTiling = std::move(threadBestTiling);
+            globalBestOrder = std::move(threadBestOrder);
+          }
+        }
+      });
 
-        bestMetric = metric;
-        bestTilingSize = tilingVec;
-        bestOrder = orderMap;
-      }
-    }
-  }
+  if (cluster.getNodeSetTopOrder().size() == 1) assert(existGlobalParameter);
 
-  if (cluster.getNodeSetTopOrder().size() == 1) assert(existProperParameter);
-
-  if (!existProperParameter) {
+  if (!existGlobalParameter) {
     ECHO("faile to solve parameter", "\n")
     return EvaluationMetric(0, 0, 0, 0);
   } else {
-    network.setUndeterminedPars(bestTilingSize);
+    network.setUndeterminedPars(globalBestTiling);
     assert(network.forward());
     cluster.applyTiling(network.getDimensionValueMapping());
     // std::unordered_map<Operation*, llvm::SmallVector<int64_t>> opOrderMap;
-    // for (auto [op, ord] : llvm::zip(cluster.getNodeSetTopOrder(), bestOrder))
+    // for (auto [op, ord] : llvm::zip(cluster.getNodeSetTopOrder(),
+    // bestOrder))
     // {
     //   opOrderMap[op] = ord;
     // }
-    cluster.applyOrder(bestOrder);
+    cluster.applyOrder(globalBestOrder);
 
     ECHO("density : ", "")
-    ECHO(bestMetric.computeDensity, "\n")
-    ECHO(bestMetric.flops, "\n")
-    ECHO(bestMetric.externalAccess, "\n")
-    ECHO_LIST(bestTilingSize, ",")
+    ECHO(globalBest.computeDensity, "\n")
+    ECHO(globalBest.flops, "\n")
+    ECHO(globalBest.externalAccess, "\n")
+    ECHO_LIST(globalBestTiling, ",")
     for (auto [xx, yy] : cluster.getParameter()) {
       ECHO_LIST(yy["tiling_size"], ",")
     }
-    return bestMetric;
+    return globalBest;
   }
 }
 

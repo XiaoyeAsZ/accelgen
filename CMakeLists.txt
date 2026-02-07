@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 
 find_package(MLIR REQUIRED CONFIG)
 find_package(CIRCT REQUIRED CONFIG)
+find_package(OpenMP REQUIRED)
 
 # Define the default argument to use by `lit` when testing.
 set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")

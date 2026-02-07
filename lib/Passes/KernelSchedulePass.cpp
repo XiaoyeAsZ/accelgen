@@ -29,11 +29,11 @@ namespace mlir::accelgen {
 namespace {
 
 class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
-public:
+ public:
   using impl::KernelScheduleBase<KernelSchedule>::KernelScheduleBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext &ctx = getContext();
+    mlir::MLIRContext& ctx = getContext();
     mlir::func::FuncOp func = getOperation();
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
@@ -47,8 +47,8 @@ public:
     // func.walk([&](mlir::linalg::GenericOp genericOp) {
     //   scheduledCluster.insertGenericOp(genericOp);
     // });
-    for (auto &block : func.getBlocks()) {
-      for (auto &op : block.getOperations())
+    for (auto& block : func.getBlocks()) {
+      for (auto& op : block.getOperations())
         if (mlir::dyn_cast<linalg::GenericOp>(op) ||
             mlir::dyn_cast<tensor::CollapseShapeOp>(op) ||
             mlir::dyn_cast<tensor::ExpandShapeOp>(op) ||
@@ -85,20 +85,17 @@ public:
           if (!cluster->isMember(operand.getDefiningOp()))
             clusterInput.insert(operand);
         }
-        for (auto constValue : constSet)
-          clusterInput.insert(constValue);
+        for (auto constValue : constSet) clusterInput.insert(constValue);
         for (auto operand : genericOp.getOutputs()) {
           bool flag = true;
           for (auto use : operand.getUsers()) {
-            if (use == genericOp)
-              continue;
+            if (use == genericOp) continue;
             if (cluster->isMember(use)) {
               flag = false;
               break;
             }
           }
-          if (flag)
-            clusterOutput.insert(operand);
+          if (flag) clusterOutput.insert(operand);
         }
       }
 
@@ -115,20 +112,19 @@ public:
 
       // clusterFuncOp.setPrivate();
 
-      mlir::Block *entry = clusterFuncOp.addEntryBlock();
+      mlir::Block* entry = clusterFuncOp.addEntryBlock();
       builder.setInsertionPointToStart(entry);
 
       IRMapping mapper;
       for (auto [arg, input] : llvm::zip(entry->getArguments(), clusterInput))
         mapper.map(input, arg);
 
-      for (Operation *op : *cluster) {
+      for (Operation* op : *cluster) {
         builder.clone(*op, mapper);
       }
 
       llvm::SmallVector<Value> retVals;
-      for (Value out : clusterOutput)
-        retVals.push_back(mapper.lookup(out));
+      for (Value out : clusterOutput) retVals.push_back(mapper.lookup(out));
 
       builder.create<func::ReturnOp>(clusterFuncOp.getLoc(), retVals);
     }
@@ -137,5 +133,5 @@ public:
   }
 };
 
-} // namespace
-} // namespace mlir::accelgen
+}  // namespace
+}  // namespace mlir::accelgen

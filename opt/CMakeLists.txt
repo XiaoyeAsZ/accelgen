@@ -1,4 +1,5 @@
 set(LIBS
+    OpenMP::OpenMP_CXX
     MLIRArithDialect
     MLIROptLib
     MLIRRegisterAllDialects
