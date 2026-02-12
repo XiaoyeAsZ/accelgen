@@ -133,15 +133,15 @@ module {
     %extracted_slice = tensor.extract_slice %expanded[0, 0, 0] [1, 16, 768] [1, 1, 1] : tensor<1x16x2304xbf16> to tensor<1x16x768xbf16>
     %extracted_slice_12 = tensor.extract_slice %expanded[0, 0, 768] [1, 16, 768] [1, 1, 1] : tensor<1x16x2304xbf16> to tensor<1x16x768xbf16>
     %extracted_slice_13 = tensor.extract_slice %expanded[0, 0, 1536] [1, 16, 768] [1, 1, 1] : tensor<1x16x2304xbf16> to tensor<1x16x768xbf16>
-    %expanded_14 = tensor.expand_shape %extracted_slice [[0], [1], [2, 3]] output_shape [1, 16, 12, 64] : tensor<1x16x768xbf16> into tensor<1x16x12x64xbf16>
+    %expanded_14 = tensor.expand_shape %extracted_slice_12 [[0], [1], [2, 3]] output_shape [1, 16, 12, 64] : tensor<1x16x768xbf16> into tensor<1x16x12x64xbf16>
+    %expanded_15 = tensor.expand_shape %extracted_slice_13 [[0], [1], [2, 3]] output_shape [1, 16, 12, 64] : tensor<1x16x768xbf16> into tensor<1x16x12x64xbf16>
     %28 = tensor.empty() : tensor<1x12x16x64xbf16>
-    %transposed = linalg.transpose ins(%expanded_14 : tensor<1x16x12x64xbf16>) outs(%28 : tensor<1x12x16x64xbf16>) permutation = [0, 2, 1, 3] 
-    %expanded_15 = tensor.expand_shape %extracted_slice_12 [[0], [1], [2, 3]] output_shape [1, 16, 12, 64] : tensor<1x16x768xbf16> into tensor<1x16x12x64xbf16>
-    %expanded_16 = tensor.expand_shape %extracted_slice_13 [[0], [1], [2, 3]] output_shape [1, 16, 12, 64] : tensor<1x16x768xbf16> into tensor<1x16x12x64xbf16>
+    %transposed = linalg.transpose ins(%expanded_15 : tensor<1x16x12x64xbf16>) outs(%28 : tensor<1x12x16x64xbf16>) permutation = [0, 2, 1, 3] 
+    %expanded_16 = tensor.expand_shape %extracted_slice [[0], [1], [2, 3]] output_shape [1, 16, 12, 64] : tensor<1x16x768xbf16> into tensor<1x16x12x64xbf16>
     %transposed_17 = linalg.transpose ins(%expanded_16 : tensor<1x16x12x64xbf16>) outs(%28 : tensor<1x12x16x64xbf16>) permutation = [0, 2, 1, 3] 
     %29 = tensor.empty() : tensor<1x12x64x16xbf16>
-    %transposed_18 = linalg.transpose ins(%expanded_15 : tensor<1x16x12x64xbf16>) outs(%29 : tensor<1x12x64x16xbf16>) permutation = [0, 2, 3, 1] 
-    %collapsed_19 = tensor.collapse_shape %transposed [[0, 1], [2], [3]] : tensor<1x12x16x64xbf16> into tensor<12x16x64xbf16>
+    %transposed_18 = linalg.transpose ins(%expanded_14 : tensor<1x16x12x64xbf16>) outs(%29 : tensor<1x12x64x16xbf16>) permutation = [0, 2, 3, 1] 
+    %collapsed_19 = tensor.collapse_shape %transposed_17 [[0, 1], [2], [3]] : tensor<1x12x16x64xbf16> into tensor<12x16x64xbf16>
     %30 = linalg.generic {indexing_maps = [#map7, #map8], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%collapsed_19 : tensor<12x16x64xbf16>) outs(%28 : tensor<1x12x16x64xbf16>) {
     ^bb0(%in: bf16, %out: bf16):
       linalg.yield %in : bf16
@@ -228,7 +228,7 @@ module {
     ^bb0(%in: bf16, %out: bf16):
       linalg.yield %in : bf16
     } -> tensor<1x12x16x16xbf16>
-    %collapsed_28 = tensor.collapse_shape %transposed_17 [[0, 1], [2], [3]] : tensor<1x12x16x64xbf16> into tensor<12x16x64xbf16>
+    %collapsed_28 = tensor.collapse_shape %transposed [[0, 1], [2], [3]] : tensor<1x12x16x64xbf16> into tensor<12x16x64xbf16>
     %55 = linalg.generic {indexing_maps = [#map7, #map8], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%collapsed_28 : tensor<12x16x64xbf16>) outs(%28 : tensor<1x12x16x64xbf16>) {
     ^bb0(%in: bf16, %out: bf16):
       linalg.yield %in : bf16

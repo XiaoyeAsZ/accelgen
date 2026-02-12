@@ -88,7 +88,7 @@ class GPT2Attention(nn.Module):
             
             query_length = query.shape[-2]
             key_length = key.shape[-2]
-            causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length]
+            causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length] # type: ignore
             mask_value = torch.finfo(attn_weights.dtype).min
             mask_value = torch.tensor(mask_value, dtype=attn_weights.dtype, device=attn_weights.device)
             attn_weights = torch.where(causal_mask, attn_weights, mask_value)
