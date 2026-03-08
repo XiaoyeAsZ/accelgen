@@ -42,3 +42,9 @@ def ConstructTileGraph: Pass<"construct-tile-graph", "::mlir::func::FuncOp"> {
   let description = [{
   }];
 }
+
+def ConvertToDap: Pass<"convert-to-dap", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+}

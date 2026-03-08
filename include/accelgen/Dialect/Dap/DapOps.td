@@ -23,6 +23,42 @@ def DataPathOp : Dap_Op<"data_path", []> {
   );
 }
 
+def SramOp : Dap_Op<"sram", []> {
+  let summary = "Sram";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$width,
+    I32Attr:$depth,
+    I32Attr:$nbank
+  );
+
+  let results = (outs
+    I32:$din,
+    I32:$dout,
+    I32:$addr,
+    I32:$stride,
+    I32:$read,
+    I32:$write
+  );
+}
+
+def DataNodeOp : Dap_Op<"data_node", []> {
+  let summary = "Data Node";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$fanin,
+    I32Attr:$fanout
+  );
+
+  let results = (outs
+    Variadic<I32>:$ports
+  );
+}
+
 def ConcatOp : Dap_Op<"concat", []> {
   let summary = "Concat";
   let description = [{

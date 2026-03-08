@@ -316,9 +316,9 @@ class DimensionRelationNetwork {
 
 class ArchConfig {
  public:
-  size_t bandwidth;     // GB/s
-  size_t sramCapacity;  // B
-  size_t mulCnt;        // #
+  size_t bandwidth;                                         // GB/s
+  size_t sramCapacity;                                      // B
+  std::unordered_map<std::string, size_t> computeResource;  // #
 };
 
 class EvaluationMetric {
@@ -447,6 +447,8 @@ class PruningSolver : public ParameterSolvingInterface {
   bool checkReuseDistance(llvm::SmallVector<int64_t>& order,
                           llvm::SmallVector<int64_t>& dims,
                           llvm::SmallVector<int64_t>& mask);
+
+  void inferUnrollFactor(GenericOpCluster& cluster, ArchConfig& archCfg);
 };
 
 class ScheduledGenericOpCluster {

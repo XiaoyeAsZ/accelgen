@@ -41,6 +41,14 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     ArchConfig archCfg;
     archCfg.bandwidth = 128;
     archCfg.sramCapacity = 128 * 1024;
+    archCfg.computeResource["mulf_bf16_bf16"] = 64 * 64 + 64;
+    archCfg.computeResource["addf_bf16_bf16"] = 64 * 64 + 64;
+    archCfg.computeResource["negf_bf16"] = 64;
+    archCfg.computeResource["addf_f32_f32"] = 64;
+    archCfg.computeResource["subf_f32_f32"] = 64;
+    archCfg.computeResource["truncf_f32_bf16"] = 64;
+    archCfg.computeResource["truncf_f64_bf16"] = 64;
+    archCfg.computeResource["transpose_bf16"] = 16 * 16;
 
     // GenericOpClusterDAG clusterDAG;
     ScheduledGenericOpCluster scheduledCluster("pruning_brute_force");

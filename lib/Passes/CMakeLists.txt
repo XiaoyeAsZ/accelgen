@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRAccelgen
         KernelSchedulePass.cpp
         MarkGenericPass.cpp
         FuseGenericPass.cpp
+        ConvertToDapPass.cpp
 
 
         ADDITIONAL_HEADER_DIRS
