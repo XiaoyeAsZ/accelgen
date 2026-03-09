@@ -1,0 +1,84 @@
+compound_components:
+  version: 0.4
+  classes:
+  - name: noc_router
+    attributes:
+      technology: "must_specify"
+      width: "must_specify"
+      global_cycle_seconds: "must_specify"
+      n_router_ports: 5
+      vc_count: 4
+      input_buffer_depth: 8
+      output_buffer_depth: 2
+      # Control-path proxy width for arbiter energy.
+      arbiter_width: max(1, ceil(log2(n_router_ports)))
+
+    subcomponents:
+    - name: input_buffer
+      class: smartbuffer_RF
+      attributes:
+        technology: technology
+        global_cycle_seconds: global_cycle_seconds
+        width: width
+        depth: input_buffer_depth * vc_count
+
+    - name: output_buffer
+      class: smartbuffer_RF
+      attributes:
+        technology: technology
+        global_cycle_seconds: global_cycle_seconds
+        width: width
+        depth: output_buffer_depth * vc_count
+
+    - name: crossbar
+      class: crossbar
+      attributes:
+        technology: technology
+        global_cycle_seconds: global_cycle_seconds
+        n_inputs: n_router_ports
+        n_outputs: n_router_ports
+        width: width
+
+    - name: arbiter
+      class: aladdin_comparator
+      attributes:
+        technology: technology
+        global_cycle_seconds: global_cycle_seconds
+        width: arbiter_width
+
+    actions:
+    - &write_action
+      name: write
+      subcomponents:
+      - name: input_buffer
+        actions: [{name: write}]
+
+    - name: read
+      subcomponents:
+      - name: output_buffer
+        actions: [{name: read}]
+
+    - name: transfer
+      subcomponents:
+      - name: input_buffer
+        actions: [{name: read}]
+      - name: arbiter
+        actions: [{name: compare}]
+      - name: crossbar
+        actions: [{name: access}]
+      - name: output_buffer
+        actions: [{name: write}]
+
+    - name: update
+      << : *write_action
+
+    - name: leak
+      subcomponents:
+      - name: input_buffer
+        actions: [{name: leak}]
+      - name: output_buffer
+        actions: [{name: leak}]
+      - name: crossbar
+        actions: [{name: leak}]
+      - name: arbiter
+        actions: [{name: leak}]
