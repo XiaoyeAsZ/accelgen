@@ -75,7 +75,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     // clusterDAG.constructDAG();
     // clusterDAG.optimizeDAG();
 
-    scheduledCluster.schedule(&ctx, model, archCfg);
+    scheduledCluster.schedule(&ctx, model, archCfg, 4);
 
     mlir::OpBuilder builder(module);
 

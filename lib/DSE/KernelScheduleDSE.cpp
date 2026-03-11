@@ -1759,6 +1759,7 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
       globalBestOrder;
 
   std::mutex resultMutex;
+  // llvm::parallelForEach
   llvm::for_each(allTilings, [&](const std::vector<int64_t>& tilingVec) {
     bool foundInThread = false;
     EvaluationMetric threadBest(0, 0, 0, 0);
@@ -1901,7 +1902,8 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
           .Case<linalg::YieldOp>([&](linalg::YieldOp arithOp) {
             if (op->hasAttr("accelgen.transpose")) {
               resource["transpose_bf16"] += flops[index];
-            }
+            } else
+              assert(0);
           })
           .Default([&](mlir::Operation* arithOp) {
             arith.dump();
@@ -1919,9 +1921,9 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
     }
   }
 
-  // ECHO("max res ", " ")
-  // ECHO(maxResourceUsed, " ")
-  // ECHO(maxResource, "\n")
+  ECHO("max res ", " ")
+  ECHO(maxResourceUsed, " ")
+  ECHO(maxResource, "\n")
   int64_t factor = archCfg.computeResource[maxResource] / maxResourceUsed;
   for (auto& x : flops) x = x * factor;
 
@@ -2156,8 +2158,8 @@ void ScheduledGenericOpCluster::insertGenericOp(linalg::GenericOp genericOp) {
 }
 
 void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
-                                         PerfModel& model,
-                                         ArchConfig& archCfg) {
+                                         PerfModel& model, ArchConfig& archCfg,
+                                         int64_t maxSubgraphOp) {
   // std::vector<mlir::Operation *> opsTopOrder = getTopoOrder(ops);
   std::vector<mlir::Operation*> opsTopOrder = getTopoOrderALSP(ops);
   std::vector<linalg::GenericOp> genericOpsTopOrder;
@@ -2187,6 +2189,7 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
   // llvm::errs() << genericOpsTopOrder.size() + 1 << "\n";
   dpStatus[0] = EvaluationMetric(0, 0, 0, 0);
   cutIndex[0] = 0;
+  llvm::errs() << "total generic : " << genericOpsTopOrder.size() << "\n";
   for (unsigned int i = 1; i <= genericOpsTopOrder.size(); i++) {
     // llvm::errs() << "outer" << i << "\n";
     EvaluationMetric maxMetric(0, 0, 0, 0);
@@ -2198,7 +2201,7 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
                                             genericOpsTopOrder.data() + i);
 
       EvaluationMetric mergedMetric(0, 0, 0, 0);
-      if (mergedCluster.checkConnectivity())
+      if (mergedCluster.checkConnectivity() && i - j + 1 <= maxSubgraphOp)
         mergedMetric = solver->solve(mergedCluster, model, archCfg);
       else {
         mergedMetric = model.evaluate(mergedCluster, archCfg);

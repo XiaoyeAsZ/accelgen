@@ -48,3 +48,9 @@ def ConvertToDap: Pass<"convert-to-dap", "::mlir::ModuleOp"> {
   let description = [{
   }];
 }
+
+def CollapseShapeDelayPass: Pass<"collapse-shape-delay", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+}

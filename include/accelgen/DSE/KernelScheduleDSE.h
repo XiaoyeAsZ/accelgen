@@ -458,7 +458,8 @@ class ScheduledGenericOpCluster {
   ~ScheduledGenericOpCluster();
   void insertOp(mlir::Operation* op);
   void insertGenericOp(linalg::GenericOp genericOp);
-  void schedule(mlir::MLIRContext* ctx, PerfModel& model, ArchConfig& archCfg);
+  void schedule(mlir::MLIRContext* ctx, PerfModel& model, ArchConfig& archCfg,
+                int64_t maxSubgraphOp);
 
   std::vector<mlir::accelgen::GenericOpCluster*>::iterator begin();
   std::vector<mlir::accelgen::GenericOpCluster*>::iterator end();

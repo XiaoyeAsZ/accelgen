@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRAccelgen
         MarkGenericPass.cpp
         FuseGenericPass.cpp
         ConvertToDapPass.cpp
+        CollapseShapeDelayPass.cpp
 
 
         ADDITIONAL_HEADER_DIRS
