@@ -8,5 +8,8 @@ batch="8"
 sequence="1024"
 
 ./build/bin/accelgen-opt ./benchmark/mlir/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}.mlir \
--pass-pipeline="builtin.module(func.func(linalg-generalize-named-ops),mark-generic,collapse-shape-delay)" \
--o ./test/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}-generic.mlir
+-pass-pipeline="builtin.module(func.func(linalg-generalize-named-ops),mark-generic,fuse-generic)" \
+-o ./test/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}-generic.mlir \
+-mlir-print-ir-after-all \
+-mlir-print-ir-after-failure \
+2>&1 | tee ./test/log.txt
