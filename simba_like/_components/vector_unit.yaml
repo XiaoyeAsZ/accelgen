@@ -1,0 +1,77 @@
+compound_components:
+  version: 0.4
+  classes:
+  # ============================================================================
+  # Vector Processing Unit (VPU) for nonlinear activations
+  # ============================================================================
+  # Models a pipelined vector functional unit that computes elementwise
+  # nonlinear functions (GELU, Softmax exp/div, LayerNorm, etc.) via
+  # polynomial approximation or lookup + interpolation.
+  #
+  # Hardware budget per lane:
+  #   - 1 multiplier  (polynomial term: coeff * x^k)
+  #   - 1 adder       (accumulate polynomial terms)
+  #   - 1 comparator  (clamp / ReLU / range select for piecewise approx)
+  #
+  # A single "compute" action = 1 multiply + 1 add + amortized compare.
+  # Polynomial term iteration is handled by Timeloop's C dimension
+  # (C = number of poly terms). The comparator fires once per element
+  # (piecewise range select), NOT once per poly term. To model this,
+  # comparator energy_scale = 1/n_poly_terms, so over C invocations:
+  #   C × (1/n_poly_terms) cmp = 1 cmp per element (when n_poly_terms = C).
+  # ============================================================================
+  - name: vector_unit
+    attributes:
+      technology: "must_specify"
+      datawidth: 8
+      global_cycle_seconds: "must_specify"
+      # Number of polynomial terms per element. Must match workload C.
+      # Used to amortize comparator (1 cmp per element, not per MAC).
+      # GELU=4, Softmax=5, LayerNorm=2. Default=4 (GELU).
+      n_poly_terms: 4
+
+    subcomponents:
+    # Multiplier for polynomial coefficient * power-of-x
+    - name: multiplier
+      class: aladdin_multiplier
+      attributes:
+        width_a: datawidth
+        width_b: datawidth
+        global_cycle_seconds: global_cycle_seconds
+
+    # Adder for accumulating polynomial terms
+    - name: adder
+      class: aladdin_adder
+      attributes:
+        width: datawidth * 2
+        global_cycle_seconds: global_cycle_seconds
+
+    # Comparator for piecewise range selection / clamping
+    - name: comparator
+      class: aladdin_comparator
+      attributes:
+        width: datawidth
+        global_cycle_seconds: global_cycle_seconds
+
+    actions:
+    # Per action: 1 multiply + 1 add + (1/n_poly_terms) compare.
+    # Timeloop invokes this C times per element. Over C calls:
+    #   C × 1 mul, C × 1 add, C × (1/n_poly_terms) cmp ≈ 1 cmp total.
+    - name: compute
+      subcomponents:
+      - name: multiplier
+        actions: [{name: read}]
+      - name: adder
+        actions: [{name: read}]
+      - name: comparator
+        actions: [{name: read, energy_scale: 1.0/n_poly_terms}]
+
+    - name: leak
+      subcomponents:
+      - name: multiplier
+        actions: [{name: leak}]
+      - name: adder
+        actions: [{name: leak}]
+      - name: comparator
+        actions: [{name: leak}]
+
