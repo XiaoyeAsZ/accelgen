@@ -1,0 +1,30 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# GPT-2 GELU activation (per Transformer block)
+# ===========================================================================
+# Position: after FFN first linear layer (1024 -> 4096), before FFN second.
+# Modelled as a pointwise polynomial approximation:
+#   GELU(x) ≈ c0 + c1*x + c2*x^2 + c3*x^3  (cubic fit)
+#
+# Mapping to Conv2D problem shape:
+#   C = 4    (polynomial coefficients as "input channels")
+#   M = 1    (one output per element)
+#   P = 4096 (FFN hidden dimension — elementwise activation axis)
+#   Q = 256  (sequence length)
+#
+# Total elements = P * Q = 4096 * 256 = 1,048,576 GELU evaluations per block.
+# Each evaluation requires C=4 multiply-accumulate operations (cubic poly).
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 1
+    C: 4          # polynomial terms (cubic approximation → 4 MACs/element)
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 4096       # FFN hidden dimension (elementwise activation axis)
+    Q: 256        # sequence length
+    G: 1
+

@@ -1,0 +1,41 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# GPT-2 Softmax — Phase 1: Elementwise exp() (per Transformer block)
+# ===========================================================================
+# Softmax(x_i) = exp(x_i) / sum(exp(x_j))
+#
+# This is the FIRST phase: compute exp(x_i) for every attention score.
+# Must complete before Phase 2 (normalization) can begin, because
+# the denominator sum(exp(x_j)) requires ALL exp values.
+#
+# Hardware approximation: 4-term Taylor expansion
+#   exp(x) ≈ a₀ + a₁·x + a₂·x² + a₃·x³
+#   → 4 MACs per element (Horner's method)
+#
+# Also accumulates S += exp(x_i) in a register (not modelled —
+# simple addition, not MAC, and pipelined with the exp computation).
+#
+# Per-head attention score matrix: seq_len × seq_len = 256 × 256
+# 16 heads total: 16 × 256 × 256 = 1,048,576 exp evaluations.
+#
+# Mapping:
+#   C = 4   (Taylor polynomial: 4 coefficients → 4 MACs/element)
+#   M = 1   (one exp output per score element)
+#   P = 256 (attention score rows)
+#   Q = 256 (attention score cols)
+#   N = 16  (attention heads as batch)
+#
+# Total computes = N × C × P × Q = 16 × 4 × 256 × 256 = 4,194,304
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 16         # 16 attention heads (batched)
+    C: 4          # 4-term Taylor expansion → 4 MACs/element
+    M: 1          # one exp output per score element
+    R: 1
+    S: 1
+    P: 256        # attention score rows (seq_len)
+    Q: 256        # attention score cols (seq_len)
+    G: 1

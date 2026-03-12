@@ -1,0 +1,39 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# GPT-2 LayerNorm (per Transformer block, 2 instances)
+# ===========================================================================
+# Position: before self-attention and before FFN (Pre-LN GPT-2 variant).
+# LayerNorm(x) = gamma * (x - mean) / sqrt(var + eps) + beta
+#
+# Decomposed operations per element:
+#   1. Subtract mean   (1 add)
+#   2. Multiply by rsqrt(var + eps) (1 multiply)
+#   3. Scale by gamma  (1 multiply)
+#   4. Add beta        (1 add)
+# Modelled as C=2 (gamma & beta as coefficients), 2 multiplies + 2 adds.
+#
+# Applied to full hidden dimension (1024) × sequence length (256).
+# Total: 1024 * 256 = 262,144 elements per LayerNorm instance.
+#
+# Mapping:
+#   C = 2    (gamma * normalize + beta: 2 MACs/element)
+#   M = 1
+#   P = 1024 (model hidden dimension)
+#   Q = 256  (sequence length)
+#
+# Total elements = P * Q = 1024 * 256 = 262,144 per LayerNorm instance.
+# GPT-2 has 2 LayerNorm per block; run this workload twice to account for both.
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 1
+    C: 2          # gamma and beta parameters (2 MACs/element)
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 1024       # model hidden dimension
+    Q: 256        # sequence length
+    G: 1
+

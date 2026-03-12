@@ -1,0 +1,39 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# GPT-2 Softmax — Phase 2: Normalization (per Transformer block)
+# ===========================================================================
+# Softmax(x_i) = exp(x_i) / sum(exp(x_j))
+#
+# This is the SECOND phase: multiply each exp(x_i) by r = 1/S.
+# MUST run AFTER softmax_exp.yaml completes, because r depends on
+# the sum S = Σ exp(x_j) computed during Phase 1.
+#
+# The reciprocal r = 1/S is computed once per row (256 elements)
+# via Newton iteration or lookup table (~10 cycles, negligible).
+# Then each element is normalized: y_i = exp(x_i) × r → 1 MAC.
+#
+# Serial dependency:
+#   Phase 1 (softmax_exp) → barrier → Phase 2 (this file)
+#   Total Softmax cycles = cycles(exp) + cycles(norm)
+#
+# Mapping:
+#   C = 1   (single multiply by reciprocal → 1 MAC/element)
+#   M = 1   (one normalized output per score element)
+#   P = 256 (attention score rows)
+#   Q = 256 (attention score cols)
+#   N = 16  (attention heads as batch)
+#
+# Total computes = N × C × P × Q = 16 × 1 × 256 × 256 = 1,048,576
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 16         # 16 attention heads (batched)
+    C: 1          # multiply by reciprocal → 1 MAC/element
+    M: 1          # one normalized output per score element
+    R: 1
+    S: 1
+    P: 256        # attention score rows (seq_len)
+    Q: 256        # attention score cols (seq_len)
+    G: 1

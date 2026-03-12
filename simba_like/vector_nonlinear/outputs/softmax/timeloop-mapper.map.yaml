@@ -1,0 +1,57 @@
+mapping:
+  - target: VPU_OutputReg
+    type: datatype
+    keep:
+      - Outputs
+    bypass:
+      - Weights
+      - Inputs
+  - target: VPU_CoeffReg
+    type: datatype
+    keep:
+      - Weights
+    bypass:
+      - Inputs
+      - Outputs
+  - target: VPU_InputReg
+    type: datatype
+    keep:
+      - Inputs
+    bypass:
+      - Weights
+      - Outputs
+  - target: GlobalBuffer
+    type: datatype
+    keep:
+      - Inputs
+      - Outputs
+    bypass:
+      - Weights
+  - target: DRAM
+    type: datatype
+    keep:
+      - Weights
+      - Inputs
+      - Outputs
+    bypass:
+      []
+  - target: VPU_OutputReg
+    type: temporal
+    factors: C1 M1 R1 S1 N2 P2 Q1 G1
+    permutation: NPCMRSQG
+  - target: VPU_CoeffReg
+    type: temporal
+    factors: C5 M1 R1 S1 N1 P1 Q1 G1
+    permutation: CMRSNPQG
+  - target: VPU_InputReg
+    type: temporal
+    factors: C1 M1 R1 S1 N2 P1 Q2 G1
+    permutation: NQCMRSPG
+  - target: GlobalBuffer
+    type: temporal
+    factors: C1 M1 R1 S1 N2 P32 Q2 G1
+    permutation: PNQCMRSG
+  - target: DRAM
+    type: temporal
+    factors: C1 M1 R1 S1 N2 P4 Q64 G1
+    permutation: NQPCMRSG
