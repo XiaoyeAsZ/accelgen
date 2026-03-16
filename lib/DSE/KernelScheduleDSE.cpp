@@ -1438,33 +1438,6 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
 
   EvaluationMetric metric;
 
-  // Check hardware resource usage
-  for (auto clusterOp : cluster.getNodeSetTopOrder()) {
-    auto genericOp = mlir::dyn_cast<linalg::GenericOp>(clusterOp);
-    assert(genericOp);
-    // Stat usage of compute unit
-    auto unrollFactor = parameter[genericOp]["unroll_factor"];
-    int64_t accumulateFactor = std::accumulate(
-        unrollFactor.begin(), unrollFactor.end(), 1, std::multiplies<int>());
-    for (auto& arithOp : genericOp.getRegion().front().getOperations()) {
-      // Skip yeild op
-      if (mlir::isa<linalg::YieldOp>(arithOp)) continue;
-      std::string computeResourceName = toString(&arithOp);
-      for (auto arithOpOperand : arithOp.getOperands()) {
-        computeResourceName =
-            computeResourceName + "_" + toString(arithOpOperand.getType());
-      }
-      metric.resourceCnt[computeResourceName] += accumulateFactor;
-    }
-    // Stat usage of SRAM
-  }
-  for (auto [nameComputeResource, cntComputeResource] : metric.resourceCnt) {
-    if (cntComputeResource > cfg.computeResource[nameComputeResource.str()]) {
-      metric.isValid = false;
-      return;
-    }
-  }
-
   std::unordered_map<mlir::Operation*,
                      std::unordered_map<std::string, double_t>>
       statisticDat;
@@ -1476,63 +1449,71 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     statisticDat[kv.first]["cycles"] = 0;
   }
   std::vector<mlir::Operation*> nodeSetTopOrder = cluster.getNodeSetTopOrder();
+
+  // Analyze factor and flops for each pipeline stage
   for (auto riter = nodeSetTopOrder.rbegin(); riter != nodeSetTopOrder.rend();
        riter++) {
     auto genericOp = mlir::dyn_cast<linalg::GenericOp>(*riter);
     assert(genericOp);
-
-    auto indexingMaps = genericOp.getIndexingMapsArray();
-
-    // auto dimOrder = (*parameter)[*riter]["outer_order"];
-    auto tilingSize = parameter[*riter]["tiling_size"];
-    auto loopBound = parameter[*riter]["loop_bound"];
-    auto unrollFactor = parameter[*riter]["unroll_factor"];
     auto iteratorTypes = genericOp.getIteratorTypesArray();
+    auto indexingMaps = genericOp.getIndexingMapsArray();
+    auto loopBound = parameter[*riter]["loop_bound"];
+    auto tilingSize = parameter[*riter]["tiling_size"];
+    auto unrollFactor = parameter[*riter]["unroll_factor"];
 
+    // Analysis tile : least tile size for producing a output tile
     auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
-    for (size_t i = 0; i < analysisTileSize.size(); i++) {
-      switch (iteratorTypes[i]) {
+    for (auto [idxAnaTileSize, itemAnaTileSize] :
+         llvm::enumerate(analysisTileSize)) {
+      switch (iteratorTypes[idxAnaTileSize]) {
         case mlir::utils::IteratorType::reduction:
-          analysisTileSize[i] = loopBound[i];
+          analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
           break;
         case mlir::utils::IteratorType::parallel:
-          analysisTileSize[i] = tilingSize[i];
+          analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
           break;
         default:
-          // llvm::errs() << "Unknown iterator types.\n";
           break;
       }
     }
 
-    auto flops =
-        std::accumulate(analysisTileSize.begin(), analysisTileSize.end(),
-                        int64_t(1), std::multiplies<>());
+    // Analyze analysis tile size with tiling size to get how many tiles are
+    // need for each inputs, i.e. factor, forward this factor to producer
+    // generic ops
+    for (auto [idxIns, itemIns] : llvm::enumerate(genericOp.getInputs())) {
+      llvm::SmallVector<linalg::GenericOp> previousGenerics;
+      cluster.getPreviousGeneric(itemIns, previousGenerics);
 
-    int64_t cycles = 1;
-    assert(analysisTileSize.size() == unrollFactor.size());
-    // ECHO_LIST(unrollFactor, ",")
-    for (size_t i = 0; i < analysisTileSize.size(); i++) {
-      cycles *= (analysisTileSize[i] / unrollFactor[i]);
-    }
-
-    statisticDat[*riter]["flops"] = flops;
-    // statisticDat[*riter]["external_access"] = externalAccess;
-    statisticDat[*riter]["cycles"] = cycles;
-
-    for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
-      auto op = operand.getDefiningOp();
-      if (!cluster.isMember(op))
-        continue;
-      else {
+      for (auto [idxPrevGeneric, itemPrevGeneric] :
+           llvm::enumerate(previousGenerics)) {
         int64_t factor = 1;
-        auto accessDims = getAffineMapAccessDims(indexingMaps[index]);
-        for (size_t i = 0; i < accessDims.size(); i++)
-          factor *= analysisTileSize[accessDims[i]] / tilingSize[accessDims[i]];
-        if (statisticDat[op]["factor"] == 1)
-          statisticDat[op]["factor"] =
+        auto accessDims = getAffineMapAccessDims(indexingMaps[idxIns]);
+        for (auto [idxAccDim, itemAccDim] : llvm::enumerate(accessDims)) {
+          assert(analysisTileSize[itemAccDim] % tilingSize[itemAccDim] == 0);
+          factor *= analysisTileSize[itemAccDim] / tilingSize[itemAccDim];
+        }
+        if (factor * statisticDat[genericOp]["factor"] >
+            statisticDat[itemPrevGeneric]["factor"])
+          statisticDat[itemPrevGeneric]["factor"] =
               factor * statisticDat[genericOp]["factor"];
       }
     }
+
+    // FLops for each stage = flops of one analysis tile * n tile (factor)
+    auto flops =
+        std::accumulate(analysisTileSize.begin(), analysisTileSize.end(),
+                        int64_t(1), std::multiplies<>());
+    statisticDat[*riter]["flops"] = flops * statisticDat[*riter]["factor"];
+
+    // Cycles for each stage
+    int64_t cycles = 1;
+    assert(analysisTileSize.size() == unrollFactor.size());
+    for (auto [dimTileSize, dimUnrollFactor] :
+         llvm::zip(analysisTileSize, unrollFactor)) {
+      assert(dimTileSize % dimUnrollFactor == 0);
+      cycles *= (dimTileSize / dimUnrollFactor);
+    }
+    statisticDat[*riter]["cycles"] = cycles * statisticDat[*riter]["factor"];
   }
 
   double_t externalAccess = 0;
@@ -1540,111 +1521,113 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
   for (auto& op : cluster.getNodeSetTopOrder()) {
     auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
     assert(genericOp);
-    auto indexingMaps = genericOp.getIndexingMapsArray();
-    auto tiling = cluster.getParameter()[op]["tiling_size"];
-    auto bound = cluster.getParameter()[op]["loop_bound"];
 
+    auto iteratorTypes = genericOp.getIteratorTypesArray();
+    auto indexingMaps = genericOp.getIndexingMapsArray();
+    auto loopBound = parameter[genericOp]["loop_bound"];
+    auto tilingSize = parameter[genericOp]["tiling_size"];
+    auto outerOrder = cluster.getParameter()[op]["outer_order"];
+
+    // Analysis tile : least tile size for producing a output tile
+    auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
+    for (auto [idxAnaTileSize, itemAnaTileSize] :
+         llvm::enumerate(analysisTileSize)) {
+      switch (iteratorTypes[idxAnaTileSize]) {
+        case mlir::utils::IteratorType::reduction:
+          analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
+          break;
+        case mlir::utils::IteratorType::parallel:
+          analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
+          break;
+        default:
+          break;
+      }
+    }
+
+    // Get dim mask to check whetehr one value is accessed one pass
     llvm::SmallVector<int64_t> dimMask;
-    for (auto [t, b] : llvm::zip(tiling, bound)) {
+    for (auto [t, b] : llvm::zip(tilingSize, loopBound)) {
       if (t == b)
         dimMask.push_back(1);
       else
         dimMask.push_back(0);
     }
-    auto order = cluster.getParameter()[op]["outer_order"];
-    double_t totalTiles = 1;
-    for (auto [t, b] : llvm::zip(tiling, bound)) {
-      if (b % t != 0) {
-        ECHO(b, "\n")
-        ECHO(t, "\n")
-      }
-      assert(b % t == 0);
-      totalTiles *= b / t;
-    }
-    // ECHO("a node", "\n")
-    // ECHO_LIST(tiling, ",")
-    // ECHO_LIST(bound, ",")
-    // ECHO(totalTiles, "\n")
-    for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
-      if (!cluster.isMember(operand.getDefiningOp())) {
-        auto accDims = getAffineMapAccessDims(indexingMaps[index]);
-        double_t operandAccess = 1;
-        // ECHO("a input", "\n")
-        // ECHO_LIST(order, ",")
-        // ECHO_LIST(accDims, ",")
-        // ECHO_LIST(dimMask, ",")
-        if (cluster.checkReuseDistance(order, accDims, dimMask)) {
-          for (auto d : accDims) operandAccess *= bound[d];
-          // ECHO("conti", "\n")
-          // ECHO(operandAccess, "\n")
-        } else {
-          for (auto d : accDims) operandAccess *= tiling[d];
-          // ECHO("set", "\n")
-          // ECHO(operandAccess, "\n")
-          operandAccess *= totalTiles;
-        }
-        // ECHO(operandAccess, "\n")
-        if (externalOperandAccess.contains(operand))
-          externalOperandAccess[operand] =
-              std::max(externalOperandAccess[operand], operandAccess);
-        else
-          externalOperandAccess[operand] = operandAccess;
 
-        // ECHO(externalOperandAccess[operand], "\n")
+    // Analyze for each input operand
+    for (auto [idxIns, itemIns] : llvm::enumerate(genericOp.getInputs())) {
+      llvm::SmallVector<linalg::GenericOp> previousGenericOps;
+      cluster.getPreviousGeneric(itemIns, previousGenericOps);
+      // Value is internal
+      if (previousGenericOps.size() != 0) continue;
+
+      auto accDims = getAffineMapAccessDims(indexingMaps[idxIns]);
+      double_t operandAccess = 1;
+      // If value is accessed on one pass, access : one analysize tile
+      if (cluster.checkReuseDistance(outerOrder, accDims, dimMask)) {
+        for (auto d : accDims) operandAccess *= analysisTileSize[d];
       }
+      // Else, tile is access for several times
+      else {
+        int64_t nTimes = 1;
+        for (auto [idxDim, itemDim] : llvm::enumerate(accDims)) {
+          assert(analysisTileSize[itemDim] % tilingSize[itemDim] == 0);
+          nTimes *= analysisTileSize[itemDim] / tilingSize[itemDim];
+        }
+        for (auto d : accDims) operandAccess *= tilingSize[d];
+        operandAccess *= nTimes;
+      }
+
+      // Scale with factor
+      operandAccess *= statisticDat[genericOp]["factor"];
+
+      if (externalOperandAccess.contains(itemIns))
+        externalOperandAccess[itemIns] =
+            std::max(externalOperandAccess[itemIns], operandAccess);
+      else
+        externalOperandAccess[itemIns] = operandAccess;
     }
+
+    // Analyze for each result operand
     assert(genericOp.getResults().size() == 1);
-    for (auto [index, operand] : llvm::enumerate(genericOp.getResults())) {
-      bool flag = true;
-      for (auto user : operand.getUsers()) {
-        if (cluster.isMember(user)) {
-          flag = false;
-          break;
-        }
-      }
-      if (flag) {
-        auto accDims = getAffineMapAccessDims(
-            indexingMaps[index + genericOp.getInputs().size()]);
-        double_t operandAccess = 1;
-        if (cluster.checkReuseDistance(order, accDims, dimMask)) {
-          for (auto d : accDims) operandAccess *= bound[d];
-        } else {
-          for (auto d : accDims) operandAccess *= tiling[d];
-          operandAccess *= totalTiles;
-        }
-        assert(!externalOperandAccess.contains(operand));
-        externalOperandAccess[operand] = operandAccess;
-        // ECHO("a output", "\n")
-        // ECHO(externalOperandAccess[operand], "\n")
-      }
+    for (auto [idxResult, itemResult] :
+         llvm::enumerate(genericOp.getResults())) {
+      llvm::SmallVector<linalg::GenericOp> latterGenericOps;
+      cluster.getLatterGeneric(itemResult, latterGenericOps);
+      // Internal value
+      if (!latterGenericOps.empty()) continue;
+
+      auto accDims = getAffineMapAccessDims(
+          indexingMaps[idxResult + genericOp.getInputs().size()]);
+      double_t operandAccess = 1;
+
+      // Outputs are always one pass
+      assert(cluster.checkReuseDistance(outerOrder, accDims, dimMask));
+      for (auto d : accDims) operandAccess *= tilingSize[d];
+      assert(!externalOperandAccess.contains(itemResult));
+      externalOperandAccess[itemResult] =
+          operandAccess * statisticDat[genericOp]["factor"];
     }
   }
   for (auto [operand, acc] : externalOperandAccess) externalAccess += acc;
 
+  // Bottleneck cycles & flops
   double_t bottleneckCycles = 0;
-  for (auto [op, namedMetric] : statisticDat) {
-    // externalAccess += namedMetric["external_access"] *
-    // namedMetric["factor"];
-    bottleneckCycles = std::max(bottleneckCycles,
-                                namedMetric["cycles"] * namedMetric["factor"]);
-  }
-
   double_t flops = 0;
-  for (auto& op : cluster.getNodeSetTopOrder()) {
-    auto bound = cluster.getParameter()[op]["loop_bound"];
-    double_t t = 1;
-    for (auto b : bound) t *= b;
-    flops += t;
+  for (auto [op, namedMetric] : statisticDat) {
+    bottleneckCycles = std::max(bottleneckCycles, namedMetric["cycles"]);
+    flops += namedMetric["flops"];
   }
 
   bottleneckCycles =
       std::max(bottleneckCycles, ceil(externalAccess / cfg.bandwidth));
+
   double_t throughput = flops / bottleneckCycles;
+  double_t computeDensity = flops / externalAccess;
 
   // llvm::errs() << flops << " " << externalAccess << "\n";
 
   metric.throughput = throughput;
-  metric.computeDensity = flops / externalAccess;
+  metric.computeDensity = computeDensity;
   metric.externalAccess = externalAccess;
   metric.flops = flops;
 
