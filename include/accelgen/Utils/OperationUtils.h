@@ -69,6 +69,29 @@ class MergedSet {
   }
 };
 
+static std::string toString(mlir::Operation* op) {
+  if (mlir::isa<mlir::arith::MulFOp>(op)) return "mulf";
+  if (mlir::isa<mlir::arith::AddFOp>(op)) return "addf";
+  if (mlir::isa<mlir::arith::TruncFOp>(op)) return "truncf";
+  if (mlir::isa<mlir::arith::NegFOp>(op)) return "negf";
+  if (mlir::isa<mlir::arith::SubFOp>(op)) return "subf";
+  // if (mlir::isa<mlir::arith::MulIOp>(op)) return "muli";
+  // if (mlir::isa<mlir::arith::AddIOp>(op)) return "addi";
+  op->dump();
+  assert(0);
+}
+
+static std::string toString(mlir::Type type) {
+  if (type.isBF16()) return "bf16";
+  if (type.isF16()) return "fp16";
+  if (type.isF32()) return "fp32";
+  if (type.isF64()) return "fp64";
+
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(type))
+    return "i" + std::to_string(intTy.getWidth());
+  assert(0);
+}
+
 }  // namespace accelgen
 }  // namespace mlir
 

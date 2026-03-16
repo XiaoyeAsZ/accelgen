@@ -20,6 +20,7 @@
 // #include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
 #include "accelgen/Utils/OperationUtils.h"
+#include "accelgen/Utils/DebugUtils.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_KERNELSCHEDULE
@@ -41,6 +42,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     ArchConfig archCfg;
     archCfg.bandwidth = 128;
     archCfg.sramCapacity = 128 * 1024;
+    archCfg.nSramBank = 32;
     archCfg.computeResource["mulf_bf16_bf16"] = 64 * 64 + 64;
     archCfg.computeResource["addf_bf16_bf16"] = 64 * 64 + 64;
     archCfg.computeResource["negf_bf16"] = 64;
@@ -83,27 +85,24 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     llvm::DenseSet<mlir::Value> constSet;
     func.walk(
         [&](mlir::arith::ConstantOp constOp) { constSet.insert(constOp); });
+
     for (auto cluster : scheduledCluster) {
-      llvm::DenseSet<mlir::Value> clusterInput, clusterOutput;
-      for (auto node : *cluster) {
+      // Collect input and output value of the cluster
+      llvm::SmallVector<mlir::Value> clusterInput, clusterOutput;
+      for (auto node : cluster->getNodeSetTopOrder()) {
         auto genericOp = llvm::dyn_cast<mlir::linalg::GenericOp>(node);
         assert(genericOp);
-        for (auto operand : genericOp.getOperands()) {
+        for (auto operand : genericOp.getInputs()) {
           // llvm::errs() << operand << "\n";
-          if (!cluster->isMember(operand.getDefiningOp()))
-            clusterInput.insert(operand);
+          llvm::SmallVector<linalg::GenericOp> previousGenericOps;
+          cluster->getPreviousGeneric(operand, previousGenericOps);
+          if (previousGenericOps.empty()) clusterInput.push_back(operand);
         }
-        for (auto constValue : constSet) clusterInput.insert(constValue);
-        for (auto operand : genericOp.getOutputs()) {
-          bool flag = true;
-          for (auto use : operand.getUsers()) {
-            if (use == genericOp) continue;
-            if (cluster->isMember(use)) {
-              flag = false;
-              break;
-            }
-          }
-          if (flag) clusterOutput.insert(operand);
+        for (auto constValue : constSet) clusterInput.push_back(constValue);
+        for (auto operand : genericOp.getResults()) {
+          llvm::SmallVector<linalg::GenericOp> latterGenericOps;
+          cluster->getLatterGeneric(operand, latterGenericOps);
+          if (latterGenericOps.empty()) clusterOutput.push_back(operand);
         }
       }
 
@@ -124,10 +123,28 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
       builder.setInsertionPointToStart(entry);
 
       IRMapping mapper;
+      // Add mapping for boundray inputs
       for (auto [arg, input] : llvm::zip(entry->getArguments(), clusterInput))
         mapper.map(input, arg);
+      // Add mapping for generic outputs
+      // ECHO(cluster->getNodeSetTopOrder().size(), "\n")
+      for (auto op : cluster->getNodeSetTopOrder()) {
+        auto genericOp = llvm::dyn_cast<mlir::linalg::GenericOp>(op);
+        assert(genericOp);
+        for (auto operand : genericOp.getOutputs()) {
+          auto shaped = mlir::dyn_cast<ShapedType>(operand.getType());
+          auto emptyOp = builder.create<tensor::EmptyOp>(
+              genericOp.getLoc(), shaped.getShape(),
+              getElementTypeOrSelf(operand));
+          mapper.map(operand, emptyOp.getResult());
+        }
+      }
 
-      for (Operation* op : *cluster) {
+      auto opClusterWithTensorOp =
+          getTopoOrder(cluster->constructClusterWithTensorOp());
+
+      // ECHO("check clone cluster", "\n")
+      for (Operation* op : opClusterWithTensorOp) {
         builder.clone(*op, mapper);
       }
 
@@ -136,6 +153,9 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
 
       builder.create<func::ReturnOp>(clusterFuncOp.getLoc(), retVals);
     }
+
+    module.dump();
+
     func.setPrivate();
     func.erase();
   }

@@ -316,17 +316,24 @@ class DimensionRelationNetwork {
 
 class ArchConfig {
  public:
-  size_t bandwidth;                                         // GB/s
+  size_t bandwidth;        // GB/s
+  size_t sramWidth = 512;  // bit
+  size_t sramDepth = 64;
+  size_t nSramBank;
   size_t sramCapacity;                                      // B
   std::unordered_map<std::string, size_t> computeResource;  // #
 };
 
 class EvaluationMetric {
  public:
+  // Whetehr parameter is under arch constraint
+  bool isValid;
   double_t throughput;
   double_t computeDensity;
   double_t externalAccess;
   double_t flops;
+  llvm::DenseMap<llvm::StringRef, int64_t> resourceCnt;
+  llvm::DenseMap<llvm::StringRef, int64_t> eventCnt;
   EvaluationMetric() = default;
   EvaluationMetric(double_t throughput, double_t computeDensity,
                    double_t externalAccess, double_t flops)
@@ -377,6 +384,17 @@ class GenericOpCluster {
 
   bool checkConnectivity();
 
+  void getPreviousGeneric(
+      mlir::Value operand,
+      llvm::SmallVector<linalg::GenericOp>& previousGenerics);
+
+  void getLatterGeneric(mlir::Value operand,
+                        llvm::SmallVector<linalg::GenericOp>& latterGenerics);
+
+  std::vector<mlir::Operation*> constructClusterWithTensorOp();
+
+  std::vector<mlir::Operation*> getTopoOrderALSP();
+
  private:
   unsigned int nInD = 0;
   unsigned int nCycles = 0;
@@ -392,6 +410,10 @@ class GenericOpCluster {
   void factorForwardHelp(mlir::Operation* op, int64_t factor);
   std::vector<int64_t> getDimsInOrder(linalg::GenericOp op,
                                       mlir::Value operand);
+
+  void constructClusterHelp(mlir::Value operand,
+                            llvm::SmallVector<mlir::Operation*>& path,
+                            llvm::DenseSet<mlir::Operation*>& ops);
 };
 
 class PerfModel {

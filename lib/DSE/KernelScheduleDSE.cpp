@@ -6,6 +6,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Parallel.h"
 #include <assert.h>
 #include <chrono>
 #include <iostream>
@@ -14,7 +15,6 @@
 #include <span>
 #include <variant>
 #include <vector>
-#include "llvm/Support/Parallel.h"
 
 #include "accelgen/DSE/KernelScheduleDSE.h"
 #include "accelgen/Utils/AffineMapUtils.h"
@@ -470,6 +470,7 @@ GenericOpCluster::GenericOpCluster(linalg::GenericOp* genericOpStart,
                                    linalg::GenericOp* genericOpEnd)
     : nodeSet(genericOpStart, genericOpEnd),
       nodeSetTopOrder(genericOpStart, genericOpEnd) {
+  nodeSetTopOrder = this->getTopoOrderALSP();
   for (auto iter = genericOpStart; iter != genericOpEnd; iter++) {
     parameter[*iter]["loop_bound"] = iter->getStaticLoopRanges();
     parameter[*iter]["tiling_size"] =
@@ -928,16 +929,20 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation* op) {
     if (auto producer = operand.getDefiningOp<linalg::GenericOp>()) {
       if (isMember(producer)) {
         // Check : continous access
+        // ECHO("continous", "\n")
         auto inputDims =
             getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
         if (!checkReuseDistance(order, inputDims, mask)) {
           return false;
         }
         // Check : the same access order
+        // ECHO("same order", "\n")
         std::vector<int64_t> operandDimsOrder =
             getDimsInOrder(generic, operand);
         std::vector<int64_t> producerOperandDimsOrder =
             getDimsInOrder(producer, operand);
+        // ECHO_LIST(operandDimsOrder, ",")
+        // ECHO_LIST(producerOperandDimsOrder, ",")
         if (operandDimsOrder != producerOperandDimsOrder) return false;
       }
     } else if (auto producer =
@@ -945,7 +950,7 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation* op) {
       auto producerGeneric =
           producer.getSrc().getDefiningOp<linalg::GenericOp>();
       assert(producerGeneric);
-      if (isMember(generic)) {
+      if (isMember(producerGeneric)) {
         // Check : continous access
         auto inputDims =
             getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
@@ -1235,7 +1240,15 @@ std::vector<int64_t> GenericOpCluster::getDimsInOrder(linalg::GenericOp op,
   for (auto d : parameter[op]["outer_order"]) {
     if (accDimsSet.contains(d)) orders.push_back(d);
   }
-  return orders;
+
+  // Compare accDims and order to find how this operand is accessed. e.g [0, 1,
+  // 2, 4] & [0, 2, 1, 4] -> [0, 2, 1, 3]
+  llvm::DenseMap<int64_t, size_t> pos;
+  for (auto [idxDim, dim] : llvm::enumerate(accDims)) pos[dim] = idxDim;
+  std::vector<int64_t> idx;
+  for (const auto& v : orders) idx.push_back(pos[v]);
+
+  return idx;
 }
 
 bool GenericOpCluster::checkConnectivity() {
@@ -1257,6 +1270,160 @@ bool GenericOpCluster::checkConnectivity() {
   return connectivity.getNumSet() == 1;
 }
 
+void GenericOpCluster::getPreviousGeneric(
+    mlir::Value operand,
+    llvm::SmallVector<linalg::GenericOp>& previousGenerics) {
+  auto preOp = operand.getDefiningOp();
+  // Func arg
+  if (preOp == nullptr) return;
+  // Previous generic, push directly
+  if (auto generic = mlir::dyn_cast<linalg::GenericOp>(preOp)) {
+    if (isMember(generic)) previousGenerics.push_back(generic);
+    return;
+  }
+  // Previous tensor op, recursively check
+  if (mlir::isa<tensor::TensorDialect>(preOp->getDialect())) {
+    for (auto tensorOperand : preOp->getOperands()) {
+      getPreviousGeneric(tensorOperand, previousGenerics);
+    }
+  }
+}
+
+void GenericOpCluster::getLatterGeneric(
+    mlir::Value operand, llvm::SmallVector<linalg::GenericOp>& latterGenerics) {
+  for (auto user : operand.getUsers()) {
+    if (auto generic = mlir::dyn_cast<linalg::GenericOp>(user)) {
+      if (isMember(generic)) latterGenerics.push_back(generic);
+      return;
+    }
+    if (mlir::isa<tensor::TensorDialect>(user->getDialect())) {
+      auto tensorOpResult = user->getResults();
+      assert(tensorOpResult.size() == 1);
+      getLatterGeneric(tensorOpResult[0], latterGenerics);
+    }
+  }
+}
+
+std::vector<mlir::Operation*> GenericOpCluster::constructClusterWithTensorOp() {
+  llvm::DenseSet<mlir::Operation*> allOps;
+  for (auto op : nodeSetTopOrder) {
+    auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
+    assert(generic);
+    allOps.insert(generic);
+    for (auto result : generic.getResults()) {
+      llvm::SmallVector<mlir::Operation*> path;
+      llvm::DenseSet<mlir::Operation*> opOnAllPath;
+      constructClusterHelp(result, path, opOnAllPath);
+      for (auto o : opOnAllPath) allOps.insert(o);
+    }
+  }
+  auto opVec = std::vector<mlir::Operation*>(allOps.begin(), allOps.end());
+  return opVec;
+}
+
+void GenericOpCluster::constructClusterHelp(
+    mlir::Value operand, llvm::SmallVector<mlir::Operation*>& path,
+    llvm::DenseSet<mlir::Operation*>& ops) {
+  for (auto user : operand.getUsers()) {
+    if (auto generic = mlir::dyn_cast<linalg::GenericOp>(user)) {
+      if (isMember(generic)) {
+        for (auto op : path) {
+          // ECHO("inserting, ", "\n")
+          op->dump();
+          ops.insert(op);
+        }
+      }
+    }
+    if (mlir::isa<tensor::TensorDialect>(user->getDialect())) {
+      auto tensorOpResult = user->getResults();
+      assert(tensorOpResult.size() == 1);
+      path.push_back(user);
+      constructClusterHelp(user->getResults()[0], path, ops);
+      path.pop_back();
+    }
+  }
+}
+
+std::vector<mlir::Operation*> GenericOpCluster::getTopoOrderALSP() {
+  std::vector<mlir::Operation*> topOrderNodes(nodeSetTopOrder.size());
+  std::unordered_map<mlir::Operation*, unsigned int> inD;
+  std::unordered_map<mlir::Operation*, unsigned int> outD;
+  for (mlir::Operation* op : nodeSetTopOrder) {
+    inD[op] = 0;
+    outD[op] = 0;
+  }
+  for (mlir::Operation* op : nodeSetTopOrder) {
+    for (auto result : op->getResults()) {
+      llvm::SmallVector<linalg::GenericOp> latterGenericOps;
+      getLatterGeneric(result, latterGenericOps);
+      for (auto user : latterGenericOps) {
+        assert(inD.find(user) != inD.end());
+        inD[user]++;
+        outD[op]++;
+      }
+    }
+  }
+
+  auto cmp = [&](mlir::Operation* a, mlir::Operation* b) {
+    return inD[a] > inD[b];
+  };
+  std::priority_queue<mlir::Operation*, std::vector<mlir::Operation*>,
+                      decltype(cmp)>
+      nodesWithoutOutD(cmp);
+  std::vector<mlir::Operation*> tmp;
+  for (auto [op, outd] : outD) {
+    if (outd == 0) {
+      tmp.push_back(op);
+    }
+  }
+  for (auto op : tmp) {
+    // ECHO("add init", "\n")
+    // op->dump();
+    nodesWithoutOutD.push(op);
+  }
+  size_t index = topOrderNodes.size() - 1;
+  while (!nodesWithoutOutD.empty()) {
+    auto op = nodesWithoutOutD.top();
+    // ECHO("now proces", "\n")
+    // op->dump();
+    // ECHO(inD[op], "\n")
+
+    nodesWithoutOutD.pop();
+    topOrderNodes[index--] = op;
+
+    std::vector<mlir::Operation*> nodes;
+    for (auto operand : op->getOperands()) {
+      // if (inD.find(user) != inD.end()) inD[user]--;
+      // ECHO("check one operand", "\n")
+      llvm::SmallVector<linalg::GenericOp> previousGenericOps;
+      getPreviousGeneric(operand, previousGenericOps);
+      // ECHO("imp", "\n")
+      // for (auto op : previousGenericOps) op.dump();
+      for (auto prev : previousGenericOps) {
+        assert(inD.find(prev) != inD.end());
+        outD[prev]--;
+        if (outD[prev] == 0) {
+          // ECHO("add 0", "\n")
+          // prev.dump();
+          nodes.push_back(prev);
+        }
+      }
+    }
+    for (auto op : nodes) {
+      nodesWithoutOutD.push(op);
+    }
+  }
+
+  // for (auto [x, y] : outD) {
+  //   if (y != 0) {
+  //     x->dump();
+  //     ECHO(y, "\n")
+  //     assert(0);
+  //   }
+  // }
+  return topOrderNodes;
+}
+
 // ============================
 // END OF GenericOpCluster
 // ============================
@@ -1268,6 +1435,36 @@ bool GenericOpCluster::checkConnectivity() {
 EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
                                      ArchConfig& cfg) {
   auto parameter = cluster.getParameter();
+
+  EvaluationMetric metric;
+
+  // Check hardware resource usage
+  for (auto clusterOp : cluster.getNodeSetTopOrder()) {
+    auto genericOp = mlir::dyn_cast<linalg::GenericOp>(clusterOp);
+    assert(genericOp);
+    // Stat usage of compute unit
+    auto unrollFactor = parameter[genericOp]["unroll_factor"];
+    int64_t accumulateFactor = std::accumulate(
+        unrollFactor.begin(), unrollFactor.end(), 1, std::multiplies<int>());
+    for (auto& arithOp : genericOp.getRegion().front().getOperations()) {
+      // Skip yeild op
+      if (mlir::isa<linalg::YieldOp>(arithOp)) continue;
+      std::string computeResourceName = toString(&arithOp);
+      for (auto arithOpOperand : arithOp.getOperands()) {
+        computeResourceName =
+            computeResourceName + "_" + toString(arithOpOperand.getType());
+      }
+      metric.resourceCnt[computeResourceName] += accumulateFactor;
+    }
+    // Stat usage of SRAM
+  }
+  for (auto [nameComputeResource, cntComputeResource] : metric.resourceCnt) {
+    if (cntComputeResource > cfg.computeResource[nameComputeResource.str()]) {
+      metric.isValid = false;
+      return;
+    }
+  }
+
   std::unordered_map<mlir::Operation*,
                      std::unordered_map<std::string, double_t>>
       statisticDat;
@@ -1311,37 +1508,6 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
         std::accumulate(analysisTileSize.begin(), analysisTileSize.end(),
                         int64_t(1), std::multiplies<>());
 
-    // auto externalAccess = 0;
-    // for (auto [index, operand] : llvm::enumerate(genericOp.getInputs())) {
-    //   auto producer = operand.getDefiningOp();
-    //   // Input from
-    //   if (!cluster.isMember(producer)) {
-    //     auto accessDims = getAffineMapAccessDims(indexingMaps[index]);
-    //     int64_t partial = 1;
-    //     for (auto dim : accessDims)
-    //       partial *= analysisTileSize[dim];
-    //     externalAccess += partial;
-    //   }
-    // }
-
-    // for (auto [index, result] : llvm::enumerate(genericOp.getResults())) {
-    //   bool flag = true;
-    //   for (auto user : result.getUsers()) {
-    //     if (cluster.isMember(user)) {
-    //       flag = false;
-    //       break;
-    //     }
-    //   }
-    //   if (flag) {
-    //     auto accessDims = getAffineMapAccessDims(
-    //         indexingMaps[genericOp.getInputs().size() + index]);
-    //     int64_t partial = 1;
-    //     for (auto dim : accessDims)
-    //       partial *= analysisTileSize[dim];
-    //     externalAccess += partial;
-    //   }
-    // }
-
     int64_t cycles = 1;
     assert(analysisTileSize.size() == unrollFactor.size());
     // ECHO_LIST(unrollFactor, ",")
@@ -1368,8 +1534,6 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
       }
     }
   }
-
-  EvaluationMetric metric;
 
   double_t externalAccess = 0;
   llvm::DenseMap<mlir::Value, double_t> externalOperandAccess;
@@ -1757,60 +1921,68 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
   std::vector<int64_t> globalBestTiling;
   std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
       globalBestOrder;
-
+  ECHO(allTilings.size(), "\n")
   std::mutex resultMutex;
-  // llvm::parallelForEach
-  llvm::for_each(allTilings, [&](const std::vector<int64_t>& tilingVec) {
-    bool foundInThread = false;
-    EvaluationMetric threadBest(0, 0, 0, 0);
-    std::vector<int64_t> threadBestTiling;
-    std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
-        threadBestOrder;
-    auto localCluster = cluster;
-    DimensionRelationNetwork localNetwork(network);
+  llvm::parallelForEach
+      // llvm::for_each
+      (allTilings, [&](const std::vector<int64_t>& tilingVec) {
+        bool foundInThread = false;
+        EvaluationMetric threadBest(0, 0, 0, 0);
+        std::vector<int64_t> threadBestTiling;
+        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
+            threadBestOrder;
+        auto localCluster = cluster;
+        DimensionRelationNetwork localNetwork(network);
 
-    localNetwork.setUndeterminedPars(tilingVec);
-    if (!localNetwork.forward())
-      return;  // Equivalent to 'continue' in parallelForEach
+        localNetwork.setUndeterminedPars(tilingVec);
+        if (!localNetwork.forward())
+          return;  // Equivalent to 'continue' in parallelForEach
 
-    localCluster.applyTiling(localNetwork.getDimensionValueMapping());
-    if (!localCluster.checkArchConstraint(archCfg)) return;
+        localCluster.applyTiling(localNetwork.getDimensionValueMapping());
+        if (!localCluster.checkArchConstraint(archCfg)) return;
 
-    std::vector<
-        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>>
-        orders;
-    std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>> candidate;
+        std::vector<
+            std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>>
+            orders;
+        std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>
+            candidate;
 
-    generateCandidateOrders(localCluster,
-                            localCluster.getNodeSetTopOrder().begin(),
-                            candidate, orders);
+        // ECHO("start genere candidate order", "\n")
 
-    if (orders.empty()) return;
+        generateCandidateOrders(localCluster,
+                                localCluster.getNodeSetTopOrder().begin(),
+                                candidate, orders);
 
-    for (const auto& orderMap : orders) {
-      localCluster.applyOrder(orderMap);
-      inferUnrollFactor(localCluster, archCfg);
-      auto metric = model.evaluate(localCluster, archCfg);
+        // ECHO(candidate.size(), "\n")
 
-      if (metric.computeDensity > threadBest.computeDensity) {
-        foundInThread = true;
-        threadBest = metric;
-        threadBestTiling = tilingVec;
-        threadBestOrder = orderMap;
-      }
-    }
+        if (orders.empty()) return;
 
-    if (foundInThread) {
-      std::lock_guard<std::mutex> lock(resultMutex);
-      existGlobalParameter = true;
-      if (threadBest.computeDensity > globalBest.computeDensity) {
-        globalBestCluster = localCluster;
-        globalBest = threadBest;
-        globalBestTiling = std::move(threadBestTiling);
-        globalBestOrder = std::move(threadBestOrder);
-      }
-    }
-  });
+        for (const auto& orderMap : orders) {
+          localCluster.applyOrder(orderMap);
+          inferUnrollFactor(localCluster, archCfg);
+          auto metric = model.evaluate(localCluster, archCfg);
+
+          if (metric.computeDensity > threadBest.computeDensity) {
+            foundInThread = true;
+            threadBest = metric;
+            threadBestTiling = tilingVec;
+            threadBestOrder = orderMap;
+          }
+        }
+
+        if (foundInThread) {
+          std::lock_guard<std::mutex> lock(resultMutex);
+          existGlobalParameter = true;
+          if (threadBest.computeDensity > globalBest.computeDensity) {
+            globalBestCluster = localCluster;
+            globalBest = threadBest;
+            globalBestTiling = std::move(threadBestTiling);
+            globalBestOrder = std::move(threadBestOrder);
+          }
+        }
+      });
+
+  ECHO("arrive here!!!", "\n")
 
   if (cluster.getNodeSetTopOrder().size() == 1) assert(existGlobalParameter);
 
@@ -1838,105 +2010,128 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
 
 void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
                                       ArchConfig& archCfg) {
-  std::vector<int64_t> flops;
-  for (auto op : cluster.getNodeSetTopOrder()) {
+  /**
+   * Approximate linear programming by assuming best unroll factor allocation
+   * by ratio of flops of each pipeline stage
+   */
+
+  auto nPipelineOp = cluster.getNodeSetTopOrder().size();
+
+  llvm::SmallVector<bool> isArithStage(nPipelineOp);
+
+  // Statistic of flops for each pipeline operation
+  llvm::SmallVector<int64_t> flops(nPipelineOp);
+  for (auto [idx, op] : llvm::enumerate(cluster.getNodeSetTopOrder())) {
     auto tiling = cluster.getParameter()[op]["tiling_size"];
     // ECHO_LIST(tiling, ",")
     int64_t acc = 1;
     for (auto t : tiling) acc *= t;
-    flops.push_back(acc);
+    flops[idx] = acc;
   }
-  // ECHO("before gcd div ", "\n")
-  // ECHO_LIST(flops, ",")
 
+  // Assume unroll factor is perfectly allocated with ratio of flops, as r0, r1,
+  // r2 ...
+  llvm::SmallVector<double_t> ratioUnrollFactor(nPipelineOp);
   int64_t gcd = std::accumulate(flops.begin() + 1, flops.end(), flops[0],
                                 [](int a, int b) { return std::gcd(a, b); });
-  for (auto& x : flops) x = x / gcd;
+  for (auto [idx, f] : llvm::enumerate(flops))
+    ratioUnrollFactor[idx] = flops[idx] / double_t(gcd);
 
-  // ECHO("after gcd div ", "\n")
-  // ECHO_LIST(flops, ",")
-
-  std::unordered_map<std::string, int64_t> resource;
-  for (auto& [r, n] : archCfg.computeResource) {
-    resource[r] = 0;
+  // Stat use of arith resource with += x_i
+  llvm::DenseMap<llvm::StringRef, int64_t> arithResourceUse;
+  for (auto& [name, cnt] : archCfg.computeResource) {
+    arithResourceUse[name] = 0;
   }
   for (auto [index, op] : llvm::enumerate(cluster.getNodeSetTopOrder())) {
     auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
     assert(generic);
     for (auto& arith : generic.getRegion().front().getOperations()) {
-      mlir::TypeSwitch<mlir::Operation*>(&arith)
-          .Case<arith::MulFOp>([&](arith::MulFOp arithOp) {
-            assert(arithOp.getLhs().getType().isBF16() &&
-                   arithOp.getRhs().getType().isBF16());
-            resource["mulf_bf16_bf16"] += flops[index];
-          })
-          .Case<arith::AddFOp>([&](arith::AddFOp arithOp) {
-            if (arithOp.getLhs().getType().isBF16() &&
-                arithOp.getRhs().getType().isBF16())
-              resource["addf_bf16_bf16"] += flops[index];
-            else if (arithOp.getLhs().getType().isF32() &&
-                     arithOp.getRhs().getType().isF32())
-              resource["addf_f32_f32"] += flops[index];
-            else
-              assert(0);
-          })
-          .Case<arith::TruncFOp>([&](arith::TruncFOp arithOp) {
-            if (arithOp.getIn().getType().isF32() &&
-                arithOp.getOut().getType().isBF16())
-              resource["truncf_f32_bf16"] += flops[index];
-            else if (arithOp.getIn().getType().isF64() &&
-                     arithOp.getOut().getType().isBF16())
-              resource["truncf_f64_bf16"] += flops[index];
-            else
-              assert(0);
-          })
-          .Case<arith::NegFOp>([&](arith::NegFOp arithOp) {
-            assert(arithOp.getOperand().getType().isBF16());
-            resource["negf_bf16"] += flops[index];
-          })
-          .Case<arith::SubFOp>([&](arith::SubFOp arithOp) {
-            assert(arithOp.getLhs().getType().isF32() &&
-                   arithOp.getRhs().getType().isF32());
-            resource["subf_f32_f32"] += flops[index];
-          })
-          .Case<linalg::YieldOp>([&](linalg::YieldOp arithOp) {
-            if (op->hasAttr("accelgen.transpose")) {
-              resource["transpose_bf16"] += flops[index];
-            } else
-              assert(0);
-          })
-          .Default([&](mlir::Operation* arithOp) {
-            arith.dump();
-            assert(0);
-          });
+      // Process airth resources
+      if (mlir::isa<arith::ArithDialect>(arith.getDialect())) {
+        std::string resourceName = toString(&arith);
+        for (auto operand : arith.getOperands())
+          resourceName = resourceName + "_" + toString(operand.getType());
+        assert(arithResourceUse.contains(resourceName));
+        arithResourceUse[resourceName] += ratioUnrollFactor[index];
+        isArithStage[index] = true;
+      }
+
+      // Process sram port resources
+
+      // mlir::TypeSwitch<mlir::Operation*>(&arith)
+      //     .Case<arith::MulFOp>([&](arith::MulFOp arithOp) {
+      //       assert(arithOp.getLhs().getType().isBF16() &&
+      //              arithOp.getRhs().getType().isBF16());
+      //       resource["mulf_bf16_bf16"] += flops[index];
+      //     })
+      //     .Case<arith::AddFOp>([&](arith::AddFOp arithOp) {
+      //       if (arithOp.getLhs().getType().isBF16() &&
+      //           arithOp.getRhs().getType().isBF16())
+      //         resource["addf_bf16_bf16"] += flops[index];
+      //       else if (arithOp.getLhs().getType().isF32() &&
+      //                arithOp.getRhs().getType().isF32())
+      //         resource["addf_f32_f32"] += flops[index];
+      //       else
+      //         assert(0);
+      //     })
+      //     .Case<arith::TruncFOp>([&](arith::TruncFOp arithOp) {
+      //       if (arithOp.getIn().getType().isF32() &&
+      //           arithOp.getOut().getType().isBF16())
+      //         resource["truncf_f32_bf16"] += flops[index];
+      //       else if (arithOp.getIn().getType().isF64() &&
+      //                arithOp.getOut().getType().isBF16())
+      //         resource["truncf_f64_bf16"] += flops[index];
+      //       else
+      //         assert(0);
+      //     })
+      //     .Case<arith::NegFOp>([&](arith::NegFOp arithOp) {
+      //       assert(arithOp.getOperand().getType().isBF16());
+      //       resource["negf_bf16"] += flops[index];
+      //     })
+      //     .Case<arith::SubFOp>([&](arith::SubFOp arithOp) {
+      //       assert(arithOp.getLhs().getType().isF32() &&
+      //              arithOp.getRhs().getType().isF32());
+      //       resource["subf_f32_f32"] += flops[index];
+      //     })
+      //     .Case<linalg::YieldOp>([&](linalg::YieldOp arithOp) {
+      //     })
+      //     .Default([&](mlir::Operation* arithOp) {
+      //       arith.dump();
+      //       assert(0);
+      //     });
     }
   }
-  int64_t maxResourceUsed = 0;
-  std::string maxResource;
 
-  for (auto [r, c] : resource) {
-    if (c > maxResourceUsed) {
-      maxResourceUsed = c;
-      maxResource = r;
+  // Look for : when scaling ratio r_i, which resource exhaust first
+  double_t bottleneckScale = std::numeric_limits<double_t>::max();
+  std::string bottleneckResource = "";
+  for (auto [name, opCnt] : arithResourceUse) {
+    if (opCnt == 0) continue;
+    if (auto c = archCfg.computeResource[name.str()] / opCnt;
+        c < bottleneckScale) {
+      bottleneckScale = c;
+      bottleneckResource = name;
     }
   }
 
-  ECHO("max res ", " ")
-  ECHO(maxResourceUsed, " ")
-  ECHO(maxResource, "\n")
-  int64_t factor = archCfg.computeResource[maxResource] / maxResourceUsed;
-  for (auto& x : flops) x = x * factor;
+  // r_i * scale = actual unroll factor
+  llvm::SmallVector<int64_t> unrollFactor(nPipelineOp);
+  for (auto [idx, ratio] : llvm::enumerate(ratioUnrollFactor)) {
+    if (isArithStage[idx])
+      unrollFactor[idx] = int64_t(bottleneckScale * ratioUnrollFactor[idx]);
+  }
 
   // Allocate unroll factor for 2 dimension with max tiling size
-  for (auto [op, totalFactor] :
-       llvm::zip(cluster.getNodeSetTopOrder(), flops)) {
+  for (auto [index, op] : llvm::enumerate(cluster.getNodeSetTopOrder())) {
     auto tiling = cluster.getParameter()[op]["tiling_size"];
     assert(tiling.size() > 1);
+    if (!isArithStage[index]) continue;
+
     std::vector<int64_t> idx(tiling.size());
     std::iota(idx.begin(), idx.end(), 0);
     std::sort(idx.begin(), idx.end(),
               [&](size_t i1, size_t i2) { return tiling[i1] > tiling[i2]; });
-    auto x = int64_t(log2(totalFactor));
+    auto x = int64_t(log2(unrollFactor[index]));
     auto lowFactor = x / 2;
     auto highFactor = x - lowFactor;
     // ECHO(lowFactor, "\n")
@@ -1946,6 +2141,9 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
     cluster.getParameter()[op]["unroll_factor"][idx[1]] = std::min(
         (1L << lowFactor), cluster.getParameter()[op]["loop_bound"][idx[1]]);
   }
+
+  // Allocate unroll factor for thoese pure memory stages
+  // TODO :
 }
 
 void PruningSolver::generateCandidateNetworks(
@@ -2161,12 +2359,23 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
                                          PerfModel& model, ArchConfig& archCfg,
                                          int64_t maxSubgraphOp) {
   // std::vector<mlir::Operation *> opsTopOrder = getTopoOrder(ops);
-  std::vector<mlir::Operation*> opsTopOrder = getTopoOrderALSP(ops);
-  std::vector<linalg::GenericOp> genericOpsTopOrder;
-  for (auto& op : opsTopOrder) {
+  // std::vector<mlir::Operation*> opsTopOrder = getTopoOrderALSP(ops);
+  std::vector<linalg::GenericOp> genericOps;
+  for (auto& op : ops) {
     if (auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
         (!op->hasAttr("accelgen.const_broadcast")) && generic)
-      genericOpsTopOrder.push_back(generic);
+      genericOps.push_back(generic);
+  }
+
+  auto rootCluster = GenericOpCluster(genericOps.data(),
+                                      genericOps.data() + genericOps.size());
+
+  // ECHO("check topo order", "\n")
+  std::vector<linalg::GenericOp> genericOpsTopOrder;
+  for (auto op : rootCluster.getNodeSetTopOrder()) {
+    // op->dump();
+    auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
+    genericOpsTopOrder.push_back(generic);
   }
 
   /****test */
@@ -2201,7 +2410,14 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
                                             genericOpsTopOrder.data() + i);
 
       EvaluationMetric mergedMetric(0, 0, 0, 0);
-      if (mergedCluster.checkConnectivity() && i - j + 1 <= maxSubgraphOp)
+
+      // Make sure graph is all connected && size < maxSubGraphOp
+      bool isValidGraph =
+          mergedCluster.checkConnectivity() && (i - j + 1 <= maxSubgraphOp);
+      // ECHO("notice!", "\n")
+      // for (auto xx : mergedCluster.getNodeSetTopOrder()) xx->dump();
+      // ECHO(mergedCluster.checkConnectivity(), "\n")
+      if (isValidGraph)
         mergedMetric = solver->solve(mergedCluster, model, archCfg);
       else {
         mergedMetric = model.evaluate(mergedCluster, archCfg);
@@ -2216,9 +2432,13 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
       //   maxMetric = dpStatus[j - 1] + mergedMetric;
       //   index = j;
       // }
-      double_t seqDensity =
-          (dpStatus[j - 1].flops + mergedMetric.flops) /
-          (dpStatus[j - 1].externalAccess + mergedMetric.externalAccess);
+      double_t seqDensity;
+      if (isValidGraph)
+        seqDensity =
+            (dpStatus[j - 1].flops + mergedMetric.flops) /
+            (dpStatus[j - 1].externalAccess + mergedMetric.externalAccess);
+      else
+        seqDensity = 0;
       if (seqDensity > maxMetric.computeDensity) {
         maxMetric.computeDensity = seqDensity;
         maxMetric.flops = dpStatus[j - 1].flops + mergedMetric.flops;
