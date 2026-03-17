@@ -1461,6 +1461,26 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     auto tilingSize = parameter[*riter]["tiling_size"];
     auto unrollFactor = parameter[*riter]["unroll_factor"];
 
+    // ECHO("tiling", "\n")
+    // for (auto xx : tilingSize) {
+    //   ECHO(xx, "\n")
+    // }
+    // ECHO("bound", "\n")
+    // for (auto xx : loopBound) {
+    //   ECHO(xx, "\n")
+    // }
+    // ECHO("unroll", "\n")
+    // for (auto xx : unrollFactor) {
+    //   ECHO(xx, "\n")
+    // }
+    // for (auto xx : iteratorTypes) {
+    //   if (xx == utils::IteratorType::parallel) {
+    //     ECHO("parallel", "\n")
+    //   } else {
+    //     ECHO("red", "\n")
+    //   }
+    // }
+
     // Analysis tile : least tile size for producing a output tile
     auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
     for (auto [idxAnaTileSize, itemAnaTileSize] :
@@ -1506,12 +1526,16 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     statisticDat[*riter]["flops"] = flops * statisticDat[*riter]["factor"];
 
     // Cycles for each stage
-    int64_t cycles = 1;
+    double_t cycles = 1;
+    // for (auto xx : analysisTileSize) {
+    //   ECHO(xx, "\n")
+    // }
     assert(analysisTileSize.size() == unrollFactor.size());
     for (auto [dimTileSize, dimUnrollFactor] :
          llvm::zip(analysisTileSize, unrollFactor)) {
-      assert(dimTileSize % dimUnrollFactor == 0);
-      cycles *= (dimTileSize / dimUnrollFactor);
+      // ECHO(dimTileSize, "\n")
+      // ECHO(dimUnrollFactor, "\n")
+      cycles *= ceil(double_t(dimTileSize) / dimUnrollFactor);
     }
     statisticDat[*riter]["cycles"] = cycles * statisticDat[*riter]["factor"];
   }
@@ -1561,24 +1585,51 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
       if (previousGenericOps.size() != 0) continue;
 
       auto accDims = getAffineMapAccessDims(indexingMaps[idxIns]);
+
+      llvm::SmallVector<int64_t> accTileSize;
+      for (auto [idxDim, itemDim] : llvm::enumerate(accDims)) {
+        if (idxDim == accDims.size() - 1) {
+          // For those tile less that 64B (AXI burst length), pad them
+          int64_t nByte =
+              getElementTypeOrSelf(itemIns).getIntOrFloatBitWidth() / 8;
+          accTileSize.push_back(std::max(64 / nByte, tilingSize[itemDim]));
+        } else
+          accTileSize.push_back(tilingSize[itemDim]);
+      }
+      // Calculate how many times needed for proceesing one output tile
+      int64_t nTimes = 1;
+      for (auto [idxDim, itemDim] : llvm::enumerate(accDims)) {
+        assert(analysisTileSize[itemDim] % tilingSize[itemDim] == 0);
+        nTimes *= analysisTileSize[itemDim] / tilingSize[itemDim];
+      }
+
       double_t operandAccess = 1;
-      // If value is accessed on one pass, access : one analysize tile
-      if (cluster.checkReuseDistance(outerOrder, accDims, dimMask)) {
-        for (auto d : accDims) operandAccess *= analysisTileSize[d];
-      }
-      // Else, tile is access for several times
-      else {
-        int64_t nTimes = 1;
-        for (auto [idxDim, itemDim] : llvm::enumerate(accDims)) {
-          assert(analysisTileSize[itemDim] % tilingSize[itemDim] == 0);
-          nTimes *= analysisTileSize[itemDim] / tilingSize[itemDim];
-        }
-        for (auto d : accDims) operandAccess *= tilingSize[d];
-        operandAccess *= nTimes;
-      }
+      for (auto dimSize : accTileSize) operandAccess *= dimSize;
+      operandAccess *= nTimes;
+
+      // // If value is accessed on one pass, access : one analysize tile
+      // if (cluster.checkReuseDistance(outerOrder, accDims, dimMask)) {
+      //   for (auto d : accDims) operandAccess *= analysisTileSize[d];
+      // }
+      // // Else, tile is access for several times
+      // else {
+      //   int64_t nTimes = 1;
+      //   for (auto [idxDim, itemDim] : llvm::enumerate(accDims)) {
+      //     assert(analysisTileSize[itemDim] % tilingSize[itemDim] == 0);
+      //     nTimes *= analysisTileSize[itemDim] / tilingSize[itemDim];
+      //   }
+      //   for (auto d : accDims) operandAccess *= tilingSize[d];
+      //   operandAccess *= nTimes;
+      // }
 
       // Scale with factor
       operandAccess *= statisticDat[genericOp]["factor"];
+
+      // ECHO("analyze input", "\n")
+      // ECHO_LIST(accTileSize, ",")
+      // ECHO(statisticDat[genericOp]["factor"], "\n")
+      // ECHO(nTimes, "\n")
+      // ECHO(operandAccess, "\n")
 
       if (externalOperandAccess.contains(itemIns))
         externalOperandAccess[itemIns] =
@@ -1598,17 +1649,41 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
 
       auto accDims = getAffineMapAccessDims(
           indexingMaps[idxResult + genericOp.getInputs().size()]);
+      llvm::SmallVector<int64_t> accTileSize;
+      for (auto [idxDim, itemDim] : llvm::enumerate(accDims)) {
+        if (idxDim == accDims.size() - 1) {
+          // For those tile less that 64B (AXI burst length), pad them
+          int64_t nByte =
+              getElementTypeOrSelf(itemResult).getIntOrFloatBitWidth() / 8;
+          accTileSize.push_back(std::max(64 / nByte, tilingSize[itemDim]));
+        } else
+          accTileSize.push_back(tilingSize[itemDim]);
+      }
+
       double_t operandAccess = 1;
 
       // Outputs are always one pass
       assert(cluster.checkReuseDistance(outerOrder, accDims, dimMask));
-      for (auto d : accDims) operandAccess *= tilingSize[d];
+      for (auto dimSize : accTileSize) operandAccess *= dimSize;
+
+      // ECHO("analyze output", "\n")
+      // ECHO(operandAccess, "\n")
+
+      // ECHO("analyze output", "\n")
+      // ECHO_LIST(accTileSize, ",")
+      // ECHO(statisticDat[genericOp]["factor"], "\n")
+      // ECHO(operandAccess, "\n")
+
       assert(!externalOperandAccess.contains(itemResult));
       externalOperandAccess[itemResult] =
           operandAccess * statisticDat[genericOp]["factor"];
     }
   }
-  for (auto [operand, acc] : externalOperandAccess) externalAccess += acc;
+  for (auto [operand, acc] : externalOperandAccess) {
+    // ECHO("adding", "\n")
+    // ECHO(acc, "\n")
+    externalAccess += acc;
+  }
 
   // Bottleneck cycles & flops
   double_t bottleneckCycles = 0;
@@ -1938,12 +2013,27 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
 
         // ECHO(candidate.size(), "\n")
 
-        if (orders.empty()) return;
+        if (orders.empty()) {
+          // ECHO("failed to check order", "\n")
+          // for (auto xx : localCluster.getNodeSetTopOrder()) {
+          //   ECHO_LIST(localCluster.getParameter()[xx]["tiling_size"], ",")
+          // }
+          return;
+        }
+
+        // ECHO("get here", "\n")
 
         for (const auto& orderMap : orders) {
           localCluster.applyOrder(orderMap);
           inferUnrollFactor(localCluster, archCfg);
           auto metric = model.evaluate(localCluster, archCfg);
+
+          // ECHO("tiling vec:", "\n")
+          // for (auto [xx, yy] : localCluster.getParameter()) {
+          //   ECHO_LIST(yy["tiling_size"], ",")
+          // }
+          // ECHO(metric.flops, "\n")
+          // ECHO(metric.externalAccess, "\n")
 
           if (metric.computeDensity > threadBest.computeDensity) {
             foundInThread = true;
@@ -2040,48 +2130,6 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
       }
 
       // Process sram port resources
-
-      // mlir::TypeSwitch<mlir::Operation*>(&arith)
-      //     .Case<arith::MulFOp>([&](arith::MulFOp arithOp) {
-      //       assert(arithOp.getLhs().getType().isBF16() &&
-      //              arithOp.getRhs().getType().isBF16());
-      //       resource["mulf_bf16_bf16"] += flops[index];
-      //     })
-      //     .Case<arith::AddFOp>([&](arith::AddFOp arithOp) {
-      //       if (arithOp.getLhs().getType().isBF16() &&
-      //           arithOp.getRhs().getType().isBF16())
-      //         resource["addf_bf16_bf16"] += flops[index];
-      //       else if (arithOp.getLhs().getType().isF32() &&
-      //                arithOp.getRhs().getType().isF32())
-      //         resource["addf_f32_f32"] += flops[index];
-      //       else
-      //         assert(0);
-      //     })
-      //     .Case<arith::TruncFOp>([&](arith::TruncFOp arithOp) {
-      //       if (arithOp.getIn().getType().isF32() &&
-      //           arithOp.getOut().getType().isBF16())
-      //         resource["truncf_f32_bf16"] += flops[index];
-      //       else if (arithOp.getIn().getType().isF64() &&
-      //                arithOp.getOut().getType().isBF16())
-      //         resource["truncf_f64_bf16"] += flops[index];
-      //       else
-      //         assert(0);
-      //     })
-      //     .Case<arith::NegFOp>([&](arith::NegFOp arithOp) {
-      //       assert(arithOp.getOperand().getType().isBF16());
-      //       resource["negf_bf16"] += flops[index];
-      //     })
-      //     .Case<arith::SubFOp>([&](arith::SubFOp arithOp) {
-      //       assert(arithOp.getLhs().getType().isF32() &&
-      //              arithOp.getRhs().getType().isF32());
-      //       resource["subf_f32_f32"] += flops[index];
-      //     })
-      //     .Case<linalg::YieldOp>([&](linalg::YieldOp arithOp) {
-      //     })
-      //     .Default([&](mlir::Operation* arithOp) {
-      //       arith.dump();
-      //       assert(0);
-      //     });
     }
   }
 
@@ -2104,25 +2152,58 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
       unrollFactor[idx] = int64_t(bottleneckScale * ratioUnrollFactor[idx]);
   }
 
+  // Allocate unroll factor for 2 dimension with lowerest access order, e.g. for
+  // (m, n, k) -> (m, k), (m, n, k) -> (k, n), (m, n, k) -> (m, n), dimension k
+  // and n appear at last dimension, so unroll n and k for continous access from
+  // SRAM
+
   // Allocate unroll factor for 2 dimension with max tiling size
   for (auto [index, op] : llvm::enumerate(cluster.getNodeSetTopOrder())) {
+    auto genericOp = mlir::dyn_cast<linalg::GenericOp>(op);
     auto tiling = cluster.getParameter()[op]["tiling_size"];
     assert(tiling.size() > 1);
     if (!isArithStage[index]) continue;
+
+    llvm::SmallVector<int64_t> dimsUnroll;
+    // First round
+    for (auto [idxAffineMap, itemAffineMap] :
+         llvm::enumerate(genericOp.getIndexingMapsArray())) {
+      if (dimsUnroll.size() >= 2) break;
+      auto accDims = getAffineMapAccessDims(itemAffineMap);
+      if (!llvm::is_contained(dimsUnroll, accDims.back()))
+        dimsUnroll.push_back(accDims.back());
+    }
+    // Second round
+    for (auto [idxAffineMap, itemAffineMap] :
+         llvm::enumerate(genericOp.getIndexingMapsArray())) {
+      if (dimsUnroll.size() >= 2) break;
+      auto accDims = getAffineMapAccessDims(itemAffineMap);
+      if (accDims.size() < 2) continue;
+      if (!llvm::is_contained(dimsUnroll, accDims[accDims.size() - 2]))
+        dimsUnroll.push_back(accDims[accDims.size() - 2]);
+    }
+    assert(dimsUnroll.size() == 2);
 
     std::vector<int64_t> idx(tiling.size());
     std::iota(idx.begin(), idx.end(), 0);
     std::sort(idx.begin(), idx.end(),
               [&](size_t i1, size_t i2) { return tiling[i1] > tiling[i2]; });
-    auto x = int64_t(log2(unrollFactor[index]));
-    auto lowFactor = x / 2;
-    auto highFactor = x - lowFactor;
-    // ECHO(lowFactor, "\n")
-    // ECHO(highFactor, "\n")
-    cluster.getParameter()[op]["unroll_factor"][idx[0]] = std::min(
-        (1L << highFactor), cluster.getParameter()[op]["loop_bound"][idx[0]]);
-    cluster.getParameter()[op]["unroll_factor"][idx[1]] = std::min(
-        (1L << lowFactor), cluster.getParameter()[op]["loop_bound"][idx[1]]);
+
+    int64_t halfFactorPot = int64_t(log2(unrollFactor[index])) / 2;
+    int64_t lowUnrollFactor =
+        std::min(tiling[dimsUnroll[0]], (1L << halfFactorPot));
+    int64_t highUnrollFactor =
+        std::min(int64_t(unrollFactor[index] / lowUnrollFactor),
+                 cluster.getParameter()[op]["tiling_size"][dimsUnroll[1]]);
+
+    // ECHO("check unro", "\n")
+    // ECHO(lowUnrollFactor, "\n")
+    // ECHO(highUnrollFactor, "\n")
+
+    cluster.getParameter()[op]["unroll_factor"][dimsUnroll[0]] =
+        lowUnrollFactor;
+    cluster.getParameter()[op]["unroll_factor"][dimsUnroll[1]] =
+        highUnrollFactor;
   }
 
   // Allocate unroll factor for thoese pure memory stages
@@ -2363,8 +2444,8 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
 
   /****test */
 
-  // auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data(),
-  //                                       genericOpsTopOrder.data() + 2);
+  // auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data() + 3,
+  //                                       genericOpsTopOrder.data() + 4);
 
   // EvaluationMetric mergedMetric = solver->solve(mergedCluster, model,
   // archCfg);
@@ -2454,8 +2535,9 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
     if (cutIndex[p] == 1) break;
     p = cutIndex[p] - 1;
   }
-  delete dpStatus;
-  delete cutIndex;
+  delete[] dpStatus;
+  delete[] cutIndex;
+  delete[] cutCluster;
   for (auto c : clusters) c->attachAttribute(ctx);
 }
 

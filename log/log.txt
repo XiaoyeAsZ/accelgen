@@ -1,52 +1,160 @@
-total generic : 1
+total generic : 30
 Start solving, subgraph size : 1
 ================
-%1 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3, d4)>, affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]} ins(%arg0 : tensor<8x8x1024x128xbf16>) outs(%0 : tensor<8x8x4x1024x128xbf16>) attrs =  {accelgen.expand = true, accelgen.memory_transformation = true} {
+%7 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d3, d2)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg5 : tensor<8x1024x4096xbf16>, tensor<4096x1024xbf16>) outs(%6 : tensor<8x1024x1024xbf16>) {
+^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+  %53 = arith.mulf %in, %in_19 : bf16
+  %54 = arith.addf %out, %53 : bf16
+  linalg.yield %54 : bf16
+} -> tensor<8x1024x1024xbf16>
+=========================
+total pars to search : 4
+6292
+arrive here!!!
+density : 6.301538e+01
+6.710886e+07
+1.064960e+06
+8,16,128,64
+8,16,128,64
+density : 6.301538e+01
+now, 
+1
+6.301538e+01
+Start solving, subgraph size : 2
+================
+%7 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d3, d2)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg5 : tensor<8x1024x4096xbf16>, tensor<4096x1024xbf16>) outs(%6 : tensor<8x1024x1024xbf16>) {
+^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+  %53 = arith.mulf %in, %in_19 : bf16
+  %54 = arith.addf %out, %53 : bf16
+  linalg.yield %54 : bf16
+} -> tensor<8x1024x1024xbf16>
+%9 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded_3 : tensor<8x1024x8x128xbf16>) outs(%8 : tensor<8x8x1024x128xbf16>) attrs =  {accelgen.memory_transformation = true, accelgen.transpose = true} {
 ^bb0(%in: bf16, %out: bf16):
   linalg.yield %in : bf16
-} -> tensor<8x8x4x1024x128xbf16>
+} -> tensor<8x8x1024x128xbf16>
+=========================
+total pars to search : 4
+6292
+arrive here!!!
+density : 4.223711e+01
+3.356262e+07
+7.946240e+05
+8,8,128,32
+8,1,8,128
+8,8,128,32
+density : 4.223711e+01
+Start solving, subgraph size : 1
+================
+%9 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded_3 : tensor<8x1024x8x128xbf16>) outs(%8 : tensor<8x8x1024x128xbf16>) attrs =  {accelgen.memory_transformation = true, accelgen.transpose = true} {
+^bb0(%in: bf16, %out: bf16):
+  linalg.yield %in : bf16
+} -> tensor<8x8x1024x128xbf16>
+=========================
+total pars to search : 4
+1408
+arrive here!!!
+density : 5.000000e-01
+2.560000e+02
+5.120000e+02
+1,1,2,128
+1,1,2,128
+density : 5.000000e-01
+now, 
+2
+6.298534e+01
+Start solving, subgraph size : 3
+================
+%7 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d3, d2)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg5 : tensor<8x1024x4096xbf16>, tensor<4096x1024xbf16>) outs(%6 : tensor<8x1024x1024xbf16>) {
+^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+  %53 = arith.mulf %in, %in_19 : bf16
+  %54 = arith.addf %out, %53 : bf16
+  linalg.yield %54 : bf16
+} -> tensor<8x1024x1024xbf16>
+%9 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded_3 : tensor<8x1024x8x128xbf16>) outs(%8 : tensor<8x8x1024x128xbf16>) attrs =  {accelgen.memory_transformation = true, accelgen.transpose = true} {
+^bb0(%in: bf16, %out: bf16):
+  linalg.yield %in : bf16
+} -> tensor<8x8x1024x128xbf16>
+%19 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice_9 : tensor<8x8x1024x64xbf16>) outs(%18 : tensor<8x8x1024x64xbf16>) {
+^bb0(%in: bf16, %out: bf16):
+  %53 = arith.negf %in : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x8x1024x64xbf16>
 =========================
 total pars to search : 5
-accelgen-opt: /home/accelgen/lib/DSE/KernelScheduleDSE.cpp:1906: mlir::accelgen::PruningSolver::inferUnrollFactor(mlir::accelgen::GenericOpCluster&, mlir::accelgen::ArchConfig&)::<lambda(mlir::linalg::YieldOp)>: Assertion `0' failed.
-PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
-Stack dump:
-0.	Program arguments: ./build/bin/accelgen-opt ./test/llama3-8b-block0-attention-prefill-b8s1024-test.mlir -pass-pipeline=builtin.module(func.func(kernel-schedule)) -o ./test/llama3-8b-block0-attention-prefill-b8s1024-generic-scheduled.mlir
- #0 0x000056198cfebdb0 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) (./build/bin/accelgen-opt+0x6c7edb0)
- #1 0x000056198cfe8a5f llvm::sys::RunSignalHandlers() (./build/bin/accelgen-opt+0x6c7ba5f)
- #2 0x000056198cfe8bb2 SignalHandler(int, siginfo_t*, void*) Signals.cpp:0:0
- #3 0x00007fc1fa7b2520 (/lib/x86_64-linux-gnu/libc.so.6+0x42520)
- #4 0x00007fc1fa8069fc __pthread_kill_implementation ./nptl/pthread_kill.c:44:76
- #5 0x00007fc1fa8069fc __pthread_kill_internal ./nptl/pthread_kill.c:78:10
- #6 0x00007fc1fa8069fc pthread_kill ./nptl/pthread_kill.c:89:10
- #7 0x00007fc1fa7b2476 gsignal ./signal/../sysdeps/posix/raise.c:27:6
- #8 0x00007fc1fa7987f3 abort ./stdlib/abort.c:81:7
- #9 0x00007fc1fa79871b _nl_load_domain ./intl/loadmsgcat.c:1177:9
-#10 0x00007fc1fa7a9e96 (/lib/x86_64-linux-gnu/libc.so.6+0x39e96)
-#11 0x0000561986833fb5 mlir::accelgen::PruningSolver::inferUnrollFactor(mlir::accelgen::GenericOpCluster&, mlir::accelgen::ArchConfig&)::'lambda5'(mlir::linalg::YieldOp)::operator()(mlir::linalg::YieldOp) const /home/accelgen/lib/DSE/KernelScheduleDSE.cpp:1907:11
-#12 0x0000561986837d72 llvm::TypeSwitch<mlir::Operation*, void>& llvm::TypeSwitch<mlir::Operation*, void>::Case<mlir::linalg::YieldOp, mlir::accelgen::PruningSolver::inferUnrollFactor(mlir::accelgen::GenericOpCluster&, mlir::accelgen::ArchConfig&)::'lambda5'(mlir::linalg::YieldOp)>(mlir::accelgen::PruningSolver::inferUnrollFactor(mlir::accelgen::GenericOpCluster&, mlir::accelgen::ArchConfig&)::'lambda5'(mlir::linalg::YieldOp)&&) /usr/local/circt/include/llvm/ADT/TypeSwitch.h:150:18
-#13 0x0000561986834789 mlir::accelgen::PruningSolver::inferUnrollFactor(mlir::accelgen::GenericOpCluster&, mlir::accelgen::ArchConfig&) /home/accelgen/lib/DSE/KernelScheduleDSE.cpp:1902:33
-#14 0x0000561986832a1a mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&)::operator()(std::vector<long, std::allocator<long>> const&) const /home/accelgen/lib/DSE/KernelScheduleDSE.cpp:1793:21
-#15 0x0000561986837e38 mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&) std::for_each<__gnu_cxx::__normal_iterator<std::vector<long, std::allocator<long>>*, std::vector<std::vector<long, std::allocator<long>>, std::allocator<std::vector<long, std::allocator<long>>>>>, mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&)>(__gnu_cxx::__normal_iterator<std::vector<long, std::allocator<long>>*, std::vector<std::vector<long, std::allocator<long>>, std::allocator<std::vector<long, std::allocator<long>>>>>, __gnu_cxx::__normal_iterator<std::vector<long, std::allocator<long>>*, std::vector<std::vector<long, std::allocator<long>>, std::allocator<std::vector<long, std::allocator<long>>>>>, mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&)) /usr/include/c++/11/bits/stl_algo.h:3819:33
-#16 0x00005619868379e3 mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&) llvm::for_each<std::vector<std::vector<long, std::allocator<long>>, std::allocator<std::vector<long, std::allocator<long>>>>&, mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&)>(std::vector<std::vector<long, std::allocator<long>>, std::allocator<std::vector<long, std::allocator<long>>>>&, mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&)::'lambda'(std::vector<long, std::allocator<long>> const&)) /usr/local/circt/include/llvm/ADT/STLExtras.h:1738:23
-#17 0x00005619868331fe mlir::accelgen::PruningSolver::solve(mlir::accelgen::GenericOpCluster&, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&) /home/accelgen/lib/DSE/KernelScheduleDSE.cpp:1763:17
-#18 0x000056198683704d mlir::accelgen::ScheduledGenericOpCluster::schedule(mlir::MLIRContext*, mlir::accelgen::PerfModel&, mlir::accelgen::ArchConfig&, long) /home/accelgen/lib/DSE/KernelScheduleDSE.cpp:2205:37
-#19 0x0000561986805532 mlir::accelgen::(anonymous namespace)::KernelSchedule::runOnOperation() /home/accelgen/lib/Passes/KernelSchedulePass.cpp:80:35
-#20 0x000056198c81a4b1 mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int) (./build/bin/accelgen-opt+0x64ad4b1)
-#21 0x000056198c81a8b1 mlir::detail::OpToOpPassAdaptor::runPipeline(mlir::OpPassManager&, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int, mlir::PassInstrumentor*, mlir::PassInstrumentation::PipelineParentInfo const*) (./build/bin/accelgen-opt+0x64ad8b1)
-#22 0x000056198c81ac46 mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::'lambda'(mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo&)::operator()(mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo&) const Pass.cpp:0:0
-#23 0x000056198c8198fd mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool) (./build/bin/accelgen-opt+0x64ac8fd)
-#24 0x000056198c81a1c6 mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int) (./build/bin/accelgen-opt+0x64ad1c6)
-#25 0x000056198c81a8b1 mlir::detail::OpToOpPassAdaptor::runPipeline(mlir::OpPassManager&, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int, mlir::PassInstrumentor*, mlir::PassInstrumentation::PipelineParentInfo const*) (./build/bin/accelgen-opt+0x64ad8b1)
-#26 0x000056198c81b731 mlir::PassManager::run(mlir::Operation*) (./build/bin/accelgen-opt+0x64ae731)
-#27 0x0000561986793f47 performActions(llvm::raw_ostream&, std::shared_ptr<llvm::SourceMgr> const&, mlir::MLIRContext*, mlir::MlirOptMainConfig const&) MlirOptMain.cpp:0:0
-#28 0x0000561986794a35 processBuffer(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::MemoryBufferRef, mlir::MlirOptMainConfig const&, mlir::DialectRegistry&, mlir::SourceMgrDiagnosticVerifierHandler*, llvm::ThreadPoolInterface*) MlirOptMain.cpp:0:0
-#29 0x0000561986794d41 llvm::LogicalResult llvm::function_ref<llvm::LogicalResult (std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::MemoryBufferRef const&, llvm::raw_ostream&)>::callback_fn<mlir::MlirOptMain(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, mlir::DialectRegistry&, mlir::MlirOptMainConfig const&)::'lambda'(std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::MemoryBufferRef, llvm::raw_ostream&)>(long, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::MemoryBufferRef const&, llvm::raw_ostream&) MlirOptMain.cpp:0:0
-#30 0x000056198cea911d mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::function_ref<llvm::LogicalResult (std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::MemoryBufferRef const&, llvm::raw_ostream&)>, llvm::raw_ostream&, llvm::StringRef, llvm::StringRef) (./build/bin/accelgen-opt+0x6b3c11d)
-#31 0x0000561986792509 mlir::MlirOptMain(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, mlir::DialectRegistry&, mlir::MlirOptMainConfig const&) (.part.0) MlirOptMain.cpp:0:0
-#32 0x0000561986795208 mlir::MlirOptMain(int, char**, llvm::StringRef, llvm::StringRef, mlir::DialectRegistry&) (./build/bin/accelgen-opt+0x428208)
-#33 0x0000561986795407 mlir::MlirOptMain(int, char**, llvm::StringRef, mlir::DialectRegistry&) (./build/bin/accelgen-opt+0x428407)
-#34 0x0000561986780379 main /home/accelgen/opt/accelgen.cpp:45:32
-#35 0x00007fc1fa799d90 __libc_start_call_main ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
-#36 0x00007fc1fa799e40 call_init ./csu/../csu/libc-start.c:128:20
-#37 0x00007fc1fa799e40 __libc_start_main ./csu/../csu/libc-start.c:379:5
-#38 0x0000561986780215 _start (./build/bin/accelgen-opt+0x413215)
+44044
+arrive here!!!
+density : 4.256753e+01
+3.356365e+07
+7.884800e+05
+8,8,128,32,16
+8,1,8,16
+8,1,8,128
+8,8,128,32
+density : 4.256753e+01
+Start solving, subgraph size : 2
+================
+%9 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded_3 : tensor<8x1024x8x128xbf16>) outs(%8 : tensor<8x8x1024x128xbf16>) attrs =  {accelgen.memory_transformation = true, accelgen.transpose = true} {
+^bb0(%in: bf16, %out: bf16):
+  linalg.yield %in : bf16
+} -> tensor<8x8x1024x128xbf16>
+%19 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice_9 : tensor<8x8x1024x64xbf16>) outs(%18 : tensor<8x8x1024x64xbf16>) {
+^bb0(%in: bf16, %out: bf16):
+  %53 = arith.negf %in : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x8x1024x64xbf16>
+=========================
+total pars to search : 5
+9856
+arrive here!!!
+density : 1.000000e+00
+1.024000e+03
+1.024000e+03
+1,1,8,64,64
+1,1,8,64
+1,1,8,64
+density : 1.000000e+00
+Start solving, subgraph size : 1
+================
+%19 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice_9 : tensor<8x8x1024x64xbf16>) outs(%18 : tensor<8x8x1024x64xbf16>) {
+^bb0(%in: bf16, %out: bf16):
+  %53 = arith.negf %in : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x8x1024x64xbf16>
+=========================
+total pars to search : 4
+1232
+arrive here!!!
+density : 5.000000e-01
+1.638400e+04
+3.276800e+04
+1,1,256,64
+1,1,256,64
+density : 5.000000e-01
+now, 
+2
+6.295581e+01
+Start solving, subgraph size : 4
+================
+%7 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d3, d2)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%arg0, %arg5 : tensor<8x1024x4096xbf16>, tensor<4096x1024xbf16>) outs(%6 : tensor<8x1024x1024xbf16>) {
+^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+  %53 = arith.mulf %in, %in_19 : bf16
+  %54 = arith.addf %out, %53 : bf16
+  linalg.yield %54 : bf16
+} -> tensor<8x1024x1024xbf16>
+%9 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded_3 : tensor<8x1024x8x128xbf16>) outs(%8 : tensor<8x8x1024x128xbf16>) attrs =  {accelgen.memory_transformation = true, accelgen.transpose = true} {
+^bb0(%in: bf16, %out: bf16):
+  linalg.yield %in : bf16
+} -> tensor<8x8x1024x128xbf16>
+%19 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice_9 : tensor<8x8x1024x64xbf16>) outs(%18 : tensor<8x8x1024x64xbf16>) {
+^bb0(%in: bf16, %out: bf16):
+  %53 = arith.negf %in : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x8x1024x64xbf16>
+%20 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (0, 0, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%concat_10, %expanded_6 : tensor<8x8x1024x128xbf16>, tensor<1x1x1024x128xbf16>) outs(%8 : tensor<8x8x1024x128xbf16>) {
+^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+  %53 = arith.mulf %in, %in_19 : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x8x1024x128xbf16>
+=========================
+total pars to search : 6
+352352

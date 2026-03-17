@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRAccelgen
         FuseGenericPass.cpp
         ConvertToDapPass.cpp
         CollapseShapeDelayPass.cpp
+        ModelBaselineAccelerator.cpp
 
 
         ADDITIONAL_HEADER_DIRS
