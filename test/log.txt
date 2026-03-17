@@ -414,3 +414,32 @@ Start solving, subgraph size : 4
 =========================
 total pars to search : 6
 416416
+arrive here!!!
+density : 4.245725e+01
+3.356365e+07
+7.905280e+05
+8,8,128,32,8,8
+8,1,8,8
+8,1,8,8
+8,1,8,128
+8,8,128,32
+density : 4.245725e+01
+Start solving, subgraph size : 3
+================
+%4 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded : tensor<8x1024x32x128xbf16>) outs(%3 : tensor<8x32x1024x128xbf16>) attrs =  {accelgen.memory_transformation = true, accelgen.transpose = true} {
+^bb0(%in: bf16, %out: bf16):
+  linalg.yield %in : bf16
+} -> tensor<8x32x1024x128xbf16>
+%14 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice_7 : tensor<8x32x1024x64xbf16>) outs(%13 : tensor<8x32x1024x64xbf16>) {
+^bb0(%in: bf16, %out: bf16):
+  %53 = arith.negf %in : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x32x1024x64xbf16>
+%15 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (0, 0, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%concat, %expanded_6 : tensor<8x32x1024x128xbf16>, tensor<1x1x1024x128xbf16>) outs(%3 : tensor<8x32x1024x128xbf16>) {
+^bb0(%in: bf16, %in_19: bf16, %out: bf16):
+  %53 = arith.mulf %in, %in_19 : bf16
+  linalg.yield %53 : bf16
+} -> tensor<8x32x1024x128xbf16>
+=========================
+total pars to search : 6
+118272
