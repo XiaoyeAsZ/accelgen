@@ -213,6 +213,12 @@ std::vector<int64_t> DimensionRelationNetwork::getUndeterminedParsBound() {
   std::vector<int64_t> bounds;
   for (auto& p : pars) {
     if (_indPars[p] == 0 && (!p->isConst())) bounds.push_back(p->bound());
+    // else {
+    //   ECHO("ind == 0", "\n")
+    //   ECHO(_indPars[p], "\n")
+    //   ECHO("p const", "\n")
+    //   ECHO(p->isConst(), "\n")
+    // }
   }
   return bounds;
 }
@@ -547,27 +553,31 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
       auto accessDims = getAffineMapAccessDims(
           genericOp.getIndexingMapsArray()[indexOperand]);
 
-      for (auto use : operand.getUsers()) {
-        if (isMember(use) &&
-            (std::distance(nodeSetTopOrder.begin(),
-                           std::find(nodeSetTopOrder.begin(),
-                                     nodeSetTopOrder.end(), use)) <
-             std::distance(nodeSetTopOrder.begin(),
-                           std::find(nodeSetTopOrder.begin(),
-                                     nodeSetTopOrder.end(), op)))) {
-          auto genericSharedOp = mlir::dyn_cast<linalg::GenericOp>(use);
-          assert(genericSharedOp);
-          auto insSharedOp = genericSharedOp.getInputs();
-          auto it = std::find(insSharedOp.begin(), insSharedOp.end(), operand);
-          assert(it != insSharedOp.end());
-          auto indexOperandSharedOp = std::distance(insSharedOp.begin(), it);
-          auto accessDimsSharedOp = getAffineMapAccessDims(
-              genericSharedOp.getIndexingMapsArray()[indexOperandSharedOp]);
-          for (auto [src, target] : llvm::zip(accessDims, accessDimsSharedOp))
-            network.addEqualRelation(Dimension(op, src),
-                                     Dimension(use, target));
-        }
-      }
+      // for (auto use : operand.getUsers()) {
+      //   ECHO("check user", "\n")
+      //   use->dump();
+      //   if (isMember(use) &&
+      //       (std::distance(nodeSetTopOrder.begin(),
+      //                      std::find(nodeSetTopOrder.begin(),
+      //                                nodeSetTopOrder.end(), use)) <
+      //        std::distance(nodeSetTopOrder.begin(),
+      //                      std::find(nodeSetTopOrder.begin(),
+      //                                nodeSetTopOrder.end(), op)))) {
+      //     auto genericSharedOp = mlir::dyn_cast<linalg::GenericOp>(use);
+      //     assert(genericSharedOp);
+      //     auto insSharedOp = genericSharedOp.getInputs();
+      //     auto it = std::find(insSharedOp.begin(), insSharedOp.end(),
+      //     operand); assert(it != insSharedOp.end()); auto
+      //     indexOperandSharedOp = std::distance(insSharedOp.begin(), it); auto
+      //     accessDimsSharedOp = getAffineMapAccessDims(
+      //         genericSharedOp.getIndexingMapsArray()[indexOperandSharedOp]);
+      //     ECHO("add equal 1", "\n")
+      //     for (auto [src, target] : llvm::zip(accessDims,
+      //     accessDimsSharedOp))
+      //       network.addEqualRelation(Dimension(op, src),
+      //                                Dimension(use, target));
+      //   }
+      // }
 
       if (!operand.getDefiningOp()) continue;
       mlir::TypeSwitch<mlir::Operation*>(operand.getDefiningOp())
@@ -576,9 +586,10 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
               auto accessDimsProducer =
                   getAffineMapAccessDims(generic.getIndexingMapsArray().back());
               for (auto [target, src] :
-                   llvm::zip(accessDims, accessDimsProducer))
+                   llvm::zip(accessDims, accessDimsProducer)) {
                 network.addEqualRelation(Dimension(generic, src),
                                          Dimension(op, target));
+              }
             }
           })
           .Case<tensor::CollapseShapeOp>([&](tensor::CollapseShapeOp collapse) {
@@ -628,8 +639,10 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
                     dimPtr.push_back(Dimension(op, accessDims[d]));
                   network.addCollapseRelation(
                       Dimension(producer, accessDimsProducer[d]), dimPtr);
+
                 } else {
                   assert(expandDims.size() == 1);
+
                   network.addEqualRelation(
                       Dimension(producer, accessDimsProducer[d]),
                       Dimension(op, accessDims[expandDims[0]]));
@@ -1294,9 +1307,7 @@ void GenericOpCluster::getLatterGeneric(
   for (auto user : operand.getUsers()) {
     if (auto generic = mlir::dyn_cast<linalg::GenericOp>(user)) {
       if (isMember(generic)) latterGenerics.push_back(generic);
-      return;
-    }
-    if (mlir::isa<tensor::TensorDialect>(user->getDialect())) {
+    } else if (mlir::isa<tensor::TensorDialect>(user->getDialect())) {
       auto tensorOpResult = user->getResults();
       assert(tensorOpResult.size() == 1);
       getLatterGeneric(tensorOpResult[0], latterGenerics);
@@ -1329,7 +1340,7 @@ void GenericOpCluster::constructClusterHelp(
       if (isMember(generic)) {
         for (auto op : path) {
           // ECHO("inserting, ", "\n")
-          op->dump();
+          // op->dump();
           ops.insert(op);
         }
       }
@@ -1363,6 +1374,11 @@ std::vector<mlir::Operation*> GenericOpCluster::getTopoOrderALSP() {
       }
     }
   }
+
+  // for (auto [op, outd] : outD) {
+  //   op->dump();
+  //   ECHO(outd, "\n")
+  // }
 
   auto cmp = [&](mlir::Operation* a, mlir::Operation* b) {
     return inD[a] > inD[b];
@@ -1639,7 +1655,10 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     }
 
     // Analyze for each result operand
-    assert(genericOp.getResults().size() == 1);
+    if (genericOp.getResults().size() != 1) {
+      // genericOp.dump();
+      assert(0);
+    }
     for (auto [idxResult, itemResult] :
          llvm::enumerate(genericOp.getResults())) {
       llvm::SmallVector<linalg::GenericOp> latterGenericOps;
@@ -1971,6 +1990,7 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
   std::vector<std::vector<int64_t>> allTilings;
   while (tilingGen.hasNext()) allTilings.push_back(tilingGen.next());
 
+  // ECHO("finish tiling generating", "\n")
   // ECHO(allTilings.size(), "\n")
 
   bool existGlobalParameter = false;
@@ -2124,7 +2144,13 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
         std::string resourceName = toString(&arith);
         for (auto operand : arith.getOperands())
           resourceName = resourceName + "_" + toString(operand.getType());
-        assert(arithResourceUse.contains(resourceName));
+        assert(arith.getResults().size() == 1);
+        for (auto result : arith.getResults())
+          resourceName = resourceName + "_" + toString(result.getType());
+        if (!arithResourceUse.contains(resourceName)) {
+          ECHO(resourceName, "\n")
+          assert(0);
+        }
         arithResourceUse[resourceName] += ratioUnrollFactor[index];
         isArithStage[index] = true;
       }
@@ -2440,6 +2466,8 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
     // op->dump();
     auto generic = mlir::dyn_cast<linalg::GenericOp>(op);
     genericOpsTopOrder.push_back(generic);
+    // ECHO("check order", "\n")
+    // generic.dump();
   }
 
   /****test */

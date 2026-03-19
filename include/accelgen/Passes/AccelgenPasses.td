@@ -19,6 +19,13 @@ def FuseGenericPass: Pass<"fuse-generic", "::mlir::ModuleOp"> {
   }];
 }
 
+def EliminateDeadOpPass: Pass<"eliminate-dead-op", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+}
+
+
 def LinalgOpFuse: Pass<"linalg-op-fuse", "::mlir::ModuleOp"> {
   let summary = "Fuse op with specific pattern.";
   let description = [{
@@ -54,6 +61,7 @@ def CollapseShapeDelayPass: Pass<"collapse-shape-delay", "::mlir::ModuleOp"> {
   let description = [{
   }];
 }
+
 
 
 def ModelBaselineAccelerator: Pass<"model-baseline-accelerator", "::mlir::ModuleOp"> {

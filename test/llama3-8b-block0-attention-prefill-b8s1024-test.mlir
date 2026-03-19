@@ -14,12 +14,30 @@
 #map13 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, 0)>
 #map14 = affine_map<(d0, d1, d2, d3) -> ()>
 module {
-  func.func @main(%arg0: tensor<8x8x1024x128xbf16>) {
-    %22 = tensor.empty() : tensor<8x8x4x1024x128xbf16>
-    %23 = linalg.generic {indexing_maps = [#map8, #map9], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]} ins(%arg0 : tensor<8x8x1024x128xbf16>) outs(%22 : tensor<8x8x4x1024x128xbf16>) attrs =  {accelgen.expand = true, accelgen.memory_transformation = true} {
-    ^bb0(%in: bf16, %out: bf16):
-      linalg.yield %in : bf16
-    } -> tensor<8x8x4x1024x128xbf16>
+  func.func @main(%arg0: tensor<8x32x1024x1024xbf16>) {
+    %cst = arith.constant 0.000000e+00 : bf16
+    %cst_0 = arith.constant 0xFF800000 : f32
+    %cst_1 = arith.constant 0.000000e+00 : f32
+    %cst_2 = arith.constant 0.088388347648318447 : f64
+    %0 = tensor.empty() : tensor<8x32x1024x1024xf32>
+    %34 = linalg.generic {indexing_maps = [#map6, #map6], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg0 : tensor<8x32x1024x1024xbf16>) outs(%0 : tensor<8x32x1024x1024xf32>) {
+    ^bb0(%in: bf16, %out: f32):
+      %51 = arith.extf %in : bf16 to f32
+      linalg.yield %51 : f32
+    } -> tensor<8x32x1024x1024xf32>
+    %1 = tensor.empty() : tensor<8x32x1024xf32>
+    %37 = linalg.generic {indexing_maps = [#map6, #map4], iterator_types = ["parallel", "parallel", "parallel", "reduction"]} ins(%34 : tensor<8x32x1024x1024xf32>) outs(%1 : tensor<8x32x1024xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %51 = arith.maximumf %in, %out : f32
+      linalg.yield %51 : f32
+    } -> tensor<8x32x1024xf32>
+    %expanded_14 = tensor.expand_shape %37 [[0], [1], [2, 3]] output_shape [8, 32, 1024, 1] : tensor<8x32x1024xf32> into tensor<8x32x1024x1xf32>
+    %33 = tensor.empty() : tensor<8x32x1024x1024xf32>
+    %38 = linalg.generic {indexing_maps = [#map6, #map13, #map6], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%34, %expanded_14 : tensor<8x32x1024x1024xf32>, tensor<8x32x1024x1xf32>) outs(%33 : tensor<8x32x1024x1024xf32>) {
+    ^bb0(%in: f32, %in_19: f32, %out: f32):
+      %51 = arith.subf %in, %in_19 : f32
+      linalg.yield %51 : f32
+    } -> tensor<8x32x1024x1024xf32>
     return
   }
 }

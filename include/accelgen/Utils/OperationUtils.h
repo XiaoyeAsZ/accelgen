@@ -75,6 +75,9 @@ static std::string toString(mlir::Operation* op) {
   if (mlir::isa<mlir::arith::TruncFOp>(op)) return "truncf";
   if (mlir::isa<mlir::arith::NegFOp>(op)) return "negf";
   if (mlir::isa<mlir::arith::SubFOp>(op)) return "subf";
+  if (mlir::isa<mlir::arith::ExtFOp>(op)) return "extf";
+  if (mlir::isa<mlir::arith::MaximumFOp>(op)) return "maximumf";
+  if (mlir::isa<mlir::arith::DivFOp>(op)) return "divf";
   // if (mlir::isa<mlir::arith::MulIOp>(op)) return "muli";
   // if (mlir::isa<mlir::arith::AddIOp>(op)) return "addi";
   op->dump();

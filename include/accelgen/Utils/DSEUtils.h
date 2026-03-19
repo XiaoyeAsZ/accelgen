@@ -8,14 +8,15 @@
 namespace mlir {
 namespace accelgen {
 
-template <typename _DType> class ParameterGenerator {
-public:
-  void addVariable(const std::vector<_DType> &values) {
+template <typename _DType>
+class ParameterGenerator {
+ public:
+  void addVariable(const std::vector<_DType>& values) {
     std::vector<_DType> v;
-    for (auto &x : values)
-      v.emplace_back(x);
+    for (auto& x : values) v.emplace_back(x);
     candidates.push_back(std::move(v));
     indices.push_back(0);
+    _hasNext = true;
   }
 
   bool hasNext() const { return _hasNext; }
@@ -32,14 +33,14 @@ public:
   std::vector<size_t> indices;
 
   void reset() {
-    for (auto &e : indices) {
+    for (auto& e : indices) {
       e = 0;
       _hasNext = true;
     }
   }
 
-private:
-  bool _hasNext = true;
+ private:
+  bool _hasNext = false;
 
   std::vector<_DType> current() const {
     std::vector<_DType> res;
@@ -52,8 +53,7 @@ private:
   void advance() {
     for (int i = indices.size() - 1; i >= 0; i--) {
       indices[i]++;
-      if (indices[i] < candidates[i].size())
-        return;
+      if (indices[i] < candidates[i].size()) return;
       indices[i] = 0;
       if (i == 0) {
         _hasNext = false;
@@ -63,12 +63,13 @@ private:
   }
 };
 
-template <typename _T> class DecisionVariable {
-private:
+template <typename _T>
+class DecisionVariable {
+ private:
   std::vector<_T> solution;
 };
 
-} // namespace accelgen
-} // namespace mlir
+}  // namespace accelgen
+}  // namespace mlir
 
 #endif
