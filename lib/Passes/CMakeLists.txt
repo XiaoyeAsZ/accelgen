@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRAccelgen
         CollapseShapeDelayPass.cpp
         ModelBaselineAccelerator.cpp
         EliminateDeadOpPass.cpp
+        FoldTensorOpPass.cpp
 
 
         ADDITIONAL_HEADER_DIRS

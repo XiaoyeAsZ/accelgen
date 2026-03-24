@@ -19,8 +19,8 @@
 #include "accelgen/Passes/AccelgenPasses.h"
 // #include "accelgen/Passes/KernelSchedulePass.h"
 #include "accelgen/Utils/AffineMapUtils.h"
-#include "accelgen/Utils/OperationUtils.h"
 #include "accelgen/Utils/DebugUtils.h"
+#include "accelgen/Utils/OperationUtils.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_KERNELSCHEDULE
@@ -30,27 +30,30 @@ namespace mlir::accelgen {
 namespace {
 
 class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
- public:
+public:
   using impl::KernelScheduleBase<KernelSchedule>::KernelScheduleBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext& ctx = getContext();
+    mlir::MLIRContext &ctx = getContext();
     mlir::func::FuncOp func = getOperation();
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
     PerfModel model = PerfModel();
     ArchConfig archCfg;
     archCfg.bandwidth = 128;
-    archCfg.sramCapacity = 128 * 1024;
+    archCfg.sramCapacity = 1024 * 1024;
     archCfg.nSramBank = 32;
     archCfg.computeResource["mulf_bf16_bf16_bf16"] = 64 * 64 + 64;
+    archCfg.computeResource["mulf_fp32_fp32_fp32"] = 64 * 64 + 64;
     archCfg.computeResource["addf_bf16_bf16_bf16"] = 64 * 64 + 64;
     archCfg.computeResource["negf_bf16_bf16"] = 64;
     archCfg.computeResource["addf_fp32_fp32_fp32"] = 64;
     archCfg.computeResource["subf_fp32_fp32_fp32"] = 64;
     archCfg.computeResource["divf_fp32_fp32_fp32"] = 64;
+    archCfg.computeResource["divf_bf16_bf16_bf16"] = 64;
     archCfg.computeResource["truncf_fp32_bf16"] = 64;
     archCfg.computeResource["truncf_fp64_bf16"] = 64;
+    archCfg.computeResource["truncf_fp64_fp32"] = 64;
     archCfg.computeResource["extf_bf16_fp32"] = 64;
     archCfg.computeResource["maximumf_fp32_fp32_fp32"] = 64;
     archCfg.computeResource["transpose_bf16_bf16"] = 16 * 16;
@@ -60,8 +63,8 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     // func.walk([&](mlir::linalg::GenericOp genericOp) {
     //   scheduledCluster.insertGenericOp(genericOp);
     // });
-    for (auto& block : func.getBlocks()) {
-      for (auto& op : block.getOperations())
+    for (auto &block : func.getBlocks()) {
+      for (auto &op : block.getOperations())
         if (mlir::dyn_cast<linalg::GenericOp>(op) ||
             mlir::dyn_cast<tensor::CollapseShapeOp>(op) ||
             mlir::dyn_cast<tensor::ExpandShapeOp>(op) ||
@@ -99,13 +102,16 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
           // llvm::errs() << operand << "\n";
           llvm::SmallVector<linalg::GenericOp> previousGenericOps;
           cluster->getPreviousGeneric(operand, previousGenericOps);
-          if (previousGenericOps.empty()) clusterInput.push_back(operand);
+          if (previousGenericOps.empty())
+            clusterInput.push_back(operand);
         }
-        for (auto constValue : constSet) clusterInput.push_back(constValue);
+        for (auto constValue : constSet)
+          clusterInput.push_back(constValue);
         for (auto operand : genericOp.getResults()) {
           llvm::SmallVector<linalg::GenericOp> latterGenericOps;
           cluster->getLatterGeneric(operand, latterGenericOps);
-          if (latterGenericOps.empty()) clusterOutput.push_back(operand);
+          if (latterGenericOps.empty())
+            clusterOutput.push_back(operand);
         }
       }
 
@@ -119,10 +125,20 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
       auto clusterFuncOp = builder.create<mlir::func::FuncOp>(
           func.getLoc(),
           std::string("Cluster_") + std::to_string(indexCluster++), funcType);
+      clusterFuncOp->setAttr(
+          "cycles",
+          mlir::FloatAttr::get(Float64Type::get(&ctx), cluster->metric.cycles));
+      clusterFuncOp->setAttr(
+          "externalAccess",
+          mlir::FloatAttr::get(Float64Type::get(&ctx),
+                               cluster->metric.externalAccess));
+      clusterFuncOp->setAttr("sramAccess",
+                             mlir::FloatAttr::get(Float64Type::get(&ctx),
+                                                  cluster->metric.sramAccess));
 
       // clusterFuncOp.setPrivate();
 
-      mlir::Block* entry = clusterFuncOp.addEntryBlock();
+      mlir::Block *entry = clusterFuncOp.addEntryBlock();
       builder.setInsertionPointToStart(entry);
 
       IRMapping mapper;
@@ -147,12 +163,13 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
           getTopoOrder(cluster->constructClusterWithTensorOp());
 
       // ECHO("check clone cluster", "\n")
-      for (Operation* op : opClusterWithTensorOp) {
+      for (Operation *op : opClusterWithTensorOp) {
         builder.clone(*op, mapper);
       }
 
       llvm::SmallVector<Value> retVals;
-      for (Value out : clusterOutput) retVals.push_back(mapper.lookup(out));
+      for (Value out : clusterOutput)
+        retVals.push_back(mapper.lookup(out));
 
       builder.create<func::ReturnOp>(clusterFuncOp.getLoc(), retVals);
     }
@@ -164,5 +181,5 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
   }
 };
 
-}  // namespace
-}  // namespace mlir::accelgen
+} // namespace
+} // namespace mlir::accelgen

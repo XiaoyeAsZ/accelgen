@@ -73,3 +73,10 @@ def ModelBaselineAccelerator: Pass<"model-baseline-accelerator", "::mlir::Module
     Option<"configPath", "config-path", "std::string","", "">
   ];
 }
+
+
+def FoldTensorOpPass: Pass<"fold-tensor-op", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+}
