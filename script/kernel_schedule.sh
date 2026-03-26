@@ -2,8 +2,8 @@
 
 model="gemma-7b"
 block="0"
-layer="attention"
-action="prefill"
+layer="ffn"
+action="decode"
 batch="8"
 sequence="1024"
 

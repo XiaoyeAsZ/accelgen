@@ -31,16 +31,19 @@ def SramOp : Dap_Op<"sram", []> {
   let arguments = (ins
     I32Attr:$width,
     I32Attr:$depth,
-    I32Attr:$nbank
+    I32Attr:$nbank,
+    I32Attr:$nbuffer
   );
 
   let results = (outs
+    I32:$write,
+    I32:$waddr,
+    I32:$wstride,
     I32:$din,
-    I32:$dout,
-    I32:$addr,
-    I32:$stride,
     I32:$read,
-    I32:$write
+    I32:$raddr,
+    I32:$rstride,
+    I32:$dout
   );
 }
 

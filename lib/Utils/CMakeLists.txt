@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRAccelgenUtils
         AffineMapUtils.cpp
         OperationUtils.cpp
         DSEUtils.cpp
+        GenericGraph.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/accelgen
