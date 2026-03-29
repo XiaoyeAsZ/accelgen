@@ -1,0 +1,37 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA RoPE K — Step 4/4: Add K*cos and rotate(K)*sin  [MLIR: %26]  (GQA)
+# ===========================================================================
+# MLIR op: %26 = linalg.generic { arith.addf %in, %in_32 } ins(%22, %25)
+# Position: RoPE step 4 for K heads (GQA) — final elementwise addition.
+# RoPE(K) = K * cos(θ) + rotate(K) * sin(θ)   ← this step produces the final result
+#
+# Full RoPE-K is 4 separate operator calls in MLIR (GQA: 8 KV heads):
+#   %22  K * cos(θ)         → rope_k.yaml
+#   %24  negate K[64:]      → rope_k_neg.yaml
+#   %25  rotate(K) * sin(θ) → rope_k_mul_sin.yaml
+#   %26  %22 + %25          → this file
+#
+# K tensor shape: [batch=8, heads_kv=8, seq=1, head_dim=128]
+# Total elements = 8 × 8 × 1 × 128 = 8,192
+# Total computes = 8 × 1 × 8 × 128 = 8,192  (1 addf per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (one addf per element: K*cos + rotate(K)*sin)
+#   M = 1     (one output per element)
+#   P = 8     (KV attention heads, GQA: 8 heads)
+#   Q = 128   (head dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # addf: K*cos(θ) + rotate(K)*sin(θ) → 1 add per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 128        # head dimension
+    G: 1

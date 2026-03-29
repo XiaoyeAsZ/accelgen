@@ -1,0 +1,35 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA SiLU Multiply (SwiGLU component)
+# ===========================================================================
+# Position: after sigmoid, combines x and σ(x) to form SiLU.
+# SiLU(x) = x · σ(x)
+#
+# This is a single elementwise multiply of the gate projection output x
+# with its sigmoid σ(x). 1 MAC per element.
+#
+# Must run AFTER sigmoid.yaml completes (data dependency on σ(x)).
+#
+# Tensor shape: [batch=8, seq=1, ffn_dim=14336]
+# Total elements = 8 × 1 × 14336 = 114,688
+# Total computes = 8 × 1 × 1 × 14336 = 114,688
+#
+# Mapping to Conv2D problem shape:
+#   N = 8      (batch)
+#   C = 1      (single multiply → 1 MAC per element)
+#   M = 1      (one output per element)
+#   P = 1      (sequence length = 1, decode step)
+#   Q = 14336  (FFN intermediate dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # x × σ(x) → 1 MAC per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 1          # sequence length (decode step)
+    Q: 14336      # FFN intermediate dimension
+    G: 1

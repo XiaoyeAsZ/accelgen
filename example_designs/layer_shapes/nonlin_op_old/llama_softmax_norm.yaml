@@ -1,0 +1,39 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Softmax — Phase 2: Normalize (divf)  [MLIR: %50]
+# ===========================================================================
+# MLIR op: %50 = linalg.generic { arith.divf %in, %in_32 } ins(%46, %49)
+# Softmax(x_i) = exp(x_i - max) / Σ exp(x_j - max)
+#
+# This is Phase 2: divide each exp(x_i) by the accumulated sum S
+# (S = Σ exp(x_j - max) computed in llama_softmax_sum.yaml, %49).
+# Must run AFTER both softmax_exp (%46) and softmax_sum (%49).
+#
+# Each element is divided by the row sum: y_i = exp(x_i) / S → 1 divf.
+#
+# Serial dependency chain:
+#   %44 max → %45 sub → %46 exp → %49 sum → %50 div (this)
+#
+# Attention score shape: [batch=8, heads=32, seq=1, kv_len=1024]
+# Total elements = 8 × 32 × 1 × 1024 = 262,144
+# Total computes = 8 × 1 × 32 × 1024 = 262,144  (1 divf per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (arith.divf: 1 divide per element)
+#   M = 1     (one normalized output per element)
+#   P = 32    (attention heads)
+#   Q = 1024  (KV cache length)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # arith.divf: exp(x_i) / sum → 1 divide per element
+    M: 1          # one normalized output per element
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1024       # KV cache length
+    G: 1

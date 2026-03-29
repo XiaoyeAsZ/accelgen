@@ -1,0 +1,37 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA SwiGLU Gate Multiply
+# ===========================================================================
+# Position: after SiLU and up-projection, combines both branches.
+# SwiGLU_gate(x) = SiLU(x·W_gate) ⊙ (x·W_up)
+#
+# This is a single elementwise multiply of the SiLU(gate) branch
+# with the up-projection branch. 1 MAC per element.
+#
+# Must run AFTER both:
+#   1. SiLU multiply completes (SiLU(x·W_gate))
+#   2. Up-projection matmul completes (x·W_up)
+#
+# Tensor shape: [batch=8, seq=1, ffn_dim=14336]
+# Total elements = 8 × 1 × 14336 = 114,688
+# Total computes = 8 × 1 × 1 × 14336 = 114,688
+#
+# Mapping to Conv2D problem shape:
+#   N = 8      (batch)
+#   C = 1      (single multiply → 1 MAC per element)
+#   M = 1      (one output per element)
+#   P = 1      (sequence length = 1, decode step)
+#   Q = 14336  (FFN intermediate dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # SiLU(gate) ⊙ up → 1 MAC per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 1          # sequence length (decode step)
+    Q: 14336      # FFN intermediate dimension
+    G: 1

@@ -1,0 +1,45 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (Q) — Step 2/7: Sum of Squares Reduction  [MLIR: %11]
+# ===========================================================================
+# MLIR op: %11 = linalg.generic { arith.addf %in, %out } ins(%8) outs(%10)
+#          iterator_types = ["parallel","parallel","parallel","reduction"]
+#          indexing_maps  = [#map2, #map3]  (#map3: (d0,d1,d2,d3)->(d0,d1,d2,0))
+# Position: RMSNorm step 2 — reduce x² over head_dim=128.
+#
+# Accumulates Σ x² over the last dimension (head_dim=128) per head.
+# Input  shape: [batch=8, seq=1024, heads=32, head_dim=128]  (squared values)
+# Output shape: [batch=8, seq=1024, heads=32, 1]             (scalar per head)
+#
+# Full RMSNorm-Q sequence:
+#   %8   fpowi square            → rmsnorm_q_square.yaml
+#   %11  addf sum reduction      → this file
+#   %12  divf / head_dim         → rmsnorm_q_div_mean.yaml
+#   %13  addf + epsilon          → rmsnorm_q_add_eps.yaml
+#   %14  math.rsqrt              → rmsnorm_q_rsqrt.yaml
+#   %15  mulf x × rsqrt          → rmsnorm_q_mul_norm.yaml
+#   %18  mulf × weight (gamma)   → rmsnorm_q_mul_weight.yaml
+#
+# Per-head reduction: sum 128 squared values → 1 scalar.
+# Total reductions: 8 × 1024 × 32 = 262,144
+# Total computes = 262,144 × 128 = 33,554,432
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 128   (head_dim: reduction dimension, 1 addf per step)
+#   M = 1     (one scalar sum per head)
+#   P = 32    (Q attention heads)
+#   Q = 1     (scalar output)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 128        # head_dim: reduction dimension (1 addf per step)
+    M: 1          # one sum scalar per head
+    R: 1
+    S: 1
+    P: 32         # Q attention heads
+    Q: 1          # scalar output per head
+    G: 1

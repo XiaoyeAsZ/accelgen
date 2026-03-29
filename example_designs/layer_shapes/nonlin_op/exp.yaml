@@ -1,0 +1,15 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# math.exp  —  Exponential
+# ===========================================================================
+# MLIR:  %r = math.exp %x : bf16/f32
+# Hardware: 5-term polynomial approximation on PPU
+#   p(x) = c0 + c1*x + c2*x^2 + c3*x^3 + c4*x^4
+#   Each term = 1 MAC (coeff * power-of-x + accumulate)
+# C = 5
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    C: 5

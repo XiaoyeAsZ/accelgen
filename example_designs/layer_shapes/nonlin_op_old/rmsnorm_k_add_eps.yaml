@@ -1,0 +1,33 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (K) — Step 4/7: Add epsilon  [MLIR: %33]  (GQA)
+# ===========================================================================
+# MLIR op: %33 = linalg.generic { arith.addf %in, eps } ins(%32)
+#          Body: truncf(1e-6 : f64 → f32), then addf.
+# Position: RMSNorm step 4 — add epsilon for numerical stability.
+#
+# Adds epsilon (1e-6) to the mean of squares: mean(x²) + ε
+# One addf per KV head.
+#
+# Input/output shape: [batch=8, seq=1024, heads_kv=8, 1]
+# Total elements = 8 × 1024 × 8 × 1 = 65,536
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 1     (one addf per element)
+#   M = 1
+#   P = 8     (KV attention heads, GQA)
+#   Q = 1     (scalar per head)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 1          # arith.addf: add epsilon → 1 op per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 1          # scalar per head
+    G: 1

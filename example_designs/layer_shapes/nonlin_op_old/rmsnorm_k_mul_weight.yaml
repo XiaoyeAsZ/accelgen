@@ -1,0 +1,36 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (K) — Step 7/7: Multiply by weight (gamma)  [MLIR: %38]  (GQA)
+# ===========================================================================
+# MLIR op: %38 = linalg.generic { arith.mulf %in, %in_29 }
+#               ins(%arg9, %37 : tensor<128xbf16>, tensor<8x1024x8x128xbf16>)
+#          indexing_maps = [#map4, #map2, #map2]
+#          #map4: (d0,d1,d2,d3) -> (d3)  — weight broadcast
+# Position: RMSNorm step 7 — scale by learnable weight: y = γ × x̂
+#
+# Multiplies each normalized element by the per-head_dim weight vector γ[128],
+# broadcast across batch, seq, and heads.
+# One mulf per element.
+#
+# Input/output shape: [batch=8, seq=1024, heads_kv=8, head_dim=128]
+# Total elements = 8 × 1024 × 8 × 128 = 8,388,608
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 1     (one mulf per element: γ × x̂)
+#   M = 1
+#   P = 8     (KV attention heads, GQA)
+#   Q = 128   (head dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 1          # arith.mulf: γ × x̂ → 1 multiply per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 128        # head dimension
+    G: 1

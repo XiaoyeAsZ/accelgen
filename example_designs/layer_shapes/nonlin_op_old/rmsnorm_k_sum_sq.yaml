@@ -1,0 +1,35 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (K) — Step 2/7: Sum of Squares Reduction  [MLIR: %31]  (GQA)
+# ===========================================================================
+# MLIR op: %31 = linalg.generic { arith.addf %in, %out } ins(%28) outs(%30)
+#          iterator_types = ["parallel","parallel","parallel","reduction"]
+# Position: RMSNorm step 2 — reduce x² over head_dim=128 for K heads.
+#
+# Accumulates Σ x² over the last dimension (head_dim=128) per KV head.
+# Input  shape: [batch=8, seq=1024, heads_kv=8, head_dim=128]
+# Output shape: [batch=8, seq=1024, heads_kv=8, 1]
+#
+# Per-head reduction: sum 128 squared values → 1 scalar.
+# Total reductions: 8 × 1024 × 8 = 65,536
+# Total computes = 65,536 × 128 = 8,388,608
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 128   (head_dim: reduction dimension, 1 addf per step)
+#   M = 1     (one scalar sum per head)
+#   P = 8     (KV attention heads, GQA)
+#   Q = 1     (scalar output)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 128        # head_dim: reduction dimension (1 addf per step)
+    M: 1          # one sum scalar per head
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 1          # scalar output per head
+    G: 1

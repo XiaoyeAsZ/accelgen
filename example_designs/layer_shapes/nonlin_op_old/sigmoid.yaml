@@ -1,0 +1,44 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Sigmoid Activation (SwiGLU component)  [MLIR: %8]
+# ===========================================================================
+# MLIR op: %8 = linalg.generic { negf, math.exp, addf, divf } ins(%7)
+# Position: after FFN gate projection (x·W_gate), inside SwiGLU.
+# σ(x) = 1 / (1 + exp(-x))
+#
+# MLIR body has 4 operations per element:
+#   %19 = arith.negf %in        → -x
+#   %20 = math.exp %19          → exp(-x)
+#   %21 = arith.addf %20, 1.0   → 1 + exp(-x)
+#   %22 = arith.divf 1.0, %21   → 1 / (1 + exp(-x))
+#
+# Total: 4 ops per element (negf + exp + addf + divf).
+#
+# Full SwiGLU non-linear sequence in MLIR:
+#   %8   sigmoid (this file)    → sigmoid.yaml
+#   %9   mulf σ(x) × x (SiLU)  → silu_mul.yaml
+#   %12  mulf silu × up (gate)  → swiglu_gate_mul.yaml
+#
+# Gate tensor shape: [batch=8, seq=1, ffn_dim=14336]
+# Total elements = 8 × 1 × 14336 = 114,688
+# Total computes = 8 × 4 × 1 × 14336 = 458,752  (4 ops per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8      (batch)
+#   C = 4      (4 MLIR ops per element: negf + exp + addf + divf)
+#   M = 1      (one output per element)
+#   P = 1      (sequence length = 1, decode step)
+#   Q = 14336  (FFN intermediate dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 4          # negf + exp + addf + divf → 4 ops per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 1          # sequence length (decode step)
+    Q: 14336      # FFN intermediate dimension
+    G: 1

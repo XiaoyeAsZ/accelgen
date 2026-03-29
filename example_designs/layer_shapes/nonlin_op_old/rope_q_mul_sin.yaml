@@ -1,0 +1,37 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA RoPE Q — Step 3/4: Multiply rotated Q by sin(θ)  [MLIR: %20]
+# ===========================================================================
+# MLIR op: %20 = linalg.generic { arith.mulf %in, %in_32 } ins(concat, expanded_sin)
+# Position: RoPE step 3 for Q heads — elementwise rotate(Q) × sin(θ).
+# rotate(Q) = concat(-Q[:, :, :, 64:], Q[:, :, :, :64])  (computed in %19 + tensor.concat)
+#
+# Full RoPE-Q is 4 separate operator calls in MLIR:
+#   %17  Q * cos(θ)         → rope_q.yaml
+#   %19  negate Q[64:]      → rope_q_neg.yaml
+#   %20  rotate(Q) * sin(θ) → this file
+#   %21  %17 + %20          → rope_q_add.yaml
+#
+# Q tensor shape: [batch=8, heads=32, seq=1, head_dim=128]
+# Total elements = 8 × 32 × 1 × 128 = 32,768
+# Total computes = 8 × 1 × 32 × 128 = 32,768  (1 mulf per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (one mulf per element: rotate(Q) × sin)
+#   M = 1     (one output per element)
+#   P = 32    (Q attention heads)
+#   Q = 128   (head dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # mulf: rotate(Q) × sin(θ) → 1 multiply per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # Q attention heads
+    Q: 128        # head dimension
+    G: 1

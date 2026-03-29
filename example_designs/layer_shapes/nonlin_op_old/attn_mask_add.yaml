@@ -1,0 +1,33 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Attention Mask / Bias Addition
+# ===========================================================================
+# Position: after attention score scaling, before softmax.
+# mask_add(S) = S + mask
+#
+# Adds a broadcast attention mask/bias tensor (shape 1×32×1×1) to each
+# attention score element. This is a single add per element (1 MAC).
+#
+# Attention score shape: [batch=8, heads=32, seq=1, kv_len=1024]
+# Total elements = 8 × 32 × 1 × 1024 = 262,144
+# Total computes = 8 × 1 × 32 × 1024 = 262,144
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (single add → 1 MAC per element)
+#   M = 1     (one output per element)
+#   P = 32    (attention heads)
+#   Q = 1024  (KV cache length)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # add mask → 1 MAC per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1024       # KV cache length
+    G: 1

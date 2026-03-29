@@ -1,0 +1,32 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (K) — Step 3/7: Divide by head_dim (mean)  [MLIR: %32]  (GQA)
+# ===========================================================================
+# MLIR op: %32 = linalg.generic { arith.divf %in, 128.0 } ins(%31)
+# Position: RMSNorm step 3 — compute mean of squares: Σx² / d_k
+#
+# Divides the sum of squares by the head dimension (128.0).
+# One divf per KV head.
+#
+# Input/output shape: [batch=8, seq=1024, heads_kv=8, 1]
+# Total elements = 8 × 1024 × 8 × 1 = 65,536
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 1     (one divf per element)
+#   M = 1
+#   P = 8     (KV attention heads, GQA)
+#   Q = 1     (scalar per head)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 1          # arith.divf: divide by head_dim → 1 op per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 1          # scalar per head
+    G: 1

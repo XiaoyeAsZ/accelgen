@@ -1,0 +1,39 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Softmax — Phase 0a: Max Reduction (per Transformer block)
+# ===========================================================================
+# Softmax(x_i) = exp(x_i - max) / sum(exp(x_j - max))
+#
+# This is the FIRST phase: find the maximum attention score per row
+# for numerical stability. Must complete BEFORE subtract-max (Phase 0b).
+#
+# Per-row reduction: compare 1024 elements → 1 max value.
+# Each comparison is 1 compare + 1 select → modelled as 1 MAC.
+#
+# Serial dependency chain:
+#   Phase 0a (this) → Phase 0b (sub_max) → Phase 1 (exp) → Phase 2 (norm)
+#
+# Attention score shape: [batch=8, heads=32, seq=1, kv_len=1024]
+# Per row: 1024 comparisons (reduction tree).
+# Total rows: 8 × 32 × 1 = 256
+# Total computes = 256 × 1024 = 262,144
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1024  (kv_len: reduction dimension, each step = 1 compare)
+#   M = 1     (one max output per row)
+#   P = 32    (attention heads)
+#   Q = 1     (sequence length = 1, decode step)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1024       # kv_len: reduction over this dimension (1 cmp per step)
+    M: 1          # one max value per row
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1          # sequence length (decode step)
+    G: 1

@@ -1,0 +1,32 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (K) — Step 5/7: Reciprocal Square Root  [MLIR: %34]  (GQA)
+# ===========================================================================
+# MLIR op: %34 = linalg.generic { math.rsqrt %in } ins(%33)
+# Position: RMSNorm step 5 — compute 1/√(mean(x²) + ε)
+#
+# Computes the reciprocal square root of (mean_sq + epsilon).
+# One rsqrt per KV head.
+#
+# Input/output shape: [batch=8, seq=1024, heads_kv=8, 1]
+# Total elements = 8 × 1024 × 8 × 1 = 65,536
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 1     (one math.rsqrt per element)
+#   M = 1
+#   P = 8     (KV attention heads, GQA)
+#   Q = 1     (scalar per head)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 1          # math.rsqrt: 1 rsqrt per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 1          # scalar per head
+    G: 1

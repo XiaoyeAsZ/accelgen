@@ -1,0 +1,43 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Softmax — Phase 1b: Sum Reduction  [MLIR: %49]
+# ===========================================================================
+# MLIR op: %49 = linalg.generic { arith.addf %in, %out } ins(%46) outs(%48)
+#          iterator_types = ["parallel","parallel","parallel","reduction"]
+#          indexing_maps  = [#map3, #map10]   (#map10: (d0,d1,d2,d3)->(d0,d1,d2,0))
+# Softmax(x_i) = exp(x_i - max) / Σ exp(x_j - max)
+#
+# This is Phase 1b: accumulate S = Σ exp(x_j - max) over the kv_len=1024 dimension.
+# Input tensor shape : [batch=8, heads=32, seq=1, kv_len=1024]  (output of %46 exp)
+# Output tensor shape: [batch=8, heads=32, seq=1, 1]            (scalar sum per row)
+#
+# Must run AFTER softmax_exp (%46).
+# Must complete BEFORE softmax_div (%50) which needs the row sum S.
+#
+# Serial dependency chain:
+#   %44 max → %45 sub → %46 exp → %49 sum (this) → %50 div
+#
+# Per-row reduction: sum 1024 exp values → 1 scalar S.
+# Each step = 1 arith.addf → modelled as 1 MAC per step.
+# Total rows: 8 × 32 × 1 = 256
+# Total computes = 256 × 1024 = 262,144
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1024  (kv_len: reduction dimension, 1 addf per step)
+#   M = 1     (one scalar sum output per row)
+#   P = 32    (attention heads)
+#   Q = 1     (sequence length = 1, decode step)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1024       # kv_len: reduction dimension (1 addf per step)
+    M: 1          # one sum scalar per row
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1          # sequence length (decode step)
+    G: 1

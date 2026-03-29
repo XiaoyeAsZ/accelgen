@@ -1,0 +1,38 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Softmax — Phase 0b: Subtract Max (per Transformer block)
+# ===========================================================================
+# Softmax(x_i) = exp(x_i - max) / sum(exp(x_j - max))
+#
+# This is the SECOND phase: subtract the row-maximum from every
+# attention score element for numerical stability.
+# Must run AFTER softmax_max (Phase 0a) and BEFORE softmax_exp (Phase 1).
+#
+# One subtract per element → 1 MAC per element.
+#
+# Serial dependency chain:
+#   Phase 0a (max) → Phase 0b (this) → Phase 1 (exp) → Phase 2 (norm)
+#
+# Attention score shape: [batch=8, heads=32, seq=1, kv_len=1024]
+# Total elements = 8 × 32 × 1 × 1024 = 262,144
+# Total computes = 8 × 1 × 32 × 1024 = 262,144
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (single subtract → 1 MAC per element)
+#   M = 1     (one output per element)
+#   P = 32    (attention heads)
+#   Q = 1024  (KV cache length)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # subtract max → 1 MAC per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1024       # KV cache length
+    G: 1

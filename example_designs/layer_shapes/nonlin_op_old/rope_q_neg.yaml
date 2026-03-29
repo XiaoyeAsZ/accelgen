@@ -1,0 +1,41 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA RoPE Q — Step 2/4: Negate second half of Q  [MLIR: %19]
+# ===========================================================================
+# MLIR op: %19 = linalg.generic { arith.negf %in } ins(extracted_slice_12)
+# Position: RoPE step 2 for Q heads — negate the upper half of head_dim.
+#
+# MLIR extracts two 64-element slices from the 128-dim head:
+#   extracted_slice    = Q[:, :, :, :64]   (first half)
+#   extracted_slice_12 = Q[:, :, :, 64:]   (second half)
+# Then %19 negates the second half: rotate(Q) = concat(-Q[64:], Q[:64])
+#
+# Full RoPE-Q is 4 separate operator calls in MLIR:
+#   %17  Q * cos(θ)         → rope_q.yaml
+#   %19  negate Q[64:]      → this file
+#   %20  rotate(Q) * sin(θ) → rope_q_mul_sin.yaml
+#   %21  %17 + %20          → rope_q_add.yaml
+#
+# Input slice shape: [batch=8, heads=32, seq=1, head_dim/2=64]
+# Total elements = 8 × 32 × 1 × 64 = 16,384
+# Total computes = 8 × 1 × 32 × 64 = 16,384  (1 negf per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (one arith.negf per element)
+#   M = 1     (one output per element)
+#   P = 32    (Q attention heads)
+#   Q = 64    (half of head dimension: 128/2)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # arith.negf: 1 negation per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # Q attention heads
+    Q: 64         # half of head dimension (128/2)
+    G: 1

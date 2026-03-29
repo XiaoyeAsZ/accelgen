@@ -70,7 +70,9 @@ def ModelBaselineAccelerator: Pass<"model-baseline-accelerator", "::mlir::Module
   }];
   let options = [
     Option<"acceleratorName", "accelerator-name", "std::string","", "">,
-    Option<"configPath", "config-path", "std::string","", "">
+    Option<"ppuName", "ppu-name", "std::string","", "">,
+    Option<"configPath", "config-path", "std::string","", "">,
+    Option<"mlirFile", "mlir-file", "std::string","", "">
   ];
 }
 

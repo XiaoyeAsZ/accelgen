@@ -1,0 +1,35 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (K) — Step 6/7: Multiply by rsqrt (normalize)  [MLIR: %35]  (GQA)
+# ===========================================================================
+# MLIR op: %35 = linalg.generic { arith.mulf %in, %in_29 } ins(%27, %34)
+#          indexing_maps = [#map2, #map3, #map2]
+#          %27 is original x (f32), %34 is rsqrt scalar (broadcast)
+# Position: RMSNorm step 6 — normalize: x̂ = x × rsqrt(mean(x²) + ε)
+#
+# Multiplies each element by the per-head rsqrt value (broadcast from
+# [8,1024,8,1] to [8,1024,8,128]).
+# One mulf per element.
+#
+# Input/output shape: [batch=8, seq=1024, heads_kv=8, head_dim=128]
+# Total elements = 8 × 1024 × 8 × 128 = 8,388,608
+#
+# Mapping to Conv2D problem shape:
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 1     (one mulf per element: x × rsqrt)
+#   M = 1
+#   P = 8     (KV attention heads, GQA)
+#   Q = 128   (head dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 1          # arith.mulf: x × rsqrt → 1 multiply per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 128        # head dimension
+    G: 1

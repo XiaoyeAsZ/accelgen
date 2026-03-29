@@ -1,0 +1,33 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Attention Score Scaling
+# ===========================================================================
+# Position: after Q·K^T matmul, before softmax.
+# scale(S) = S × (1 / √d_k)
+#
+# Multiplies each attention score by the constant 1/√128 ≈ 0.0884.
+# This is a single multiply per element (1 MAC).
+#
+# Attention score shape: [batch=8, heads=32, seq=1, kv_len=1024]
+# Total elements = 8 × 32 × 1 × 1024 = 262,144
+# Total computes = 8 × 1 × 32 × 1024 = 262,144
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (single multiply by constant → 1 MAC per element)
+#   M = 1     (one output per element)
+#   P = 32    (attention heads)
+#   Q = 1024  (KV cache length)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # multiply by 1/√dk → 1 MAC per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1024       # KV cache length
+    G: 1

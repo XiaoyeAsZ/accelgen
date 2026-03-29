@@ -1,0 +1,57 @@
+mapping:
+  - target: PPU_OutputReg
+    type: datatype
+    keep:
+      - Outputs
+    bypass:
+      - Weights
+      - Inputs
+  - target: PPU_CoeffReg
+    type: datatype
+    keep:
+      - Weights
+    bypass:
+      - Inputs
+      - Outputs
+  - target: PPU_InputReg
+    type: datatype
+    keep:
+      - Inputs
+    bypass:
+      - Weights
+      - Outputs
+  - target: GlobalBuffer
+    type: datatype
+    keep:
+      - Inputs
+      - Outputs
+    bypass:
+      - Weights
+  - target: DRAM
+    type: datatype
+    keep:
+      - Weights
+      - Inputs
+      - Outputs
+    bypass:
+      []
+  - target: PPU_OutputReg
+    type: temporal
+    factors: C1 M1 R1 S1 N1 P1 Q1 G1
+    permutation: CMRSNPQG
+  - target: PPU_CoeffReg
+    type: temporal
+    factors: C1 M1 R1 S1 N1 P4 Q1 G1
+    permutation: PCMRSNQG
+  - target: PPU_InputReg
+    type: temporal
+    factors: C1 M1 R1 S1 N1 P1 Q1 G1
+    permutation: CMRSNPQG
+  - target: GlobalBuffer
+    type: temporal
+    factors: C1 M1 R1 S1 N1 P16 Q1 G1
+    permutation: PCMRSNQG
+  - target: DRAM
+    type: temporal
+    factors: C1 M1 R1 S1 N1 P4194304 Q1 G1
+    permutation: PCMRSNQG

@@ -1,0 +1,37 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA RoPE Q — Step 4/4: Add Q*cos and rotate(Q)*sin  [MLIR: %21]
+# ===========================================================================
+# MLIR op: %21 = linalg.generic { arith.addf %in, %in_32 } ins(%17, %20)
+# Position: RoPE step 4 for Q heads — final elementwise addition.
+# RoPE(Q) = Q * cos(θ) + rotate(Q) * sin(θ)   ← this step produces the final result
+#
+# Full RoPE-Q is 4 separate operator calls in MLIR:
+#   %17  Q * cos(θ)         → rope_q.yaml
+#   %19  negate Q[64:]      → rope_q_neg.yaml
+#   %20  rotate(Q) * sin(θ) → rope_q_mul_sin.yaml
+#   %21  %17 + %20          → this file
+#
+# Q tensor shape: [batch=8, heads=32, seq=1, head_dim=128]
+# Total elements = 8 × 32 × 1 × 128 = 32,768
+# Total computes = 8 × 1 × 32 × 128 = 32,768  (1 addf per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (one addf per element: Q*cos + rotate(Q)*sin)
+#   M = 1     (one output per element)
+#   P = 32    (Q attention heads)
+#   Q = 128   (head dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # addf: Q*cos(θ) + rotate(Q)*sin(θ) → 1 add per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # Q attention heads
+    Q: 128        # head dimension
+    G: 1

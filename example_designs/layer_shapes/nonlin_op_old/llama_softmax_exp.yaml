@@ -1,0 +1,48 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA Softmax — Phase 1a: Elementwise exp()  [MLIR: %46]
+# ===========================================================================
+# MLIR op: %46 = linalg.generic { math.exp %in } ins(%45)  [f32→f32]
+# Softmax(x_i) = exp(x_i - max) / Σ exp(x_j - max)
+#
+# This is Phase 1a: compute exp(x_i - max) for every attention score.
+# Must run AFTER softmax_sub_max (Phase 0b, %45).
+# Must complete BEFORE softmax_sum (Phase 1b, %49) and softmax_div (Phase 2, %50).
+#
+# Each MLIR element maps to exactly ONE math.exp call (1 exp per element).
+# This file models %46 only; the full softmax sequence in MLIR is:
+#   %39  extf bf16→f32       (type cast, no MAC)
+#   %44  maximumf reduction  → softmax_max.yaml
+#   %45  subf sub_max        → softmax_sub_max.yaml
+#   %46  math.exp            → this file
+#   %49  addf sum reduction  → llama_softmax_sum.yaml
+#   %50  divf normalize      → llama_softmax_norm.yaml
+#   %51  truncf f32→bf16     (type cast, no MAC)
+#
+# Serial dependency chain:
+#   Phase 0a (%44 max) → Phase 0b (%45 sub) → Phase 1a (%46 this)
+#     → Phase 1b (%49 sum) → Phase 2 (%50 div)
+#
+# Attention score shape: [batch=8, heads=32, seq=1, kv_len=1024]
+# Total elements = 8 × 32 × 1 × 1024 = 262,144
+# Total computes = 8 × 1 × 32 × 1024 = 262,144  (1 exp per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (one math.exp call per element)
+#   M = 1     (one exp output per score element)
+#   P = 32    (attention heads)
+#   Q = 1024  (KV cache length)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # math.exp: 1 exp call per element
+    M: 1          # one exp output per score element
+    R: 1
+    S: 1
+    P: 32         # attention heads
+    Q: 1024       # KV cache length
+    G: 1

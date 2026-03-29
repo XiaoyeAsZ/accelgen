@@ -1,0 +1,41 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA RoPE K — Step 2/4: Negate second half of K  [MLIR: %24]  (GQA)
+# ===========================================================================
+# MLIR op: %24 = linalg.generic { arith.negf %in } ins(extracted_slice_14)
+# Position: RoPE step 2 for K heads (GQA) — negate the upper half of head_dim.
+#
+# MLIR extracts two 64-element slices from the 128-dim head:
+#   extracted_slice_13 = K[:, :, :, :64]   (first half)
+#   extracted_slice_14 = K[:, :, :, 64:]   (second half)
+# Then %24 negates the second half: rotate(K) = concat(-K[64:], K[:64])
+#
+# Full RoPE-K is 4 separate operator calls in MLIR (GQA: 8 KV heads):
+#   %22  K * cos(θ)         → rope_k.yaml
+#   %24  negate K[64:]      → this file
+#   %25  rotate(K) * sin(θ) → rope_k_mul_sin.yaml
+#   %26  %22 + %25          → rope_k_add.yaml
+#
+# Input slice shape: [batch=8, heads_kv=8, seq=1, head_dim/2=64]
+# Total elements = 8 × 8 × 1 × 64 = 4,096
+# Total computes = 8 × 1 × 8 × 64 = 4,096  (1 negf per element)
+#
+# Mapping to Conv2D problem shape:
+#   N = 8     (batch)
+#   C = 1     (one arith.negf per element)
+#   M = 1     (one output per element)
+#   P = 8     (KV attention heads, GQA: 8 heads)
+#   Q = 64    (half of head dimension: 128/2)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8          # batch size
+    C: 1          # arith.negf: 1 negation per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 8          # KV attention heads (GQA: 8 heads)
+    Q: 64         # half of head dimension (128/2)
+    G: 1

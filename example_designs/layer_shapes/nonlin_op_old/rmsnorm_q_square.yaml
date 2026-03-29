@@ -1,0 +1,43 @@
+{{include_text('../problem_base.yaml')}}
+
+# ===========================================================================
+# LLaMA QK-Norm (Q) — Step 1/7: Square  [MLIR: %8]
+# ===========================================================================
+# MLIR op: %8 = linalg.generic { math.fpowi %in, 2 } ins(%7)  [f32→f32]
+# Position: RMSNorm applied to Q heads after projection, before RoPE.
+#
+# Squares each element of the Q tensor: x² = fpowi(x, 2)
+#
+# Full RMSNorm-Q sequence in MLIR:
+#   %7   extf bf16→f32           (type cast, no MAC)
+#   %8   fpowi square            → this file
+#   %11  addf sum reduction      → rmsnorm_q_sum_sq.yaml
+#   %12  divf / head_dim         → rmsnorm_q_div_mean.yaml
+#   %13  addf + epsilon          → rmsnorm_q_add_eps.yaml
+#   %14  math.rsqrt              → rmsnorm_q_rsqrt.yaml
+#   %15  mulf x × rsqrt          → rmsnorm_q_mul_norm.yaml
+#   %17  truncf f32→bf16         (type cast, no MAC)
+#   %18  mulf × weight (gamma)   → rmsnorm_q_mul_weight.yaml
+#
+# Q tensor shape: [batch=8, seq=1024, heads=32, head_dim=128]
+# Total elements = 8 × 1024 × 32 × 128 = 33,554,432
+# Total computes = 8192 × 1 × 32 × 128 = 33,554,432  (1 fpowi per element)
+#
+# Mapping to Conv2D problem shape (batch×seq folded into N):
+#   N = 8192  (8 × 1024, batch × seq)
+#   C = 1     (one fpowi/square per element)
+#   M = 1     (one output per element)
+#   P = 32    (Q attention heads)
+#   Q = 128   (head dimension)
+# ===========================================================================
+problem:
+  <<<: *problem_base
+  instance:
+    N: 8192       # batch × seq = 8 × 1024
+    C: 1          # math.fpowi: 1 square per element
+    M: 1          # one output per element
+    R: 1
+    S: 1
+    P: 32         # Q attention heads
+    Q: 128        # head dimension
+    G: 1
