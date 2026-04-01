@@ -1,0 +1,32 @@
+DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+-------------------------------------------------------------------------------
+| for C in [0:16)
+
+GlobalBuffer [ Weights:3145728 (3145728) Inputs:6144 (6144) ] 
+-------------------------------------------------------------
+|   for M in [0:32)
+
+inter_GemminiTile_spatial [ ] 
+Scratchpad [ Weights:98304 (98304) Inputs:6144 (6144) ] 
+-------------------------------------------------------
+|     for M in [0:2)
+
+inter_PECols_spatial [ ] 
+Accumulator [ Outputs:512 (512) ] 
+---------------------------------
+|       for C in [0:12)
+|         for M in [0:64)
+|           for N in [0:2)
+
+inter_PERows_spatial [ ] 
+------------------------
+|             for C in [0:64) (Spatial-Y)
+
+WeightReg [ Weights:1 (1) ] 
+---------------------------
+|               for N in [0:4)
+
+InputReg [ Inputs:1 (1) ] 
+OutputReg [ Outputs:1 (1) ] 
+---------------------------
+|                 << Compute >>

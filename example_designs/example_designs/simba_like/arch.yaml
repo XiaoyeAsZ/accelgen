@@ -4,7 +4,7 @@ architecture:
   - !Container # Top-level system
     name: System
     attributes:
-      datawidth: 8
+      datawidth: 16
       technology: "45nm"
   
   - !Component # DRAM main memory
@@ -13,7 +13,7 @@ architecture:
     attributes:
       type: "LPDDR4"
       width: 64
-      datawidth: 8
+      datawidth: 16
 
   - !Component # Interconnect NoC between DRAM and on-chip hierarchy
     name: NoC
@@ -23,7 +23,7 @@ architecture:
       # Logical NoC storage capacity used by Timeloop mapping.
       depth: 2048
       width: 64
-      datawidth: 8
+      datawidth: 16
       n_banks: 1
       # two-layer abstraction: routers + local/global links.
       n_routers: 16
@@ -47,7 +47,7 @@ architecture:
     attributes:
       depth: 2048
       width: 256
-      datawidth: 8
+      datawidth: 16
       n_banks: 4
       nports: 2
     constraints:
@@ -66,8 +66,8 @@ architecture:
     subclass: smartbuffer_RF
     attributes:
       depth: 1024
-      width: 64
-      datawidth: 8
+      width: 128
+      datawidth: 16
     constraints:
       dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
 
@@ -88,8 +88,8 @@ architecture:
       subclass: smartbuffer_RF
       attributes:
         depth: 4096
-        width: 64
-        datawidth: 8
+        width: 128
+        datawidth: 16
         n_banks: 8
       constraints:
         dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
@@ -100,8 +100,8 @@ architecture:
       subclass: smartbuffer_RF
       attributes:
         depth: 1024
-        datawidth: 24
-        width: 24
+        datawidth: 32
+        width: 32
       constraints:
         dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
@@ -122,10 +122,10 @@ architecture:
     subclass: smartbuffer_RF
     attributes:
       depth: 1
-      width: 512
+      width: 1024
       cluster_size: 64
       num_ports: 2
-      datawidth: 8
+      datawidth: 16
     constraints:
       dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
 
@@ -133,5 +133,5 @@ architecture:
     name: mac
     class: intmac
     attributes:
-      multiplier_width: 8
-      adder_width: 24
+      multiplier_width: 16
+      adder_width: 32

@@ -1,0 +1,155 @@
+architecture:
+  # ============================================================================
+  # Gemmini Output-Stationary (OS) - Server Configuration
+  # ============================================================================
+  # Structure follows Gemmini paper (DAC 2021) Fig 1 & Fig 5:
+  #   Multiple Gemmini tiles sharing a global SRAM buffer.
+  #   Each tile: DRAM → Scratchpad → Spatial Array + Accumulator
+  # Paper Fig 5: "dual-core SoC with a Gemmini accelerator attached to
+  #   each CPU, as well as a shared L2 cache"
+  #
+  # Concrete sizes scaled to match config/server.json:
+  #   - DRAM bandwidth: 1024
+  #   - GlobalBuffer: sram_bank(1024) × sram_width(512) × sram_depth(256)
+  #   - 64 tiles × 64×64 MACs = 262144 MACs (mulf_bf16=262656 = 262144+512 PPU)
+  #   - bf16 datawidth=16
+  #   - OS dataflow: partial sums stay in Accumulator/PE
+  # ============================================================================
+  version: 0.4
+  nodes:
+  - !Container
+    name: System
+    attributes:
+      datawidth: 16
+      technology: "45nm"
+
+  # ========================= Off-chip Memory ================================
+  - !Component
+    name: DRAM
+    class: DRAM
+    attributes:
+      type: "LPDDR4"
+      width: 1024            # server dram bandwidth=1024
+      datawidth: 16
+
+  # ========================= Shared Global Buffer (L2/Scratchpad) ===========
+  # Paper: "shared L2 cache" connecting multiple Gemmini tiles
+  # Holds Inputs + Weights for distribution to tiles (OS: Outputs stay in PE)
+  - !Component
+    name: GlobalBuffer
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 262144          # sram_bank(1024) × sram_depth(256) = 262144
+      width: 512             # sram_width=512
+      datawidth: 16
+      n_banks: 1024          # sram_bank=1024
+      nports: 2
+    constraints:
+      dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
+
+  # ========================= Gemmini Tiles ==================================
+  # 64 tiles, each is a complete Gemmini accelerator
+  - !Container
+    name: GemminiTile
+    spatial: {meshX: 64}
+    constraints:
+      spatial:
+        factors: [R=1, S=1, P=1, Q=1, N=1, G=1]
+        permutation: [M, C, P, Q, N, R, S]
+        split: 0
+
+  # ========================= Per-Tile Scratchpad ============================
+  # Each tile has its own local scratchpad (same structure as edge Gemmini)
+  - !Component
+    name: Scratchpad
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 16384
+      width: 128
+      datawidth: 16
+      n_banks: 4
+      nports: 2
+    constraints:
+      dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
+
+  # ========================= PE Columns (64 per tile, spatial on M) =========
+  - !Container
+    name: PECols
+    spatial: {meshX: 64}
+    constraints:
+      spatial:
+        factors: [R=1, S=1, P=1, Q=1, N=1, C=1, G=1]
+        permutation: [M, C, P, Q, R, S, N]
+        split: 0
+
+  # ========================= Accumulator SRAM (per column) ==================
+  # OS: partial sums stay here
+  - !Component
+    name: Accumulator
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 1024
+      width: 32
+      datawidth: 32
+      n_banks: 2
+      nports: 2
+    constraints:
+      dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
+
+  # ========================= PE Rows (64 per column, spatial on C/K) ========
+  - !Container
+    name: PERows
+    spatial: {meshY: 64}
+    constraints:
+      spatial:
+        factors: [R=1, S=1, P=1, Q=1, M=1, N=1, G=1]
+        permutation: [C, M, P, Q, R, S, N]
+        split: 0
+
+  # ========================= PE Registers (OS) =============================
+  - !Parallel
+    nodes:
+    - !Component
+      name: WeightReg
+      class: storage
+      subclass: aladdin_register
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Weights]}
+        temporal: {factors: [R=1, S=1, M=1, C=1]}
+
+    - !Component
+      name: InputReg
+      class: storage
+      subclass: aladdin_register
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Inputs]}
+        temporal: {factors: [P=1, Q=1, C=1, N=1]}
+
+    # OS: Output partial sum stays in register across C/K iterations
+    - !Component
+      name: OutputReg
+      class: storage
+      subclass: aladdin_register
+      attributes:
+        depth: 1
+        width: 32
+        datawidth: 32
+      constraints:
+        dataspace: {keep: [Outputs]}
+        temporal: {factors: [P=1, Q=1, M=1, N=1]}
+
+  # ========================= MAC Unit =======================================
+  - !Component
+    name: mac
+    class: intmac
+    attributes:
+      multiplier_width: 16
+      adder_width: 32

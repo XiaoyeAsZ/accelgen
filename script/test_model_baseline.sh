@@ -29,7 +29,7 @@ echo "================================================================"
 echo ""
 
 $ACCELGEN_OPT "$MLIR_FILE" \
-  -pass-pipeline="builtin.module(model-baseline-accelerator{accelerator-name=$LINEAR_ARCH ppu-name=$PPU_ARCH config-path=$EXAMPLE_DESIGNS_DIR mlir-file=$MLIR_FILE})" \
+  -pass-pipeline="model-baseline-accelerator{accelerator-name=$LINEAR_ARCH ppu-name=$PPU_ARCH config-path=$EXAMPLE_DESIGNS_DIR mlir-file=$MLIR_FILE}" \
   -o /dev/null \
   2>&1
 

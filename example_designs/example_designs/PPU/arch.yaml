@@ -16,7 +16,7 @@ architecture:
   - !Container
     name: System
     attributes:
-      datawidth: 8
+      datawidth: 16
       technology: "45nm"
 
   # ========================= Off-chip Memory ================================
@@ -30,7 +30,7 @@ architecture:
     attributes:
       type: "LPDDR4"
       width: 64
-      datawidth: 8
+      datawidth: 16
 
   # ========================= On-chip Global Buffer ==========================
   # Aligned with Simba's GlobalBuffer. PPU reads data that the MAC array
@@ -41,7 +41,7 @@ architecture:
     attributes:
       depth: 2048        # same as Simba
       width: 256         # same as Simba
-      datawidth: 8
+      datawidth: 16
       n_banks: 4
       nports: 2
     constraints:
@@ -68,7 +68,7 @@ architecture:
       attributes:
         depth: 16
         width: 64
-        datawidth: 8
+        datawidth: 16
       constraints:
         dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
 
@@ -79,7 +79,7 @@ architecture:
       attributes:
         depth: 16
         width: 64
-        datawidth: 8
+        datawidth: 16
       constraints:
         dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
 
@@ -90,7 +90,7 @@ architecture:
       attributes:
         depth: 16
         width: 64
-        datawidth: 16
+        datawidth: 32
       constraints:
         dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
@@ -103,7 +103,7 @@ architecture:
     class: intmac
     subclass: vector_unit
     attributes:
-      datawidth: 8
+      datawidth: 16
       # n_poly_terms must match the workload's C (number of poly terms).
       # Used to amortize comparator: fires once per element, not once per MAC.
       # GELU=4, Softmax=5, LayerNorm=2. Set to 4 as default (GELU).

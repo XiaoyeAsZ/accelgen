@@ -4,7 +4,7 @@ architecture:
   - !Container # Top-level system
     name: System
     attributes:
-      datawidth: 8
+      datawidth: 16
       technology: "45nm"
   
   - !Component # DRAM main memory
@@ -13,23 +13,23 @@ architecture:
     attributes:
       type: "LPDDR4"
       width: 1024          # server dram bandwidth=1024
-      datawidth: 8
+      datawidth: 16
 
-  - !Component # DRAM-to-SRAM interconnect (single PE, no multi-chiplet)
+  - !Component # Inter-PE NoC (8×8 PE mesh, 64 PEs)
     name: NoC
     class: storage
     subclass: noc
     attributes:
-      depth: 65536          # scaled for 262144 MACs
+      depth: 65536          # scaled for 64 PEs × 4096 MACs = 262144 MACs
       width: 1024
-      datawidth: 8
+      datawidth: 16
       n_banks: 1
-      n_routers: 1           # single PE, single router
-      n_router_ports: 2       # in/out only
-      vc_count: 1
-      n_local_links: 1
+      n_routers: 64          # 8×8 PE mesh
+      n_router_ports: 5       # 4 neighbors + 1 local
+      vc_count: 4
+      n_local_links: 112      # 8×8 mesh: 2 × 8 × 7 = 112 bidirectional links
       n_global_links: 0
-      avg_hops_local: 1       # direct connection
+      avg_hops_local: 5.33    # 8×8 mesh average Manhattan distance
       avg_hops_global: 0
       local_link_length: 1000
       global_link_length: 0
@@ -38,24 +38,26 @@ architecture:
     constraints:
       dataspace: {keep: [Inputs, Weights, Outputs], no_coalesce: [Inputs, Weights, Outputs]}
 
-  - !Component # Global buffer (server: 1024 banks x 512 width x 256 depth = 16MB)
+  - !Component # Global buffer shared across 64 PEs (1024 banks × 512 width × 256 depth = 16MB)
     name: GlobalBuffer
     class: smartbuffer_SRAM
     attributes:
       depth: 262144         # sram_bank(1024) × sram_depth(256) = 262144
       width: 512            # sram_width=512
-      datawidth: 8
+      datawidth: 16
       n_banks: 1024         # sram_bank=1024
       nports: 2
     constraints:
-      dataspace: {keep: [Inputs, Weights, Outputs]}
+      dataspace: {keep: [Inputs, Outputs], bypass: [Weights]}
 
-  - !Container # Single PE (no multi-PE; the MAC array is inside)
+  - !Container # 64 PEs in 8×8 mesh (each PE = edge: 64×64 MAC array)
     name: PE
-    spatial: {meshX: 1}
+    spatial: {meshX: 64}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1, M=1, C=1, G=1]
+        factors: [P=1, Q=1, R=1, S=1, N=1]  # M and C spatial across PEs (paper: parallel_for k2, c2)
+        permutation: [M, C]
+        split: 0
 
   - !Component # Input buffer
     name: PEInputBuffer
@@ -63,18 +65,18 @@ architecture:
     subclass: smartbuffer_RF
     attributes:
       depth: 8192
-      width: 64
-      datawidth: 8
+      width: 128
+      datawidth: 16
     constraints:
       dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
 
-  - !Container # 512 weight-buffer columns (M dimension primary)
+  - !Container # 64 weight-buffer columns per PE (M dimension, same as edge)
     name: distributed_buffers
-    spatial: {meshY: 512}
+    spatial: {meshY: 64}
     constraints:
       spatial:
-        factors: [R=1, S=1, C=1, G=1]  # C=1: keep reduction out; M/P/Q/N free to fill 512
-        permutation: [M, P, Q, N, C, R, S]
+        factors: [P=1, Q=1, R=1, S=1, C=1, N=1]  # Only M is spatial (paper: parallel_for k0)
+        permutation: [M, C]
         split: 0
 
   - !Parallel # Weight/accumulator buffers
@@ -85,8 +87,8 @@ architecture:
       subclass: smartbuffer_RF
       attributes:
         depth: 4096
-        width: 64
-        datawidth: 8
+        width: 128
+        datawidth: 16
         n_banks: 8
       constraints:
         dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
@@ -97,20 +99,20 @@ architecture:
       subclass: smartbuffer_RF
       attributes:
         depth: 1024
-        datawidth: 24
-        width: 24
+        datawidth: 32
+        width: 32
       constraints:
         dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
     - !Nothing {constraints: {dataspace: {keep: [Inputs]}}}
 
-  - !Container # 512 registers/MAC pairs per column (C dimension primary)
+  - !Container # 64 registers/MAC pairs per column (C dimension, same as edge)
     name: reg_mac
-    spatial: {meshY: 512}
+    spatial: {meshY: 64}
     constraints:
       spatial:
-        factors: [R=1, S=1, M=1, G=1]  # M=1: keep output dim out; C/P/Q/N free to fill 512
-        permutation: [C, P, Q, N, M, R, S]
+        factors: [P=1, Q=1, R=1, S=1, M=1, N=1]  # Only C is spatial (paper: parallel_for c0)
+        permutation: [C, M]
         split: 0
 
   - !Component # Weight registers
@@ -119,10 +121,10 @@ architecture:
     subclass: smartbuffer_RF
     attributes:
       depth: 1
-      width: 512
+      width: 1024
       cluster_size: 64
       num_ports: 2
-      datawidth: 8
+      datawidth: 16
     constraints:
       dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
 
@@ -130,5 +132,5 @@ architecture:
     name: mac
     class: intmac
     attributes:
-      multiplier_width: 8
-      adder_width: 16
+      multiplier_width: 16
+      adder_width: 32

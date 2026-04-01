@@ -1,0 +1,132 @@
+architecture:
+  # ============================================================================
+  # Lego - Edge Configuration (Flexible WS/OS Dataflow)
+  # ============================================================================
+  # Same hardware structure as Gemmini (DAC 2021) Fig 1:
+  #   DRAM → Scratchpad (banked SRAM) → Spatial Array + Accumulator
+  # No NoC — single accelerator with DMA engine direct to DRAM/L2.
+  #
+  # Key difference from gemmini_edge: NO dataflow constraints.
+  # Mapper is free to explore both Output-Stationary and Weight-Stationary.
+  #
+  # Sizes match config/edge.json:
+  #   - DRAM bandwidth: 128
+  #   - Scratchpad: sram_bank(256) × sram_width(512) × sram_depth(256)
+  #   - MAC array: 64×64 = 4096 MACs (mulf_bf16=4160 = 4096+64 PPU)
+  #   - bf16 datawidth=16
+  # ============================================================================
+  version: 0.4
+  nodes:
+  - !Container
+    name: System
+    attributes:
+      datawidth: 16
+      technology: "45nm"
+
+  # ========================= Off-chip Memory ================================
+  - !Component
+    name: DRAM
+    class: DRAM
+    attributes:
+      type: "LPDDR4"
+      width: 128             # edge dram bandwidth=128
+      datawidth: 16
+
+  # ========================= Scratchpad (banked SRAM) =======================
+  # Hardware data path: Scratchpad feeds Inputs+Weights to PE array input side.
+  # This constraint is physical wiring, same for both WS and OS.
+  - !Component
+    name: Scratchpad
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 65536           # sram_bank(256) × sram_depth(256) = 65536
+      width: 512             # sram_width=512
+      datawidth: 16
+      n_banks: 256           # sram_bank=256
+      nports: 2
+    constraints:
+      dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
+
+  # ========================= PE Columns (spatial dim 1) =====================
+  # No spatial constraint on which dimension — mapper decides M or C
+  - !Container
+    name: PECols
+    spatial: {meshX: 64}
+    constraints:
+      spatial:
+        factors: [R=1, S=1, P=1, Q=1, N=1, G=1]
+        permutation: [M, C, P, Q, R, S, N]
+        split: 0
+
+  # ========================= Accumulator SRAM (per column) ==================
+  # Hardware data path: Accumulator is the output-side wider-bitwidth buffer.
+  # Always holds Outputs/partial sums, same for both WS and OS.
+  - !Component
+    name: Accumulator
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 1024
+      width: 32
+      datawidth: 32
+      n_banks: 2
+      nports: 2
+    constraints:
+      dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
+
+  # ========================= PE Rows (spatial dim 2) ========================
+  # No spatial constraint on which dimension — mapper decides
+  - !Container
+    name: PERows
+    spatial: {meshY: 64}
+    constraints:
+      spatial:
+        factors: [R=1, S=1, P=1, Q=1, N=1, G=1]
+        permutation: [C, M, P, Q, R, S, N]
+        split: 0
+
+  # ========================= PE Registers ===================================
+  # No temporal constraints — mapper freely chooses which data is stationary
+  # OS: OutputReg stationary, Weight/Input flow
+  # WS: WeightReg stationary, Input/Output flow
+  - !Parallel
+    nodes:
+    - !Component
+      name: WeightReg
+      class: storage
+      subclass: aladdin_register
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Weights]}
+
+    - !Component
+      name: InputReg
+      class: storage
+      subclass: aladdin_register
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Inputs]}
+
+    - !Component
+      name: OutputReg
+      class: storage
+      subclass: aladdin_register
+      attributes:
+        depth: 1
+        width: 32
+        datawidth: 32
+      constraints:
+        dataspace: {keep: [Outputs]}
+
+  # ========================= MAC Unit =======================================
+  - !Component
+    name: mac
+    class: intmac
+    attributes:
+      multiplier_width: 16   # bf16
+      adder_width: 32        # fp32 accumulation

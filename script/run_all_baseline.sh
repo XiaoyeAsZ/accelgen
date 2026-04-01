@@ -8,6 +8,17 @@ cd /home/accelgen
 
 NUM_PARALLEL="${1:-4}"
 SESSION="baseline_run"
+
+# Create timestamped output directory and symlink baseline_test → it
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+REAL_DIR="baseline_test_${TIMESTAMP}"
+mkdir -p "$REAL_DIR"
+
+# Remove old symlink or empty dir, then create symlink
+rm -f baseline_test 2>/dev/null || rmdir baseline_test 2>/dev/null || true
+ln -sfn "$REAL_DIR" baseline_test
+echo "Output directory: $REAL_DIR (symlinked as baseline_test)"
+
 LOG_DIR="baseline_test/logs"
 mkdir -p "$LOG_DIR"
 

@@ -21,7 +21,9 @@ MODELS = [
     "qwen3-8b-block0-ffn-prefill-b8s1024",
     "qwen3-8b-block0-ffn-decode-b8s1024",
 ]
-ARCHS = ["simba_edge", "simba_edge_nonoc", "simba_server", "simba_server_nonoc"]
+ARCHS = ["simba_edge", "simba_server",
+         "gemmini_edge", "gemmini_server",
+         "lego_edge", "lego_server"]
 
 os.chdir("/home/accelgen")
 
@@ -62,7 +64,8 @@ def parse_log(path):
                     arch_field = arch_field[:-len(suffix)]
                     break
             ops.append(dict(ssa=parts[0], name=parts[1], arch=arch_field,
-                            typ=typ_field, cyc=0, eng=0.0, comp=0, util=0.0, ok=False))
+                            typ=typ_field, cyc=0, eng=0.0, comp=0, util=0.0,
+                            dram=0, sram=0, ok=False))
             continue
         # Handle two formats:
         # (A) separated:  %5  batch_matmul_0  simba_edge  linear  33,554,432  3.698e+06  137,438,953,472  100.00%
@@ -76,20 +79,22 @@ def parse_log(path):
                 concat = True
                 break
         if concat:
-            # Format (B): parts = [ssa, name, arch+type, cyc, eng, comp, util%]
+            # Format (B): parts = [ssa, name, arch+type, cyc, eng, comp, util%, dram, sram]
             if len(parts) >= 7:
                 try:
                     cyc  = int(parts[3].replace(",", ""))
                     eng  = float(parts[4])
                     comp = int(parts[5].replace(",", ""))
                     util = float(parts[6].rstrip("%"))
+                    dram = int(parts[7].replace(",", "")) if len(parts) >= 8 else 0
+                    sram = int(parts[8].replace(",", "")) if len(parts) >= 9 else 0
                     ops.append(dict(ssa=parts[0], name=parts[1], arch=arch_field,
                                     typ=typ_field, cyc=cyc, eng=eng, comp=comp,
-                                    util=util, ok=True))
+                                    util=util, dram=dram, sram=sram, ok=True))
                 except ValueError:
                     pass
         else:
-            # Format (A): parts = [ssa, name, arch, type, cyc, eng, comp, util%]
+            # Format (A): parts = [ssa, name, arch, type, cyc, eng, comp, util%, dram, sram]
             typ_field = parts[3]
             if len(parts) >= 8:
                 try:
@@ -97,9 +102,11 @@ def parse_log(path):
                     eng  = float(parts[5])
                     comp = int(parts[6].replace(",", ""))
                     util = float(parts[7].rstrip("%"))
+                    dram = int(parts[8].replace(",", "")) if len(parts) >= 9 else 0
+                    sram = int(parts[9].replace(",", "")) if len(parts) >= 10 else 0
                     ops.append(dict(ssa=parts[0], name=parts[1], arch=arch_field,
                                     typ=typ_field, cyc=cyc, eng=eng, comp=comp,
-                                    util=util, ok=True))
+                                    util=util, dram=dram, sram=sram, ok=True))
                 except ValueError:
                     pass
     return (status, total_ops, succ, fail, ops)
@@ -116,13 +123,16 @@ for arch in ARCHS:
         tc = te = tcomp = wu = 0     # total
         lc = le = lcomp = lw = 0     # linear
         ec = ee = ecomp = ew = 0     # elementwise
+        tdram = tsram = 0            # memory accesses
 
         for o in ops:
             detail_rows.append((model, arch, o))
             if not o["ok"]:
                 continue
             c, e, comp, u = o["cyc"], o["eng"], o["comp"], o["util"]
+            dr, sr = o["dram"], o["sram"]
             tc += c;  te += e;  tcomp += comp;  wu += c * u
+            tdram += dr; tsram += sr
             if o["typ"] == "linear":
                 lc += c; le += e; lcomp += comp; lw += c * u
             else:
@@ -136,7 +146,8 @@ for arch in ARCHS:
                          tops=tops, succ=succ, fail=fail,
                          tc=tc, te=te, tcomp=tcomp, avg=avg,
                          lc=lc, le=le, lcomp=lcomp, lu=lutil,
-                         ec=ec, ee=ee, ecomp=ecomp, eu=eutil))
+                         ec=ec, ee=ee, ecomp=ecomp, eu=eutil,
+                         tdram=tdram, tsram=tsram))
 
 # ── write summary CSV ────────────────────────────────────────────────────────
 with open(f"{OUT_DIR}/summary.csv", "w", newline="") as f:
@@ -144,28 +155,32 @@ with open(f"{OUT_DIR}/summary.csv", "w", newline="") as f:
     w.writerow(["Model","Arch","Status","Ops","Succ","Fail",
                 "TotalCycles","TotalEnergy(uJ)","TotalComputes","AvgUtil(%)",
                 "LinCycles","LinEnergy(uJ)","LinComputes","LinUtil(%)",
-                "ElemCycles","ElemEnergy(uJ)","ElemComputes","ElemUtil(%)"])
+                "ElemCycles","ElemEnergy(uJ)","ElemComputes","ElemUtil(%)",
+                "DRAM_Access","SRAM_Access"])
     for r in rows:
         w.writerow([r["model"], r["arch"], r["status"], r["tops"], r["succ"], r["fail"],
                     r["tc"], f'{r["te"]:.4e}', r["tcomp"], f'{r["avg"]:.2f}',
                     r["lc"], f'{r["le"]:.4e}', r["lcomp"], f'{r["lu"]:.2f}',
-                    r["ec"], f'{r["ee"]:.4e}', r["ecomp"], f'{r["eu"]:.2f}'])
+                    r["ec"], f'{r["ee"]:.4e}', r["ecomp"], f'{r["eu"]:.2f}',
+                    r["tdram"], r["tsram"]])
 
 # ── write detail CSV ─────────────────────────────────────────────────────────
 with open(f"{OUT_DIR}/summary_detail.csv", "w", newline="") as f:
     w = csv.writer(f)
     w.writerow(["Model","Arch","SSA","OpName","OpArch","OpType",
-                "Cycles","Energy(uJ)","Computes","Util(%)"])
+                "Cycles","Energy(uJ)","Computes","Util(%)",
+                "DRAM_Access","SRAM_Access"])
     for model, arch, o in detail_rows:
         if o["ok"]:
             w.writerow([model, arch, o["ssa"], o["name"], o["arch"], o["typ"],
-                        o["cyc"], f'{o["eng"]:.4e}', o["comp"], f'{o["util"]:.2f}'])
+                        o["cyc"], f'{o["eng"]:.4e}', o["comp"], f'{o["util"]:.2f}',
+                        o["dram"], o["sram"]])
         else:
             w.writerow([model, arch, o["ssa"], o["name"], o["arch"], o["typ"],
-                        "FAILED","FAILED","FAILED","FAILED"])
+                        "FAILED","FAILED","FAILED","FAILED","FAILED","FAILED"])
 
 # ── print detailed tables ────────────────────────────────────────────────────
-W = 112  # table width matching C++ output
+W = 145  # table width matching C++ output
 out = []
 def p(s=""): out.append(s); print(s)
 
@@ -193,34 +208,43 @@ for arch in ARCHS:
         p(f"{'='*W}")
 
         p(f"{'SSA':<11}{'Operator':<31}{'Arch':<12}{'Type':<13}"
-          f"{'Cycles':>14}{'Energy(uJ)':>14}{'Computes':>16}{'Util%':>16}")
+          f"{'Cycles':>14}{'Energy(uJ)':>14}{'Computes':>16}{'Util%':>16}"
+          f"{'DRAM_Acc':>16}{'SRAM_Acc':>16}")
         p("-" * W)
 
         for o in ops:
             if o["ok"]:
                 p(f"{o['ssa']:<11}{o['name']:<31}{o['arch']:<12}{o['typ']:<13}"
                   f"{o['cyc']:>14,}{o['eng']:>14.6e}{o['comp']:>16,}"
-                  f"{o['util']:>15.2f}%")
+                  f"{o['util']:>15.2f}%"
+                  f"{o['dram']:>16,}{o['sram']:>16,}")
             else:
                 p(f"{o['ssa']:<11}{o['name']:<31}{o['arch']:<12}{o['typ']:<13}"
-                  f"{'FAILED':>14}{'FAILED':>14}{'FAILED':>16}{'N/A':>16}")
+                  f"{'FAILED':>14}{'FAILED':>14}{'FAILED':>16}{'N/A':>16}"
+                  f"{'N/A':>16}{'N/A':>16}")
 
+        # Compute DRAM/SRAM totals for this model
+        model_dram = sum(o['dram'] for o in ops if o['ok'])
+        model_sram = sum(o['sram'] for o in ops if o['ok'])
         p("-" * W)
         p(f"{'':11}{'TOTAL':<31}{'':12}{'':13}"
-          f"{r['tc']:>14,}{r['te']:>14.6e}{r['tcomp']:>16,}")
+          f"{r['tc']:>14,}{r['te']:>14.6e}{r['tcomp']:>16,}"
+          f"{'':>16}"
+          f"{model_dram:>16,}{model_sram:>16,}")
         p(f"{'='*W}")
         p(f"  Total operators: {r['tops']}  Succeeded: {r['succ']}  Failed: {r['fail']}"
           f"  |  AvgUtil: {r['avg']:.1f}%  LinUtil: {r['lu']:.1f}%  ElemUtil: {r['eu']:.1f}%")
         p(f"{'='*W}")
 
 # ── Part 2: Grand summary table ─────────────────────────────────────────────
-SEP = "─" * 150
-p(f"\n\n{'='*150}")
+SEP = "─" * 190
+p(f"\n\n{'='*190}")
 p("  GRAND SUMMARY — All Models × All Architectures")
-p(f"{'='*150}\n")
+p(f"{'='*190}\n")
 p(f"{'Model':<52} {'Arch':<20} {'St':>7} {'Ops':>4} {'Fail':>4} "
   f"{'TotalCycles':>14} {'Energy(uJ)':>14} {'Computes':>16} | "
-  f"{'AvgUtl':>7} {'LinUtl':>7} {'ElmUtl':>7}")
+  f"{'AvgUtl':>7} {'LinUtl':>7} {'ElmUtl':>7} | "
+  f"{'DRAM_Acc':>16} {'SRAM_Acc':>16}")
 p(SEP)
 
 for arch in ARCHS:
@@ -228,7 +252,8 @@ for arch in ARCHS:
     for r in ar:
         p(f"{r['model']:<52} {r['arch']:<20} {r['status']:>7} {r['tops']:>4} {r['fail']:>4} "
           f"{r['tc']:>14,} {r['te']:>14.4e} {r['tcomp']:>16,} | "
-          f"{r['avg']:>6.1f}% {r['lu']:>6.1f}% {r['eu']:>6.1f}%")
+          f"{r['avg']:>6.1f}% {r['lu']:>6.1f}% {r['eu']:>6.1f}% | "
+          f"{r['tdram']:>16,} {r['tsram']:>16,}")
 
     ac = sum(r["tc"] for r in ar)
     ae = sum(r["te"] for r in ar)
@@ -240,12 +265,16 @@ for arch in ARCHS:
     aew = sum(r["ec"]*r["eu"] for r in ar)
     aa = awu/ac if ac else 0; al = alw/alc if alc else 0; ae2 = aew/aec if aec else 0
 
+    adram = sum(r["tdram"] for r in ar)
+    asram = sum(r["tsram"] for r in ar)
+
     p(f"{'  >>> ARCH TOTAL':<52} {arch:<20} {'':>7} {'':>4} {'':>4} "
       f"{ac:>14,} {ae:>14.4e} {acomp:>16,} | "
-      f"{aa:>6.1f}% {al:>6.1f}% {ae2:>6.1f}%")
+      f"{aa:>6.1f}% {al:>6.1f}% {ae2:>6.1f}% | "
+      f"{adram:>16,} {asram:>16,}")
     p(SEP)
 
-p(f"\n{'='*150}")
+p(f"\n{'='*190}")
 
 with open(f"{OUT_DIR}/summary.txt", "w") as f:
     f.write("\n".join(out) + "\n")

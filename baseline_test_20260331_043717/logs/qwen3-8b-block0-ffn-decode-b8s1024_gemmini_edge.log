@@ -1,0 +1,1929 @@
+================================================================
+  ModelBaselineAccelerator Test
+================================================================
+  MLIR file:    benchmark/mlir/qwen3-8b-block0-ffn-decode-b8s1024.mlir
+  Config path:  /home/accelgen/example_designs
+  Linear arch:  gemmini_edge
+  PPU arch:     PPU_edge
+================================================================
+
+
+[ModelBaseline] Config:
+  MLIR file:           benchmark/mlir/qwen3-8b-block0-ffn-decode-b8s1024.mlir
+  example_designs dir: /home/accelgen/example_designs
+  linear arch:         gemmini_edge
+  nonlinear arch:      PPU_edge
+  problem_base:        /home/accelgen/example_designs/layer_shapes/problem_base.yaml
+  output base:         baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024
+
+
+[ModelBaseline] Skipping transpose op (memory-only, no compute)
+
+[ModelBaseline] Found batch_matmul_0: batch=8 M=1 K=4096 N=12288
+=== Running timeloop for: batch_matmul_0 (linear) ===
+  Arch: gemmini_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_0/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_0
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_0/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_0/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1820
+  Factorization options along problem dimension M = 9100
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 20
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 1
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 331240000
+Mapspace Dimension [LoopPermutation] Size: 216
+Mapspace Dimension [Spatial] Size: 1
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 82810000 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  2] Utilization = 0.00 | pJ/Compute =   63.039 | L7[WIO] M64 C2 - L6[WI] C8 N8 M3 - L5[] G1 - L4[O] C256 M64 - L3[] G1 - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 402653184
+[  1] Utilization = 0.00 | pJ/Compute =   56.638 | L7[WIO] M64 C2 - L6[WI] C8 N8 M3 - L5[] G1 - L4[O] C16 M64 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  2] Utilization = 0.00 | pJ/Compute =   80.156 | L7[WIO] C128 M2 - L6[WI] N4 M48 C2 - L5[] G1 - L4[O] C8 M128 - L3[] G1 C2Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 201326592
+[  0] Utilization = 0.00 | pJ/Compute =   78.449 | L7[WIO] C128 M2 - L6[WI] N4 M48 C2 - L5[] G1 - L4[O] C4 M128 - L3[] G1 C4Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 100663296
+[  3] Utilization = 0.00 | pJ/Compute =  143.357 | L7[WIO] M8 N4 C16 - L6[WI] M24 N2 C8 - L5[] G1 - L4[O] M64 C2 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  2] Utilization = 0.02 | pJ/Compute =   70.755 | L7[WIO] C32 M192 - L6[WI] N4 M8 - L5[] G1 - L4[O] M8 C2 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  0] Utilization = 0.01 | pJ/Compute =   88.537 | L7[WIO] C2 N2 M1536 - L6[WI] M4 C32 - L5[] G1 - L4[O] N2 M2 C2 - L3[] G1 C32Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  0] Utilization = 0.01 | pJ/Compute =   81.573 | L7[WIO] N2 C8 M256 - L6[WI] M16 - L5[] G1 - L4[O] C16 M3 - L3[] G1 C32Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  3] Utilization = 0.00 | pJ/Compute =   64.120 | L7[WIO] M64 C4 N2 - L6[WI] N4 C16 M32 - L5[] G1 - L4[O] C4 M6 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  0] Utilization = 0.01 | pJ/Compute =   56.801 | L7[WIO] M2 C32 N4 - L6[WI] N2 M128 C2 - L5[] G1 - L4[O] C2 M48 - L3[] G1 C32Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  2] Utilization = 0.02 | pJ/Compute =   58.175 | L7[WIO] M6 C32 N2 - L6[WI] C2 N4 M2 - L5[] G1 - L4[O] M1024 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] Utilization = 0.02 | pJ/Compute =   76.709 | L7[WIO] N2 M32 C2 - L6[WI] N4 C2 M32 - L5[] G1 - L4[O] C16 M12 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.02 | pJ/Compute =   65.237 | L7[WIO] M512 C16 - L6[WI] M24 C4 - L5[] G1 - L4[O] N4 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] Utilization = 0.02 | pJ/Compute =   61.889 | L7[WIO] C8 M1024 - L6[WI] N2 - L5[] G1 - L4[O] C8 M12 N4 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  0] Utilization = 0.02 | pJ/Compute =   57.963 | L7[WIO] C4 M128 - L6[WI] M24 C16 - L5[] G1 - L4[O] M4 N2 - L3[] G1 C64Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  2] Utilization = 0.02 | pJ/Compute =   58.145 | L7[WIO] M4 C32 N8 - L6[WI] C2 M32 - L5[] G1 - L4[O] M96 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.02 | pJ/Compute =   62.422 | L7[WIO] M3 C16 N2 - L6[WI] M128 C2 - L5[] G1 - L4[O] C2 M32 N2 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] Utilization = 0.02 | pJ/Compute =   59.818 | L7[WIO] M64 C16 - L6[WI] C4 M6 N4 - L5[] G1 - L4[O] N2 M32 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PERows_spatial
+    Fail count: 11494
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      Scratchpad [ Weights:50331648 (50331648) Inputs:32768 (32768) ] 
+      ---------------------------------------------------------------
+      | for C in [0:4)
+      |   for N in [0:2)
+
+      inter_PECols_spatial [ ] 
+      ------------------------
+      |     for M in [0:6) (Spatial-Y)
+
+      Accumulator [ Outputs:8192 (8192) ] 
+      -----------------------------------
+      |       for C in [0:2)
+      |         for M in [0:2048)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |           for C in [0:512) (Spatial-Y)
+
+      WeightReg [ Weights:1 (1) ] 
+      ---------------------------
+      |             for N in [0:4)
+
+      InputReg [ Inputs:1 (1) ] 
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |               << Compute >>
+    Fail reason: mapped fanoutY 512 exceeds hardware fanoutY 64
+
+
+  Level: inter_PECols_spatial
+    Fail count: 135185
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for M in [0:2)
+
+      Scratchpad [ Weights:25165824 (25165824) Inputs:32768 (32768) ] 
+      ---------------------------------------------------------------
+      |   for N in [0:8)
+      |     for M in [0:2)
+      |       for C in [0:256)
+
+      inter_PECols_spatial [ ] 
+      ------------------------
+      |         for M in [0:24) (Spatial-Y)
+
+      Accumulator [ Outputs:128 (128) ] 
+      ---------------------------------
+      |           for C in [0:8)
+      |             for M in [0:64)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |               for C in [0:2) (Spatial-Y)
+
+      WeightReg [ Weights:2 (2) ] 
+      InputReg [ Inputs:1 (1) ] 
+      -------------------------
+      |                 for M in [0:2)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                   << Compute >>
+    Fail reason: mapped fanoutY 24 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: InputReg
+    Fail count: 24136
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:4)
+      |   for M in [0:16)
+      |     for N in [0:2)
+
+      Scratchpad [ Weights:786432 (786432) Inputs:4096 (4096) ] 
+      ---------------------------------------------------------
+      |       for N in [0:2)
+      |         for C in [0:64)
+      |           for M in [0:3)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:512 (512) ] 
+      ---------------------------------
+      |             for M in [0:4)
+      |               for C in [0:2)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:512 (512) ] 
+      -------------------------------
+      |                 for N in [0:2)
+
+      InputReg [ Inputs:8 (8) ] 
+      -------------------------
+      |                   for M in [0:64)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                     for C in [0:8)
+      |                       << Compute >>
+    Fail reason: mapped tile size 8 exceeds buffer capacity 1
+
+
+  Level: WeightReg
+    Fail count: 30591
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      Scratchpad [ Weights:50331648 (50331648) Inputs:32768 (32768) ] 
+      ---------------------------------------------------------------
+      | for N in [0:4)
+      |   for C in [0:32)
+      |     for M in [0:128)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:192 (192) ] 
+      ---------------------------------
+      |       for N in [0:2)
+      |         for C in [0:16)
+      |           for M in [0:6)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:128 (128) ] 
+      InputReg [ Inputs:8 (8) ] 
+      -------------------------
+      |             for M in [0:16)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |               for C in [0:8)
+      |                 << Compute >>
+    Fail reason: mapped tile size 128 exceeds buffer capacity 1
+
+
+  Level: Accumulator
+    Fail count: 9486
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:128)
+
+      Scratchpad [ Weights:393216 (393216) Inputs:256 (256) ] 
+      -------------------------------------------------------
+      |   for C in [0:2)
+      |     for N in [0:2)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:49152 (49152) ] 
+      -------------------------------------
+      |       for M in [0:384)
+      |         for C in [0:2)
+      |           for N in [0:2)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |             for C in [0:4) (Spatial-Y)
+
+      WeightReg [ Weights:64 (64) ] 
+      -----------------------------
+      |               for N in [0:2)
+
+      InputReg [ Inputs:2 (2) ] 
+      -------------------------
+      |                 for M in [0:32)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                   for C in [0:2)
+      |                     << Compute >>
+    Fail reason: mapped tile size 49152 exceeds buffer capacity 1024
+
+
+  Level: Scratchpad
+    Fail count: 13237
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for M in [0:4)
+      |   for N in [0:2)
+
+      Scratchpad [ Weights:12582912 (12582912) Inputs:16384 (16384) ] 
+      ---------------------------------------------------------------
+      |     for C in [0:128)
+      |       for M in [0:24)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:512 (512) ] 
+      ---------------------------------
+      |         for M in [0:8)
+      |           for C in [0:2)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:256 (256) ] 
+      -------------------------------
+      |             for N in [0:4)
+
+      InputReg [ Inputs:16 (16) ] 
+      ---------------------------
+      |               for M in [0:16)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                 for C in [0:16)
+      |                   << Compute >>
+    Fail reason: mapped tile size 12599296 exceeds buffer capacity 2097152
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.02 | pJ/Compute =   57.963 | Cycles = 6291456
+  Cycles: 6291456  Energy: 2.333909e+04 uJ  Computes: 402653184  Utilization: 1.560000e+00%
+
+[ModelBaseline] Found negf_0 (arith.negf, C=1)
+  shape=[8x1x12288] → N=8 C=1 P=1 Q=12288
+=== Running timeloop for: negf_0 (elementwise) ===
+  Arch: PPU_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/negf_0/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/negf_0
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/negf_0/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/negf_0/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 37128
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 2079168
+Mapspace Dimension [LoopPermutation] Size: 16
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 519792 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  1] Utilization = 0.03 | pJ/Compute =  290.888 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 N2X - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 49152
+[  2] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N4 Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  3] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N4 Q256 - L4[IO] Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12 N2  | Cycles = 98304
+[  1] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N4X Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] G1  | Cycles = 3072
+[  0] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 - L2[I] N2 Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  2] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] N2  | Cycles = 12288
+[  0] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N2X Q8X - L2[I] Q12 N2 - L1[W] Q2 - L0[O] G1  | Cycles = 6144
+[  3] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 12288
+[  2] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N2 Q4 - L0[O] N2  | Cycles = 6144
+[  3] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N4 Q4 - L0[O] G1  | Cycles = 6144
+[  1] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N4 - L1[W] G1 - L0[O] Q8  | Cycles = 1536
+[  0] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] Q8 - L1[W] N2 Q2 - L0[O] N2  | Cycles = 4096
+[  2] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] Q2 - L0[O] N2  | Cycles = 4096
+[  3] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 4096
+[  0] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N2 - L1[W] N2 - L0[O] Q8  | Cycles = 1536
+[  2] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q2 N4 - L3[] G1 N2X Q16X - L2[I] Q3 - L1[W] G1 - L0[O] Q16  | Cycles = 3072
+[  3] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 N2 - L3[] G1 Q32X - L2[I] G1 - L1[W] N4 Q2 - L0[O] G1  | Cycles = 3072
+[  3] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 N2 - L0[O] G1  | Cycles = 2048
+[  2] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 - L0[O] N2  | Cycles = 2048
+[  2] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q6 N2 - L3[] G1 N4X Q16X - L2[I] G1 - L1[W] Q4 - L0[O] Q4  | Cycles = 1536
+[  3] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q4 - L3[] G1 N2X Q32X - L2[I] Q4 - L1[W] N2 - L0[O] Q6  | Cycles = 1536
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PPU_spatial
+    Fail count: 987
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:3)
+      |   for N in [0:2)
+
+      GlobalBuffer [ Inputs:16384 (16384) Outputs:16384 (16384) ] 
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for N in [0:2) (Spatial-Y)
+      |       for Q in [0:256) (Spatial-X)
+
+      PPU_InputReg [ Inputs:32 (32) ] 
+      -------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      PPU_OutputReg [ Outputs:8 (8) ] 
+      -------------------------------
+      |             for Q in [0:8)
+      |               << Compute >>
+    Fail reason: mapped fanoutX 256 exceeds hardware fanoutX 64mapped fanoutY 2 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: PPU_OutputReg
+    Fail count: 225
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:8)
+
+      GlobalBuffer [ Inputs:12288 (12288) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |   for Q in [0:8)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |     for N in [0:8)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |       for Q in [0:3)
+
+      PPU_OutputReg [ Outputs:64 (64) ] 
+      ---------------------------------
+      |         for Q in [0:64)
+      |           << Compute >>
+    Fail reason: mapped tile size 64 exceeds buffer capacity 32
+
+
+  Level: PPU_InputReg
+    Fail count: 1301
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for N in [0:2)
+      |   for Q in [0:8)
+
+      GlobalBuffer [ Inputs:6144 (6144) Outputs:6144 (6144) ] 
+      -------------------------------------------------------
+      |     for Q in [0:4)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |       for N in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:64)
+
+      PPU_OutputReg [ Outputs:6 (6) ] 
+      -------------------------------
+      |             for Q in [0:6)
+      |               << Compute >>
+    Fail reason: mapped tile size 1536 exceeds buffer capacity 64
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  290.882 | Cycles = 1536
+  Cycles: 1536  Energy: 2.859000e+01 uJ  Computes: 98304  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found exp_1 (math.exp, C=5)
+  shape=[8x1x12288] → N=8 C=5 P=1 Q=12288
+=== Running timeloop for: exp_1 (elementwise) ===
+  Arch: PPU_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/exp_1/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/exp_1
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/exp_1/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/exp_1/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 5
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 37128
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 10395840
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 2598960 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  3] Utilization = 0.02 | pJ/Compute =  196.120 | L5[WIO] C5 - L4[IO] N2 Q3072 - L3[] G1 - L2[I] G1 - L1[W] Q2 N4 - L0[O] Q2  | Cycles = 491520
+[  0] Utilization = 0.25 | pJ/Compute =  188.779 | L5[WIO] Q48 - L4[IO] Q128 - L3[] G1 N8X Q2X - L2[I] C5 - L1[W] G1 - L0[O] G1  | Cycles = 30720
+[  3] Utilization = 0.06 | pJ/Compute =  180.575 | L5[WIO] Q48 - L4[IO] Q128 - L3[] G1 N2X Q2X - L2[I] G1 - L1[W] G1 - L0[O] N4 C5  | Cycles = 122880
+[  1] Utilization = 0.25 | pJ/Compute =  196.168 | L5[WIO] Q48 - L4[IO] C5 Q128 - L3[] G1 N8X Q2X - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 30720
+[  2] Utilization = 0.25 | pJ/Compute =  409.241 | L5[WIO] C5 Q48 - L4[IO] Q128 - L3[] G1 N8X Q2X - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 30720
+[  0] Utilization = 0.50 | pJ/Compute =  180.572 | L5[WIO] N2 Q8 - L4[IO] Q24 - L3[] G1 Q32X - L2[I] Q2 N2 - L1[W] C5 - L0[O] N2  | Cycles = 15360
+[  1] Utilization = 0.50 | pJ/Compute =  197.156 | L5[WIO] N2 Q8 - L4[IO] Q24 - L3[] G1 Q32X - L2[I] Q2 C5 N2 - L1[W] G1 - L0[O] N2  | Cycles = 15360
+[  3] Utilization = 0.50 | pJ/Compute =  409.243 | L5[WIO] N2 C5 Q8 - L4[IO] Q24 - L3[] G1 Q32X - L2[I] Q2 N2 - L1[W] G1 - L0[O] N2  | Cycles = 15360
+[  2] Utilization = 0.50 | pJ/Compute =  196.630 | L5[WIO] N2 Q8 - L4[IO] Q24 C5 - L3[] G1 Q32X - L2[I] Q2 N2 - L1[W] G1 - L0[O] N2  | Cycles = 15360
+[  1] Utilization = 0.50 | pJ/Compute =  196.279 | L5[WIO] N2 Q64 - L4[IO] C5 - L3[] G1 N2X Q16X - L2[I] Q2 - L1[W] G1 - L0[O] Q6 N2  | Cycles = 15360
+[  0] Utilization = 1.00 | pJ/Compute =  196.380 | L5[WIO] Q3 N2 - L4[IO] N4 Q8 - L3[] G1 Q64X - L2[I] C5 Q2 - L1[W] G1 - L0[O] Q4  | Cycles = 7680
+[  3] Utilization = 1.00 | pJ/Compute =  409.240 | L5[WIO] C5 Q6 N2 - L4[IO] Q2 - L3[] G1 N2X Q32X - L2[I] Q2 - L1[W] N2 Q2 - L0[O] Q8  | Cycles = 7680
+[  1] Utilization = 1.00 | pJ/Compute =  196.138 | L5[WIO] Q3 N2 - L4[IO] N4 C5 Q8 - L3[] G1 Q64X - L2[I] Q2 - L1[W] G1 - L0[O] Q4  | Cycles = 7680
+[  0] Utilization = 1.00 | pJ/Compute =  180.572 | L5[WIO] Q2 N4 - L4[IO] Q32 - L3[] G1 Q64X - L2[I] G1 - L1[W] N2 Q3 - L0[O] C5  | Cycles = 7680
+[  3] Utilization = 1.00 | pJ/Compute =  196.149 | L5[WIO] Q8 - L4[IO] Q4 C5 - L3[] G1 N2X Q32X - L2[I] Q2 N4 - L1[W] Q2 - L0[O] Q3  | Cycles = 7680
+[  2] Utilization = 1.00 | pJ/Compute =  196.122 | L5[WIO] Q6 N2 - L4[IO] C5 Q2 - L3[] G1 N2X Q32X - L2[I] Q2 - L1[W] N2 Q2 - L0[O] Q8  | Cycles = 7680
+[  1] Utilization = 1.00 | pJ/Compute =  180.572 | L5[WIO] Q2 N4 - L4[IO] Q32 - L3[] G1 Q64X - L2[I] G1 - L1[W] N2 Q3 C5 - L0[O] G1  | Cycles = 7680
+[  3] Utilization = 1.00 | pJ/Compute =  196.108 | L5[WIO] Q3 C5 - L4[IO] N2 Q8 - L3[] G1 N2X Q32X - L2[I] Q2 - L1[W] Q4 - L0[O] Q2 N2  | Cycles = 7680
+[  2] Utilization = 1.00 | pJ/Compute =  196.113 | L5[WIO] Q3 - L4[IO] N2 C5 Q8 - L3[] G1 N2X Q32X - L2[I] Q2 - L1[W] Q4 - L0[O] Q2 N2  | Cycles = 7680
+[  2] Utilization = 1.00 | pJ/Compute =  196.108 | L5[WIO] Q3 C5 - L4[IO] Q64 - L3[] G1 N8X Q8X - L2[I] G1 - L1[W] G1 - L0[O] Q8  | Cycles = 7680
+[  3] Utilization = 1.00 | pJ/Compute =  180.572 | L5[WIO] Q12 - L4[IO] Q8 N4 - L3[] G1 Q64X - L2[I] Q2 - L1[W] G1 - L0[O] N2 C5  | Cycles = 7680
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] Utilization = 1.00 | pJ/Compute =  180.572 | L5[WIO] Q48 - L4[IO] Q8 - L3[] G1 N4X Q16X - L2[I] Q2 - L1[W] C5 - L0[O] N2  | Cycles = 7680
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PPU_spatial
+    Fail count: 2377
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:5 (5) Inputs:491520 (491520) Outputs:98304 (98304) ] 
+      GlobalBuffer [ Inputs:491520 (491520) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------
+      | for Q in [0:64)
+      |   for C in [0:5)
+
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for N in [0:2) (Spatial-Y)
+      |       for Q in [0:16) (Spatial-Y)
+
+      PPU_InputReg [ Inputs:48 (48) ] 
+      -------------------------------
+      |         for Q in [0:12)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |           for N in [0:4)
+
+      PPU_OutputReg [ Outputs:1 (1) ] 
+      -------------------------------
+      |             << Compute >>
+    Fail reason: mapped fanoutY 32 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: PPU_OutputReg
+    Fail count: 509
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:5 (5) Inputs:491520 (491520) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------
+      | for Q in [0:8)
+
+      GlobalBuffer [ Inputs:61440 (61440) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |   for N in [0:4)
+      |     for C in [0:5)
+
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |       for Q in [0:12) (Spatial-X)
+
+      PPU_InputReg [ Inputs:256 (256) ] 
+      ---------------------------------
+      |         for Q in [0:2)
+      |           for N in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      PPU_OutputReg [ Outputs:64 (64) ] 
+      ---------------------------------
+      |             for Q in [0:64)
+      |               << Compute >>
+    Fail reason: mapped tile size 64 exceeds buffer capacity 32
+
+
+  Level: PPU_InputReg
+    Fail count: 3558
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:5 (5) Inputs:491520 (491520) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------
+      | for Q in [0:4)
+      |   for N in [0:2)
+
+      GlobalBuffer [ Inputs:61440 (61440) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |     for C in [0:5)
+
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |       for Q in [0:2) (Spatial-X)
+
+      PPU_InputReg [ Inputs:6144 (6144) ] 
+      -----------------------------------
+      |         for Q in [0:32)
+      |           for N in [0:4)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |             for Q in [0:3)
+
+      PPU_OutputReg [ Outputs:16 (16) ] 
+      ---------------------------------
+      |               for Q in [0:16)
+      |                 << Compute >>
+    Fail reason: mapped tile size 6144 exceeds buffer capacity 64
+
+
+  Level: GlobalBuffer
+    Fail count: 491
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:5 (5) Inputs:491520 (491520) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------
+      | for Q in [0:2)
+
+      GlobalBuffer [ Inputs:245760 (245760) Outputs:49152 (49152) ] 
+      -------------------------------------------------------------
+      |   for Q in [0:8)
+
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for Q in [0:4) (Spatial-X)
+
+      PPU_InputReg [ Inputs:7680 (7680) ] 
+      -----------------------------------
+      |       for Q in [0:4)
+
+      PPU_CoeffReg [ Weights:5 (5) ] 
+      ------------------------------
+      |         for Q in [0:24)
+
+      PPU_OutputReg [ Outputs:16 (16) ] 
+      ---------------------------------
+      |           for Q in [0:2)
+      |             for N in [0:8)
+      |               for C in [0:5)
+      |                 << Compute >>
+    Fail reason: mapped tile size 294912 exceeds buffer capacity 262144
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  180.572 | Cycles = 7680
+  Cycles: 7680  Energy: 8.875000e+01 uJ  Computes: 491520  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found addf_2 (arith.addf, C=1)
+  shape=[8x1x12288] → N=8 C=1 P=1 Q=12288
+=== Running timeloop for: addf_2 (elementwise) ===
+  Arch: PPU_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/addf_2/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/addf_2
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/addf_2/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/addf_2/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 37128
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 2079168
+Mapspace Dimension [LoopPermutation] Size: 16
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 519792 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  0] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 - L2[I] N2 Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  3] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N4 Q256 - L4[IO] Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12 N2  | Cycles = 98304
+[  2] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N4 Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  1] Utilization = 0.03 | pJ/Compute =  290.888 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 N2X - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 49152
+[  0] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N2X Q8X - L2[I] Q12 N2 - L1[W] Q2 - L0[O] G1  | Cycles = 6144
+[  2] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] N2  | Cycles = 12288
+[  3] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 12288
+[  1] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N4X Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] G1  | Cycles = 3072
+[  2] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N2 Q4 - L0[O] N2  | Cycles = 6144
+[  3] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N4 Q4 - L0[O] G1  | Cycles = 6144
+[  2] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] Q2 - L0[O] N2  | Cycles = 4096
+[  0] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] Q8 - L1[W] N2 Q2 - L0[O] N2  | Cycles = 4096
+[  2] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q2 N4 - L3[] G1 N2X Q16X - L2[I] Q3 - L1[W] G1 - L0[O] Q16  | Cycles = 3072
+[  3] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 4096
+[  0] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N2 - L1[W] N2 - L0[O] Q8  | Cycles = 1536
+[  1] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N4 - L1[W] G1 - L0[O] Q8  | Cycles = 1536
+[  2] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 - L0[O] N2  | Cycles = 2048
+[  3] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 N2 - L3[] G1 Q32X - L2[I] G1 - L1[W] N4 Q2 - L0[O] G1  | Cycles = 3072
+[  2] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q6 N2 - L3[] G1 N4X Q16X - L2[I] G1 - L1[W] Q4 - L0[O] Q4  | Cycles = 1536
+[  3] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 N2 - L0[O] G1  | Cycles = 2048
+[  3] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q4 - L3[] G1 N2X Q32X - L2[I] Q4 - L1[W] N2 - L0[O] Q6  | Cycles = 1536
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PPU_spatial
+    Fail count: 987
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:3)
+      |   for N in [0:2)
+
+      GlobalBuffer [ Inputs:16384 (16384) Outputs:16384 (16384) ] 
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for N in [0:2) (Spatial-Y)
+      |       for Q in [0:256) (Spatial-X)
+
+      PPU_InputReg [ Inputs:32 (32) ] 
+      -------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      PPU_OutputReg [ Outputs:8 (8) ] 
+      -------------------------------
+      |             for Q in [0:8)
+      |               << Compute >>
+    Fail reason: mapped fanoutX 256 exceeds hardware fanoutX 64mapped fanoutY 2 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: PPU_OutputReg
+    Fail count: 225
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:8)
+
+      GlobalBuffer [ Inputs:12288 (12288) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |   for Q in [0:8)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |     for N in [0:8)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |       for Q in [0:3)
+
+      PPU_OutputReg [ Outputs:64 (64) ] 
+      ---------------------------------
+      |         for Q in [0:64)
+      |           << Compute >>
+    Fail reason: mapped tile size 64 exceeds buffer capacity 32
+
+
+  Level: PPU_InputReg
+    Fail count: 1301
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for N in [0:2)
+      |   for Q in [0:8)
+
+      GlobalBuffer [ Inputs:6144 (6144) Outputs:6144 (6144) ] 
+      -------------------------------------------------------
+      |     for Q in [0:4)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |       for N in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:64)
+
+      PPU_OutputReg [ Outputs:6 (6) ] 
+      -------------------------------
+      |             for Q in [0:6)
+      |               << Compute >>
+    Fail reason: mapped tile size 1536 exceeds buffer capacity 64
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  290.882 | Cycles = 1536
+  Cycles: 1536  Energy: 2.859000e+01 uJ  Computes: 98304  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found divf_3 (arith.divf, C=1)
+  shape=[8x1x12288] → N=8 C=1 P=1 Q=12288
+=== Running timeloop for: divf_3 (elementwise) ===
+  Arch: PPU_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/divf_3/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/divf_3
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/divf_3/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/divf_3/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 37128
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 2079168
+Mapspace Dimension [LoopPermutation] Size: 16
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 519792 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  1] Utilization = 0.03 | pJ/Compute =  290.888 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 N2X - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 49152
+[  2] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N4 Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  3] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N4 Q256 - L4[IO] Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12 N2  | Cycles = 98304
+[  0] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 - L2[I] N2 Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  1] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N4X Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] G1  | Cycles = 3072
+[  2] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] N2  | Cycles = 12288
+[  0] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N2X Q8X - L2[I] Q12 N2 - L1[W] Q2 - L0[O] G1  | Cycles = 6144
+[  3] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 12288
+[  2] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N2 Q4 - L0[O] N2  | Cycles = 6144
+[  3] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N4 Q4 - L0[O] G1  | Cycles = 6144
+[  2] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] Q2 - L0[O] N2  | Cycles = 4096
+[  2] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q2 N4 - L3[] G1 N2X Q16X - L2[I] Q3 - L1[W] G1 - L0[O] Q16  | Cycles = 3072
+[  1] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N4 - L1[W] G1 - L0[O] Q8  | Cycles = 1536
+[  0] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] Q8 - L1[W] N2 Q2 - L0[O] N2  | Cycles = 4096
+[  3] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 4096
+[  0] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N2 - L1[W] N2 - L0[O] Q8  | Cycles = 1536
+[  2] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 - L0[O] N2  | Cycles = 2048
+[  3] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 N2 - L3[] G1 Q32X - L2[I] G1 - L1[W] N4 Q2 - L0[O] G1  | Cycles = 3072
+[  2] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q6 N2 - L3[] G1 N4X Q16X - L2[I] G1 - L1[W] Q4 - L0[O] Q4  | Cycles = 1536
+[  3] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 N2 - L0[O] G1  | Cycles = 2048
+[  3] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q4 - L3[] G1 N2X Q32X - L2[I] Q4 - L1[W] N2 - L0[O] Q6  | Cycles = 1536
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PPU_spatial
+    Fail count: 987
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:3)
+      |   for N in [0:2)
+
+      GlobalBuffer [ Inputs:16384 (16384) Outputs:16384 (16384) ] 
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for N in [0:2) (Spatial-Y)
+      |       for Q in [0:256) (Spatial-X)
+
+      PPU_InputReg [ Inputs:32 (32) ] 
+      -------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      PPU_OutputReg [ Outputs:8 (8) ] 
+      -------------------------------
+      |             for Q in [0:8)
+      |               << Compute >>
+    Fail reason: mapped fanoutX 256 exceeds hardware fanoutX 64mapped fanoutY 2 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: PPU_OutputReg
+    Fail count: 225
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:8)
+
+      GlobalBuffer [ Inputs:12288 (12288) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |   for Q in [0:8)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |     for N in [0:8)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |       for Q in [0:3)
+
+      PPU_OutputReg [ Outputs:64 (64) ] 
+      ---------------------------------
+      |         for Q in [0:64)
+      |           << Compute >>
+    Fail reason: mapped tile size 64 exceeds buffer capacity 32
+
+
+  Level: PPU_InputReg
+    Fail count: 1301
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for N in [0:2)
+      |   for Q in [0:8)
+
+      GlobalBuffer [ Inputs:6144 (6144) Outputs:6144 (6144) ] 
+      -------------------------------------------------------
+      |     for Q in [0:4)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |       for N in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:64)
+
+      PPU_OutputReg [ Outputs:6 (6) ] 
+      -------------------------------
+      |             for Q in [0:6)
+      |               << Compute >>
+    Fail reason: mapped tile size 1536 exceeds buffer capacity 64
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  290.882 | Cycles = 1536
+  Cycles: 1536  Energy: 2.859000e+01 uJ  Computes: 98304  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found mulf_4 (arith.mulf, C=1)
+  shape=[8x1x12288] → N=8 C=1 P=1 Q=12288
+=== Running timeloop for: mulf_4 (elementwise) ===
+  Arch: PPU_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_4/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_4
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_4/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_4/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 37128
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 2079168
+Mapspace Dimension [LoopPermutation] Size: 16
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 519792 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  3] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N4 Q256 - L4[IO] Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12 N2  | Cycles = 98304
+[  0] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 - L2[I] N2 Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  2] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N4 Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  1] Utilization = 0.03 | pJ/Compute =  290.888 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 N2X - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 49152
+[  3] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 12288
+[  0] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N2X Q8X - L2[I] Q12 N2 - L1[W] Q2 - L0[O] G1  | Cycles = 6144
+[  2] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] N2  | Cycles = 12288
+[  1] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N4X Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] G1  | Cycles = 3072
+[  3] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N4 Q4 - L0[O] G1  | Cycles = 6144
+[  2] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N2 Q4 - L0[O] N2  | Cycles = 6144
+[  3] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 4096
+[  0] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] Q8 - L1[W] N2 Q2 - L0[O] N2  | Cycles = 4096
+[  2] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] Q2 - L0[O] N2  | Cycles = 4096
+[  1] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N4 - L1[W] G1 - L0[O] Q8  | Cycles = 1536
+[  3] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 N2 - L3[] G1 Q32X - L2[I] G1 - L1[W] N4 Q2 - L0[O] G1  | Cycles = 3072
+[  2] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q2 N4 - L3[] G1 N2X Q16X - L2[I] Q3 - L1[W] G1 - L0[O] Q16  | Cycles = 3072
+[  0] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N2 - L1[W] N2 - L0[O] Q8  | Cycles = 1536
+[  3] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 N2 - L0[O] G1  | Cycles = 2048
+[  2] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 - L0[O] N2  | Cycles = 2048
+[  2] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q6 N2 - L3[] G1 N4X Q16X - L2[I] G1 - L1[W] Q4 - L0[O] Q4  | Cycles = 1536
+[  3] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q4 - L3[] G1 N2X Q32X - L2[I] Q4 - L1[W] N2 - L0[O] Q6  | Cycles = 1536
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PPU_spatial
+    Fail count: 987
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:3)
+      |   for N in [0:2)
+
+      GlobalBuffer [ Inputs:16384 (16384) Outputs:16384 (16384) ] 
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for N in [0:2) (Spatial-Y)
+      |       for Q in [0:256) (Spatial-X)
+
+      PPU_InputReg [ Inputs:32 (32) ] 
+      -------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      PPU_OutputReg [ Outputs:8 (8) ] 
+      -------------------------------
+      |             for Q in [0:8)
+      |               << Compute >>
+    Fail reason: mapped fanoutX 256 exceeds hardware fanoutX 64mapped fanoutY 2 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: PPU_OutputReg
+    Fail count: 225
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:8)
+
+      GlobalBuffer [ Inputs:12288 (12288) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |   for Q in [0:8)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |     for N in [0:8)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |       for Q in [0:3)
+
+      PPU_OutputReg [ Outputs:64 (64) ] 
+      ---------------------------------
+      |         for Q in [0:64)
+      |           << Compute >>
+    Fail reason: mapped tile size 64 exceeds buffer capacity 32
+
+
+  Level: PPU_InputReg
+    Fail count: 1301
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for N in [0:2)
+      |   for Q in [0:8)
+
+      GlobalBuffer [ Inputs:6144 (6144) Outputs:6144 (6144) ] 
+      -------------------------------------------------------
+      |     for Q in [0:4)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |       for N in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:64)
+
+      PPU_OutputReg [ Outputs:6 (6) ] 
+      -------------------------------
+      |             for Q in [0:6)
+      |               << Compute >>
+    Fail reason: mapped tile size 1536 exceeds buffer capacity 64
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  290.882 | Cycles = 1536
+  Cycles: 1536  Energy: 2.859000e+01 uJ  Computes: 98304  Utilization: 1.000000e+02%
+
+[ModelBaseline] Skipping transpose op (memory-only, no compute)
+
+[ModelBaseline] Found batch_matmul_1: batch=8 M=1 K=4096 N=12288
+=== Running timeloop for: batch_matmul_1 (linear) ===
+  Arch: gemmini_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_1/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_1
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_1/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_1/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1820
+  Factorization options along problem dimension M = 9100
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 20
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 1
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 331240000
+Mapspace Dimension [LoopPermutation] Size: 216
+Mapspace Dimension [Spatial] Size: 1
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 82810000 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  2] Utilization = 0.00 | pJ/Compute =   63.039 | L7[WIO] M64 C2 - L6[WI] C8 N8 M3 - L5[] G1 - L4[O] C256 M64 - L3[] G1 - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 402653184
+[  1] Utilization = 0.00 | pJ/Compute =   56.638 | L7[WIO] M64 C2 - L6[WI] C8 N8 M3 - L5[] G1 - L4[O] C16 M64 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  0] Utilization = 0.00 | pJ/Compute =   78.449 | L7[WIO] C128 M2 - L6[WI] N4 M48 C2 - L5[] G1 - L4[O] C4 M128 - L3[] G1 C4Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 100663296
+[  2] Utilization = 0.00 | pJ/Compute =   80.156 | L7[WIO] C128 M2 - L6[WI] N4 M48 C2 - L5[] G1 - L4[O] C8 M128 - L3[] G1 C2Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 201326592
+[  3] Utilization = 0.00 | pJ/Compute =  143.357 | L7[WIO] M8 N4 C16 - L6[WI] M24 N2 C8 - L5[] G1 - L4[O] M64 C2 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  2] Utilization = 0.02 | pJ/Compute =   70.755 | L7[WIO] C32 M192 - L6[WI] N4 M8 - L5[] G1 - L4[O] M8 C2 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  0] Utilization = 0.01 | pJ/Compute =   88.537 | L7[WIO] C2 N2 M1536 - L6[WI] M4 C32 - L5[] G1 - L4[O] N2 M2 C2 - L3[] G1 C32Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  0] Utilization = 0.01 | pJ/Compute =   81.573 | L7[WIO] N2 C8 M256 - L6[WI] M16 - L5[] G1 - L4[O] C16 M3 - L3[] G1 C32Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  3] Utilization = 0.00 | pJ/Compute =   64.120 | L7[WIO] M64 C4 N2 - L6[WI] N4 C16 M32 - L5[] G1 - L4[O] C4 M6 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  0] Utilization = 0.01 | pJ/Compute =   56.801 | L7[WIO] M2 C32 N4 - L6[WI] N2 M128 C2 - L5[] G1 - L4[O] C2 M48 - L3[] G1 C32Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  1] Utilization = 0.02 | pJ/Compute =   76.709 | L7[WIO] N2 M32 C2 - L6[WI] N4 C2 M32 - L5[] G1 - L4[O] C16 M12 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  2] Utilization = 0.02 | pJ/Compute =   58.175 | L7[WIO] M6 C32 N2 - L6[WI] C2 N4 M2 - L5[] G1 - L4[O] M1024 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.02 | pJ/Compute =   65.237 | L7[WIO] M512 C16 - L6[WI] M24 C4 - L5[] G1 - L4[O] N4 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] Utilization = 0.02 | pJ/Compute =   61.889 | L7[WIO] C8 M1024 - L6[WI] N2 - L5[] G1 - L4[O] C8 M12 N4 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  0] Utilization = 0.02 | pJ/Compute =   57.963 | L7[WIO] C4 M128 - L6[WI] M24 C16 - L5[] G1 - L4[O] M4 N2 - L3[] G1 C64Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  2] Utilization = 0.02 | pJ/Compute =   58.145 | L7[WIO] M4 C32 N8 - L6[WI] C2 M32 - L5[] G1 - L4[O] M96 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.02 | pJ/Compute =   62.422 | L7[WIO] M3 C16 N2 - L6[WI] M128 C2 - L5[] G1 - L4[O] C2 M32 N2 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] Utilization = 0.02 | pJ/Compute =   59.818 | L7[WIO] M64 C16 - L6[WI] C4 M6 N4 - L5[] G1 - L4[O] N2 M32 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PERows_spatial
+    Fail count: 11494
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      Scratchpad [ Weights:50331648 (50331648) Inputs:32768 (32768) ] 
+      ---------------------------------------------------------------
+      | for C in [0:4)
+      |   for N in [0:2)
+
+      inter_PECols_spatial [ ] 
+      ------------------------
+      |     for M in [0:6) (Spatial-Y)
+
+      Accumulator [ Outputs:8192 (8192) ] 
+      -----------------------------------
+      |       for C in [0:2)
+      |         for M in [0:2048)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |           for C in [0:512) (Spatial-Y)
+
+      WeightReg [ Weights:1 (1) ] 
+      ---------------------------
+      |             for N in [0:4)
+
+      InputReg [ Inputs:1 (1) ] 
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |               << Compute >>
+    Fail reason: mapped fanoutY 512 exceeds hardware fanoutY 64
+
+
+  Level: inter_PECols_spatial
+    Fail count: 135185
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for M in [0:2)
+
+      Scratchpad [ Weights:25165824 (25165824) Inputs:32768 (32768) ] 
+      ---------------------------------------------------------------
+      |   for N in [0:8)
+      |     for M in [0:2)
+      |       for C in [0:256)
+
+      inter_PECols_spatial [ ] 
+      ------------------------
+      |         for M in [0:24) (Spatial-Y)
+
+      Accumulator [ Outputs:128 (128) ] 
+      ---------------------------------
+      |           for C in [0:8)
+      |             for M in [0:64)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |               for C in [0:2) (Spatial-Y)
+
+      WeightReg [ Weights:2 (2) ] 
+      InputReg [ Inputs:1 (1) ] 
+      -------------------------
+      |                 for M in [0:2)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                   << Compute >>
+    Fail reason: mapped fanoutY 24 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: InputReg
+    Fail count: 24136
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:4)
+      |   for M in [0:16)
+      |     for N in [0:2)
+
+      Scratchpad [ Weights:786432 (786432) Inputs:4096 (4096) ] 
+      ---------------------------------------------------------
+      |       for N in [0:2)
+      |         for C in [0:64)
+      |           for M in [0:3)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:512 (512) ] 
+      ---------------------------------
+      |             for M in [0:4)
+      |               for C in [0:2)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:512 (512) ] 
+      -------------------------------
+      |                 for N in [0:2)
+
+      InputReg [ Inputs:8 (8) ] 
+      -------------------------
+      |                   for M in [0:64)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                     for C in [0:8)
+      |                       << Compute >>
+    Fail reason: mapped tile size 8 exceeds buffer capacity 1
+
+
+  Level: WeightReg
+    Fail count: 30591
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      Scratchpad [ Weights:50331648 (50331648) Inputs:32768 (32768) ] 
+      ---------------------------------------------------------------
+      | for N in [0:4)
+      |   for C in [0:32)
+      |     for M in [0:128)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:192 (192) ] 
+      ---------------------------------
+      |       for N in [0:2)
+      |         for C in [0:16)
+      |           for M in [0:6)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:128 (128) ] 
+      InputReg [ Inputs:8 (8) ] 
+      -------------------------
+      |             for M in [0:16)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |               for C in [0:8)
+      |                 << Compute >>
+    Fail reason: mapped tile size 128 exceeds buffer capacity 1
+
+
+  Level: Accumulator
+    Fail count: 9486
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:128)
+
+      Scratchpad [ Weights:393216 (393216) Inputs:256 (256) ] 
+      -------------------------------------------------------
+      |   for C in [0:2)
+      |     for N in [0:2)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:49152 (49152) ] 
+      -------------------------------------
+      |       for M in [0:384)
+      |         for C in [0:2)
+      |           for N in [0:2)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |             for C in [0:4) (Spatial-Y)
+
+      WeightReg [ Weights:64 (64) ] 
+      -----------------------------
+      |               for N in [0:2)
+
+      InputReg [ Inputs:2 (2) ] 
+      -------------------------
+      |                 for M in [0:32)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                   for C in [0:2)
+      |                     << Compute >>
+    Fail reason: mapped tile size 49152 exceeds buffer capacity 1024
+
+
+  Level: Scratchpad
+    Fail count: 13237
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:32768 (32768) Outputs:98304 (98304) ] 
+      -------------------------------------------------------------------------------
+      | for M in [0:4)
+      |   for N in [0:2)
+
+      Scratchpad [ Weights:12582912 (12582912) Inputs:16384 (16384) ] 
+      ---------------------------------------------------------------
+      |     for C in [0:128)
+      |       for M in [0:24)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:512 (512) ] 
+      ---------------------------------
+      |         for M in [0:8)
+      |           for C in [0:2)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:256 (256) ] 
+      -------------------------------
+      |             for N in [0:4)
+
+      InputReg [ Inputs:16 (16) ] 
+      ---------------------------
+      |               for M in [0:16)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                 for C in [0:16)
+      |                   << Compute >>
+    Fail reason: mapped tile size 12599296 exceeds buffer capacity 2097152
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.02 | pJ/Compute =   57.963 | Cycles = 6291456
+  Cycles: 6291456  Energy: 2.333909e+04 uJ  Computes: 402653184  Utilization: 1.560000e+00%
+
+[ModelBaseline] Found mulf_5 (arith.mulf, C=1)
+  shape=[8x1x12288] → N=8 C=1 P=1 Q=12288
+=== Running timeloop for: mulf_5 (elementwise) ===
+  Arch: PPU_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_5/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_5
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_5/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/mulf_5/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 37128
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 2079168
+Mapspace Dimension [LoopPermutation] Size: 16
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 519792 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  3] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N4 Q256 - L4[IO] Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12 N2  | Cycles = 98304
+[  2] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N4 Q2 - L3[] G1 - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  1] Utilization = 0.03 | pJ/Compute =  290.888 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 N2X - L2[I] Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 49152
+[  0] Utilization = 0.02 | pJ/Compute =  290.895 | L5[WIO] N2 Q256 - L4[IO] N2 Q2 - L3[] G1 - L2[I] N2 Q2 - L1[W] G1 - L0[O] Q12  | Cycles = 98304
+[  3] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 12288
+[  2] Utilization = 0.12 | pJ/Compute =  290.883 | L5[WIO] N2 Q4 - L4[IO] Q16 N2 - L3[] G1 Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] N2  | Cycles = 12288
+[  0] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N2X Q8X - L2[I] Q12 N2 - L1[W] Q2 - L0[O] G1  | Cycles = 6144
+[  1] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q16 - L3[] G1 N4X Q8X - L2[I] Q12 - L1[W] Q2 - L0[O] G1  | Cycles = 3072
+[  3] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N4 Q4 - L0[O] G1  | Cycles = 6144
+[  2] Utilization = 0.25 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 - L3[] G1 Q16X - L2[I] N2 - L1[W] N2 Q4 - L0[O] N2  | Cycles = 6144
+[  0] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] Q8 - L1[W] N2 Q2 - L0[O] N2  | Cycles = 4096
+[  2] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] Q2 - L0[O] N2  | Cycles = 4096
+[  3] Utilization = 0.38 | pJ/Compute =  290.882 | L5[WIO] Q64 - L4[IO] G1 - L3[] G1 N2X Q12X - L2[I] N2 Q8 - L1[W] N2 Q2 - L0[O] G1  | Cycles = 4096
+[  2] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q2 N4 - L3[] G1 N2X Q16X - L2[I] Q3 - L1[W] G1 - L0[O] Q16  | Cycles = 3072
+[  1] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N4 - L1[W] G1 - L0[O] Q8  | Cycles = 1536
+[  0] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q3 N2 - L4[IO] Q8 - L3[] G1 Q64X - L2[I] N2 - L1[W] N2 - L0[O] Q8  | Cycles = 1536
+[  3] Utilization = 0.50 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q24 N2 - L3[] G1 Q32X - L2[I] G1 - L1[W] N4 Q2 - L0[O] G1  | Cycles = 3072
+[  2] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 - L0[O] N2  | Cycles = 2048
+[  3] Utilization = 0.75 | pJ/Compute =  290.882 | L5[WIO] N2 Q32 - L4[IO] Q2 - L3[] G1 N2X Q24X - L2[I] G1 - L1[W] Q8 N2 - L0[O] G1  | Cycles = 2048
+[  2] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] Q8 - L4[IO] Q6 N2 - L3[] G1 N4X Q16X - L2[I] G1 - L1[W] Q4 - L0[O] Q4  | Cycles = 1536
+[  3] Utilization = 1.00 | pJ/Compute =  290.882 | L5[WIO] N2 Q4 - L4[IO] Q4 - L3[] G1 N2X Q32X - L2[I] Q4 - L1[W] N2 - L0[O] Q6  | Cycles = 1536
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PPU_spatial
+    Fail count: 987
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:3)
+      |   for N in [0:2)
+
+      GlobalBuffer [ Inputs:16384 (16384) Outputs:16384 (16384) ] 
+      inter_PPU_spatial [ ] 
+      ---------------------
+      |     for N in [0:2) (Spatial-Y)
+      |       for Q in [0:256) (Spatial-X)
+
+      PPU_InputReg [ Inputs:32 (32) ] 
+      -------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      PPU_OutputReg [ Outputs:8 (8) ] 
+      -------------------------------
+      |             for Q in [0:8)
+      |               << Compute >>
+    Fail reason: mapped fanoutX 256 exceeds hardware fanoutX 64mapped fanoutY 2 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: PPU_OutputReg
+    Fail count: 225
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for Q in [0:8)
+
+      GlobalBuffer [ Inputs:12288 (12288) Outputs:12288 (12288) ] 
+      -----------------------------------------------------------
+      |   for Q in [0:8)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |     for N in [0:8)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |       for Q in [0:3)
+
+      PPU_OutputReg [ Outputs:64 (64) ] 
+      ---------------------------------
+      |         for Q in [0:64)
+      |           << Compute >>
+    Fail reason: mapped tile size 64 exceeds buffer capacity 32
+
+
+  Level: PPU_InputReg
+    Fail count: 1301
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:1 (1) Inputs:98304 (98304) Outputs:98304 (98304) ] 
+      -----------------------------------------------------------------
+      | for N in [0:2)
+      |   for Q in [0:8)
+
+      GlobalBuffer [ Inputs:6144 (6144) Outputs:6144 (6144) ] 
+      -------------------------------------------------------
+      |     for Q in [0:4)
+
+      inter_PPU_spatial [ ] 
+      PPU_InputReg [ Inputs:1536 (1536) ] 
+      -----------------------------------
+      |       for N in [0:2)
+
+      PPU_CoeffReg [ Weights:1 (1) ] 
+      ------------------------------
+      |         for N in [0:2)
+      |           for Q in [0:64)
+
+      PPU_OutputReg [ Outputs:6 (6) ] 
+      -------------------------------
+      |             for Q in [0:6)
+      |               << Compute >>
+    Fail reason: mapped tile size 1536 exceeds buffer capacity 64
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  290.882 | Cycles = 1536
+  Cycles: 1536  Energy: 2.859000e+01 uJ  Computes: 98304  Utilization: 1.000000e+02%
+
+[ModelBaseline] Skipping transpose op (memory-only, no compute)
+
+[ModelBaseline] Found batch_matmul_2: batch=8 M=1 K=12288 N=4096
+=== Running timeloop for: batch_matmul_2 (linear) ===
+  Arch: gemmini_edge
+  Problem: /home/accelgen/baseline_test_20260331_043717/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_2/problem.yaml
+  Output: baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_2
+input file: /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_2/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_edge/qwen3-8b-block0-ffn-decode-b8s1024/batch_matmul_2/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 4
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 9100
+  Factorization options along problem dimension M = 1820
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 20
+  Factorization options along problem dimension P = 1
+  Factorization options along problem dimension Q = 1
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 331240000
+Mapspace Dimension [LoopPermutation] Size: 216
+Mapspace Dimension [Spatial] Size: 1
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 82810000 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  2] Utilization = 0.00 | pJ/Compute =   58.661 | L7[WIO] M8 C8 - L6[WI] M128 - L5[] G1 - L4[O] M4 C128 N2 - L3[] G1 C12Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 33554432
+[  1] Utilization = 0.00 | pJ/Compute =   62.350 | L7[WIO] C8 M8 - L6[WI] M512 C48 - L5[] G1 - L4[O] N2 C4 - L3[] G1 C8Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 50331648
+[  3] Utilization = 0.00 | pJ/Compute =   94.797 | L7[WIO] C128 N2 M16 - L6[WI] M256 C2 N2 - L5[] G1 - L4[O] C8 - L3[] G1 C6Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 67108864
+[  0] Utilization = 0.00 | pJ/Compute =   63.784 | L7[WIO] C32 - L6[WI] M1024 C3 N2 - L5[] G1 - L4[O] C8 N4 M4 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  2] Utilization = 0.01 | pJ/Compute =   90.993 | L7[WIO] M128 N2 - L6[WI] C128 M2 - L5[] G1 - L4[O] M16 N4 C2 - L3[] G1 C48Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 8388608
+[  3] Utilization = 0.00 | pJ/Compute =  142.379 | L7[WIO] M4 N4 C8 - L6[WI] M1024 N2 C3 - L5[] G1 - L4[O] C32 - L3[] G1 C16Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  0] Utilization = 0.01 | pJ/Compute =   57.966 | L7[WIO] C8 M4 - L6[WI] M64 C2 - L5[] G1 - L4[O] M16 C16 N8 - L3[] G1 C48Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 8388608
+[  2] Utilization = 0.02 | pJ/Compute =   61.785 | L7[WIO] C4 M8 N2 - L6[WI] M2 C6 - L5[] G1 - L4[O] M256 C8 - L3[] G1 C64Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.00 | pJ/Compute =  104.437 | L7[WIO] N2 C64 M2 - L6[WI] M512 C4 - L5[] G1 - L4[O] N4 M4 C4 - L3[] G1 C12Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 33554432
+[  3] Utilization = 0.00 | pJ/Compute =   61.839 | L7[WIO] C4 M64 - L6[WI] M2 N2 - L5[] G1 - L4[O] C192 M32 - L3[] G1 C16Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  0] Utilization = 0.01 | pJ/Compute =   54.578 | L7[WIO] C16 M4 - L6[WI] N2 M4 C16 - L5[] G1 - L4[O] N4 M256 - L3[] G1 C48Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 8388608
+[  3] Utilization = 0.01 | pJ/Compute =   71.378 | L7[WIO] M64 C4 - L6[WI] M16 C16 - L5[] G1 - L4[O] N4 C6 M4 - L3[] G1 C32Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 12582912
+[  0] Utilization = 0.02 | pJ/Compute =   59.790 | L7[WIO] C6 M32 - L6[WI] C16 M4 - L5[] G1 - L4[O] C2 M32 - L3[] G1 C64Y - L2[W] N8 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.01 | pJ/Compute =   63.962 | L7[WIO] M64 C4 N2 - L6[WI] M32 C32 - L5[] G1 - L4[O] C2 M2 - L3[] G1 C48Y - L2[W] N4 - L1[I] G1 - L0[O] G1  | Cycles = 8388608
+[  1] Utilization = 0.00 | pJ/Compute =   74.511 | L7[WIO] C128 M8 - L6[WI] C2 N2 M256 - L5[] G1 - L4[O] N2 M2 C3 - L3[] G1 C16Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 25165824
+[  1] Utilization = 0.02 | pJ/Compute =  116.946 | L7[WIO] M32 N4 C8 - L6[WI] C12 M4 - L5[] G1 - L4[O] C2 N2 M32 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] Utilization = 0.02 | pJ/Compute =   70.059 | L7[WIO] M8 C24 - L6[WI] C2 N4 M16 - L5[] G1 - L4[O] C4 M32 - L3[] G1 C64Y - L2[W] N2 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  0] Utilization = 0.02 | pJ/Compute =   57.782 | L7[WIO] M1024 - L6[WI] C12 - L5[] G1 - L4[O] M4 C16 N8 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.02 | pJ/Compute =   84.054 | L7[WIO] C32 M16 - L6[WI] N4 M16 - L5[] G1 - L4[O] N2 M16 C6 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  3] Utilization = 0.02 | pJ/Compute =   56.446 | L7[WIO] M8 C12 N4 - L6[WI] M32 N2 C16 - L5[] G1 - L4[O] M16 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] Utilization = 0.02 | pJ/Compute =   68.819 | L7[WIO] C2 M64 - L6[WI] M64 N4 C6 - L5[] G1 - L4[O] C16 N2 - L3[] G1 C64Y - L2[W] G1 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  1] Utilization = 0.02 | pJ/Compute =   59.790 | L7[WIO] C32 M32 - L6[WI] C3 M16 - L5[] G1 - L4[O] C2 M8 - L3[] G1 C64Y - L2[W] N8 - L1[I] G1 - L0[O] G1  | Cycles = 6291456
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+===============================================
+               BEGIN DIAGNOSTICS               
+-----------------------------------------------
+Fail class: Fanout
+
+  Level: inter_PERows_spatial
+    Fail count: 11091
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:16)
+
+      Scratchpad [ Weights:3145728 (3145728) Inputs:6144 (6144) ] 
+      -----------------------------------------------------------
+      |   for M in [0:8)
+
+      inter_PECols_spatial [ ] 
+      ------------------------
+      |     for M in [0:4) (Spatial-Y)
+
+      Accumulator [ Outputs:1024 (1024) ] 
+      -----------------------------------
+      |       for N in [0:2)
+      |         for M in [0:2)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |           for C in [0:768) (Spatial-Y)
+
+      WeightReg [ Weights:64 (64) ] 
+      -----------------------------
+      |             for N in [0:4)
+
+      InputReg [ Inputs:1 (1) ] 
+      -------------------------
+      |               for M in [0:64)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                 << Compute >>
+    Fail reason: mapped fanoutY 768 exceeds hardware fanoutY 64
+
+
+  Level: inter_PECols_spatial
+    Fail count: 88285
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:8)
+      |   for N in [0:4)
+      |     for M in [0:8)
+
+      Scratchpad [ Weights:786432 (786432) Inputs:3072 (3072) ] 
+      ---------------------------------------------------------
+      |       for M in [0:4)
+
+      inter_PECols_spatial [ ] 
+      ------------------------
+      |         for M in [0:64) (Spatial-Y)
+
+      Accumulator [ Outputs:4 (4) ] 
+      -----------------------------
+      |           for N in [0:2)
+      |             for M in [0:2)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |               for C in [0:1536) (Spatial-Y)
+
+      WeightReg [ Weights:1 (1) ] 
+      InputReg [ Inputs:1 (1) ] 
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                 << Compute >>
+    Fail reason: mapped fanoutY 64 exceeds hardware fanoutY 1
+
+Fail class: Capacity
+
+  Level: InputReg
+    Fail count: 21746
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+      -------------------------------------------------------------------------------
+      | for M in [0:16)
+      |   for N in [0:2)
+      |     for C in [0:2)
+
+      Scratchpad [ Weights:1572864 (1572864) Inputs:24576 (24576) ] 
+      -------------------------------------------------------------
+      |       for M in [0:32)
+      |         for C in [0:8)
+      |           for N in [0:2)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:16 (16) ] 
+      -------------------------------
+      |             for M in [0:2)
+      |               for C in [0:96)
+      |                 for N in [0:2)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:32 (32) ] 
+      InputReg [ Inputs:8 (8) ] 
+      -------------------------
+      |                   for M in [0:4)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                     for C in [0:8)
+      |                       << Compute >>
+    Fail reason: mapped tile size 8 exceeds buffer capacity 1
+
+
+  Level: WeightReg
+    Fail count: 25670
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:512)
+      |   for M in [0:8)
+
+      Scratchpad [ Weights:12288 (12288) Inputs:192 (192) ] 
+      -----------------------------------------------------
+      |     for C in [0:8)
+      |       for N in [0:4)
+      |         for M in [0:4)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:256 (256) ] 
+      ---------------------------------
+      |           for N in [0:2)
+      |             for M in [0:2)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:192 (192) ] 
+      InputReg [ Inputs:3 (3) ] 
+      -------------------------
+      |               for M in [0:64)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                 for C in [0:3)
+      |                   << Compute >>
+    Fail reason: mapped tile size 192 exceeds buffer capacity 1
+
+
+  Level: Accumulator
+    Fail count: 5329
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+      -------------------------------------------------------------------------------
+      | for M in [0:8)
+      |   for C in [0:2)
+      |     for N in [0:2)
+
+      Scratchpad [ Weights:3145728 (3145728) Inputs:24576 (24576) ] 
+      -------------------------------------------------------------
+      |       for C in [0:128)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:2048 (2048) ] 
+      -----------------------------------
+      |         for N in [0:2)
+      |           for M in [0:64)
+
+      inter_PERows_spatial [ ] 
+      WeightReg [ Weights:384 (384) ] 
+      -------------------------------
+      |             for N in [0:2)
+
+      InputReg [ Inputs:48 (48) ] 
+      ---------------------------
+      |               for M in [0:8)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |                 for C in [0:48)
+      |                   << Compute >>
+    Fail reason: mapped tile size 2048 exceeds buffer capacity 1024
+
+
+  Level: Scratchpad
+    Fail count: 11187
+    Sample mapping that experienced this fail class:
+      DRAM [ Weights:50331648 (50331648) Inputs:98304 (98304) Outputs:32768 (32768) ] 
+      -------------------------------------------------------------------------------
+      | for C in [0:6)
+
+      Scratchpad [ Weights:8388608 (8388608) Inputs:16384 (16384) ] 
+      -------------------------------------------------------------
+      |   for C in [0:8)
+
+      inter_PECols_spatial [ ] 
+      Accumulator [ Outputs:32768 (32768) ] 
+      -------------------------------------
+      |     for M in [0:64)
+      |       for N in [0:4)
+
+      inter_PERows_spatial [ ] 
+      ------------------------
+      |         for C in [0:4) (Spatial-Y)
+
+      WeightReg [ Weights:4096 (4096) ] 
+      ---------------------------------
+      |           for N in [0:2)
+
+      InputReg [ Inputs:64 (64) ] 
+      ---------------------------
+      |             for M in [0:64)
+
+      OutputReg [ Outputs:1 (1) ] 
+      ---------------------------
+      |               for C in [0:64)
+      |                 << Compute >>
+    Fail reason: mapped tile size 8404992 exceeds buffer capacity 2097152
+
+-----------------------------------------------
+                 END DIAGNOSTICS               
+===============================================
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.02 | pJ/Compute =   56.446 | Cycles = 6291456
+  Cycles: 6291456  Energy: 2.272819e+04 uJ  Computes: 402653184  Utilization: 1.560000e+00%
+
+================================================================
+  ModelBaselineAccelerator — Timeloop Results Summary
+  MLIR file:    benchmark/mlir/qwen3-8b-block0-ffn-decode-b8s1024.mlir
+  Linear arch:  gemmini_edge  |  Nonlinear arch: PPU_edge
+================================================================
+SSA        Operator                       Arch        Type               Cycles   Energy(uJ)     Computes    Util%     DRAM_Access   SRAM_Access
+-------------------------------------------------------------------------------------------------------------------------------------------------
+%7         batch_matmul_0                 gemmini_edgelinear       6291456	2.333909e+04	402653184	1.560000e+00%	51052544	2969796608
+%8         negf_0                         PPU_edge    elementwise  1536	2.859000e+01	98304	1.000000e+02%	196609	688192
+%8         exp_1                          PPU_edge    elementwise  7680	8.875000e+01	491520	1.000000e+02%	589829	3440960
+%8         addf_2                         PPU_edge    elementwise  1536	2.859000e+01	98304	1.000000e+02%	196609	688192
+%8         divf_3                         PPU_edge    elementwise  1536	2.859000e+01	98304	1.000000e+02%	196609	688192
+%9         mulf_4                         PPU_edge    elementwise  1536	2.859000e+01	98304	1.000000e+02%	196609	688192
+%11        batch_matmul_1                 gemmini_edgelinear       6291456	2.333909e+04	402653184	1.560000e+00%	51052544	2969796608
+%12        mulf_5                         PPU_edge    elementwise  1536	2.859000e+01	98304	1.000000e+02%	196609	688192
+%18        batch_matmul_2                 gemmini_edgelinear       6291456	2.272819e+04	402653184	1.560000e+00%	51871744	2928738304
+-------------------------------------------------------------------------------------------------------------------------------------------------
+           TOTAL                                                    18889728	6.963807e+04	1208942592		155549706	8875213440
+================================================================
+  Total operators: 9  Succeeded: 9  Failed: 0
+================================================================
+
+Done.
+EXIT_CODE=0

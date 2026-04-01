@@ -1,16 +1,17 @@
 architecture:
   # ============================================================================
-  # Post-Processing Unit (PPU) - Server Configuration (512 lanes)
+  # Post-Processing Unit (PPU) - Server Configuration (64 PEs × 8 lanes = 512)
   # ============================================================================
   # Dedicated PPU for elementwise nonlinear functions.
-  # 512 parallel vector lanes matching the server MAC array dimension.
+  # 64 PEs in 8×8 mesh, each PE has 8 parallel vector lanes.
+  # Total PPU lanes = 512, matching server.json scalar ops.
   # ============================================================================
   version: 0.4
   nodes:
   - !Container
     name: System
     attributes:
-      datawidth: 8
+      datawidth: 16
       technology: "45nm"
 
   # ========================= Off-chip Memory ================================
@@ -20,7 +21,7 @@ architecture:
     attributes:
       type: "LPDDR4"
       width: 1024            # server dram bandwidth=1024
-      datawidth: 8
+      datawidth: 16
 
   # ========================= On-chip Global Buffer ==========================
   # Aligned with simba_server GlobalBuffer parameters
@@ -28,18 +29,27 @@ architecture:
     name: GlobalBuffer
     class: smartbuffer_SRAM
     attributes:
-      depth: 65536           # same as simba_server
-      width: 512             # same as simba_server
-      datawidth: 8
+      depth: 262144          # sram_bank(1024) × sram_depth(256), matching simba_server
+      width: 512             # sram_width=512, matching simba_server
+      datawidth: 16
       n_banks: 1024          # same as simba_server
       nports: 2
     constraints:
       dataspace: {keep: [Inputs, Outputs], bypass: [Weights]}
 
-  # ========================= Post-Processing Unit ===========================
+  # ========================= PE Array (64 PEs, 8×8 mesh) ===================
+  - !Container
+    name: PPU_PE
+    spatial: {meshX: 64}     # 64 PEs, matching simba_server PE count
+    constraints:
+      spatial:
+        factors: [C=1, M=1, R=1, S=1]
+        permutation: [P, Q, N, M, C, R, S]
+
+  # ========================= Per-PE PPU (8 lanes per PE) ====================
   - !Container
     name: PPU
-    spatial: {meshX: 512}    # 512 parallel vector lanes
+    spatial: {meshX: 8}      # 8 parallel vector lanes per PE (64 PEs × 8 = 512 total)
     constraints:
       spatial:
         factors: [C=1, M=1, R=1, S=1]
@@ -55,7 +65,7 @@ architecture:
       attributes:
         depth: 16
         width: 64
-        datawidth: 8
+        datawidth: 16
       constraints:
         dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
 
@@ -66,7 +76,7 @@ architecture:
       attributes:
         depth: 16
         width: 64
-        datawidth: 8
+        datawidth: 16
       constraints:
         dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
 
@@ -77,7 +87,7 @@ architecture:
       attributes:
         depth: 16
         width: 64
-        datawidth: 16
+        datawidth: 32
       constraints:
         dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
@@ -87,5 +97,5 @@ architecture:
     class: intmac
     subclass: vector_unit
     attributes:
-      datawidth: 8
+      datawidth: 16
       n_poly_terms: 4
