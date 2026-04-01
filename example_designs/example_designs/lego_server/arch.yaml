@@ -2,16 +2,17 @@ architecture:
   # ============================================================================
   # Lego - Server Configuration (Flexible WS/OS Dataflow)
   # ============================================================================
-  # Same hardware structure as Gemmini server (multi-tile):
-  #   DRAM → GlobalBuffer → Tiles → Scratchpad → Spatial Array + Accumulator
+  # Scaled-up version of edge Lego (same flat structure, larger resources):
+  #   DRAM → Scratchpad (banked SRAM) → Spatial Array + Accumulator
+  # No NoC — single accelerator with DMA engine direct to DRAM/L2.
   #
   # Key difference from gemmini_server: NO dataflow constraints.
   # Mapper is free to explore both Output-Stationary and Weight-Stationary.
   #
   # Sizes match config/server.json:
   #   - DRAM bandwidth: 1024
-  #   - GlobalBuffer: sram_bank(1024) × sram_width(512) × sram_depth(256)
-  #   - 64 tiles × 64×64 MACs = 262144 MACs (mulf_bf16=262656 = 262144+512 PPU)
+  #   - Scratchpad: sram_bank(1024) × sram_width(512) × sram_depth(256)
+  #   - MAC array: 512×512 = 262144 MACs (mulf_bf16=262656 = 262144+512 PPU)
   #   - bf16 datawidth=16
   # ============================================================================
   version: 0.4
@@ -31,10 +32,11 @@ architecture:
       width: 1024            # server dram bandwidth=1024
       datawidth: 16
 
-  # ========================= Shared Global Buffer ===========================
-  # Hardware data path: GlobalBuffer distributes Inputs+Weights to tiles.
+  # ========================= Scratchpad (banked SRAM) =======================
+  # Hardware data path: Scratchpad feeds Inputs+Weights to PE array input side.
+  # This constraint is physical wiring, same for both WS and OS.
   - !Component
-    name: GlobalBuffer
+    name: Scratchpad
     class: smartbuffer_SRAM
     attributes:
       depth: 262144          # sram_bank(1024) × sram_depth(256) = 262144
@@ -45,38 +47,14 @@ architecture:
     constraints:
       dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
 
-  # ========================= Gemmini Tiles ==================================
-  - !Container
-    name: GemminiTile
-    spatial: {meshX: 64}
-    constraints:
-      spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1, G=1]
-        permutation: [M, C, P, Q, N, R, S]
-        split: 0
-
-  # ========================= Per-Tile Scratchpad ============================
-  # Hardware data path: feeds Inputs+Weights to PE array (same as edge).
-  - !Component
-    name: Scratchpad
-    class: smartbuffer_SRAM
-    attributes:
-      depth: 16384
-      width: 128
-      datawidth: 16
-      n_banks: 4
-      nports: 2
-    constraints:
-      dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
-
-  # ========================= PE Columns (spatial dim 1) =====================
+  # ========================= PE Columns (512, spatial dim 1) ================
   - !Container
     name: PECols
-    spatial: {meshX: 64}
+    spatial: {meshX: 512}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1, G=1]
-        permutation: [M, C, P, Q, R, S, N]
+        factors: [R=1, S=1, P=1, Q=1, N=1]
+        permutation: [M, C]
         split: 0
 
   # ========================= Accumulator SRAM (per column) ==================
@@ -93,14 +71,14 @@ architecture:
     constraints:
       dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
-  # ========================= PE Rows (spatial dim 2) ========================
+  # ========================= PE Rows (512, spatial dim 2) ===================
   - !Container
     name: PERows
-    spatial: {meshY: 64}
+    spatial: {meshY: 512}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1, G=1]
-        permutation: [C, M, P, Q, R, S, N]
+        factors: [R=1, S=1, P=1, Q=1, N=1]
+        permutation: [C, M]
         split: 0
 
   # ========================= PE Registers ===================================
