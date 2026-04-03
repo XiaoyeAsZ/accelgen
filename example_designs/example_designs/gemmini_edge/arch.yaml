@@ -1,99 +1,59 @@
 architecture:
-  # ============================================================================
-  # Gemmini Output-Stationary (OS) - Edge Configuration
-  # ============================================================================
-  # Structure follows Gemmini paper (DAC 2021) Fig 1:
-  #   DRAM → Scratchpad (banked SRAM) → Spatial Array + Accumulator
-  # No NoC — single accelerator with DMA engine direct to DRAM/L2.
-  #
-  # Concrete sizes scaled to match config/edge.json:
-  #   - DRAM bandwidth: 128
-  #   - Scratchpad: sram_bank(256) × sram_width(512) × sram_depth(256)
-  #   - MAC array: 64×64 = 4096 MACs (mulf_bf16=4160 = 4096+64 PPU)
-  #   - bf16 datawidth=16
-  #   - OS dataflow: partial sums stay in Accumulator/PE
-  # ============================================================================
   version: 0.4
   nodes:
   - !Container
-    name: System
-    attributes:
-      datawidth: 16
-      technology: "45nm"
+    name: system
 
-  # ========================= Off-chip Memory ================================
-  # DMA engine reads/writes DRAM directly (no NoC)
   - !Component
     name: DRAM
     class: DRAM
     attributes:
       type: "LPDDR4"
-      width: 128             # edge dram bandwidth=128
+      width: 128
       datawidth: 16
 
-  # ========================= Scratchpad (banked SRAM) =======================
-  # Paper: "The spatial array reads data from a local, explicitly managed
-  #         scratchpad of banked SRAMs"
-  # In OS mode: Scratchpad holds Inputs + Weights; Outputs go to Accumulator
+  - !Container
+    name: gemmini
+    attributes:
+      technology: "45nm"
+
+  # Scratchpad: shared banked SRAM, holds Inputs + Weights only
   - !Component
-    name: Scratchpad
+    name: scratchpad
     class: smartbuffer_SRAM
     attributes:
-      depth: 65536           # sram_bank(256) × sram_depth(256) = 65536
-      width: 512             # sram_width=512
+      depth: 65536           # 256 banks × 256 depth
+      width: 512
+      n_banks: 256
       datawidth: 16
-      n_banks: 256           # sram_bank=256
-      nports: 2
     constraints:
       dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
 
-  # ========================= PE Columns (spatial on M) ======================
-  # 64 columns of PEs, each column processes a different output channel
+  # Single 2D systolic array: meshX maps M (columns), meshY maps C (rows)
   - !Container
-    name: PECols
-    spatial: {meshX: 64}
+    name: PE
+    spatial: {meshX: 64, meshY: 64}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1, C=1]
-        permutation: [M]
-        split: 0
+        permutation: [P, M]
+        factors: [R=1, S=1, Q=1]
 
-  # ========================= Accumulator SRAM (per column) ==================
-  # Paper: "writes results to a local accumulator storage with a higher
-  #         bitwidth than the inputs"
-  # OS: Outputs (partial sums) stay here — this is the core of OS dataflow
+  # Accumulator: per-PE output buffer, wider bitwidth for partial sums
   - !Component
-    name: Accumulator
+    name: accumulator
     class: smartbuffer_SRAM
     attributes:
-      depth: 1024            # accumulator entries per column
-      width: 32              # 32-bit accumulation (wider than input)
+      depth: 192
+      width: 32
       datawidth: 32
-      n_banks: 2
-      nports: 2
     constraints:
       dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
+      temporal: {permutation: [R, S, Q]}
 
-  # ========================= PE Rows (spatial on C/K reduction) =============
-  # 64 rows for reduction dimension; in systolic array, data flows vertically
-  - !Container
-    name: PERows
-    spatial: {meshY: 64}
-    constraints:
-      spatial:
-        factors: [R=1, S=1, P=1, Q=1, M=1, N=1]
-        permutation: [C]
-        split: 0
-
-  # ========================= PE Registers ===================================
-  # Paper: "Each PE performs a single multiply-accumulate (MAC) operation
-  #         every cycle, using either the weight- or the output-stationary
-  #         dataflow."
-  # OS: Output register is stationary (partial sum stays across K iterations)
   - !Parallel
     nodes:
     - !Component
-      name: WeightReg
+      name: weight_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -102,10 +62,10 @@ architecture:
         datawidth: 16
       constraints:
         dataspace: {keep: [Weights]}
-        temporal: {factors: [R=1, S=1, M=1, C=1]}
+        temporal: {factors: [R=1, S=1]}
 
     - !Component
-      name: InputReg
+      name: input_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -114,25 +74,23 @@ architecture:
         datawidth: 16
       constraints:
         dataspace: {keep: [Inputs]}
-        temporal: {factors: [P=1, Q=1, C=1, N=1]}
+        temporal: {factors: [Q=1, N=1]}
 
-    # OS key: Output partial sum stays in this register across C/K iterations
     - !Component
-      name: OutputReg
+      name: output_reg
       class: storage
       subclass: aladdin_register
       attributes:
         depth: 1
-        width: 32            # wider bitwidth for accumulation
+        width: 32
         datawidth: 32
       constraints:
         dataspace: {keep: [Outputs]}
-        temporal: {factors: [P=1, Q=1, M=1, N=1]}
+        temporal: {factors: [Q=1, N=1]}
 
-  # ========================= MAC Unit =======================================
   - !Component
     name: mac
     class: intmac
     attributes:
-      multiplier_width: 16   # bf16
-      adder_width: 32        # fp32 accumulation
+      multiplier_width: 16
+      adder_width: 32

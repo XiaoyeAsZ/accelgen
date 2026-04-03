@@ -55,16 +55,17 @@ architecture:
     spatial: {meshX: 1}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1]
+        factors: [R=1, S=1, Q=1]
 
-  - !Component # Input buffer
+  - !Component # Input buffer (8× width & banks vs simba_like for 64× MACs)
     name: PEInputBuffer
     class: storage
     subclass: smartbuffer_RF
     attributes:
       depth: 8192
-      width: 128
+      width: 1024            # 128→1024 (8× capacity: 8192×64=524288 elements)
       datawidth: 16
+      n_banks: 8              # 8× parallel read bandwidth
     constraints:
       dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
 
@@ -73,32 +74,32 @@ architecture:
     spatial: {meshY: 64}
     constraints:
       spatial:
-        factors: [P=1, Q=1, R=1, S=1, C=1, N=1]  # Only M is spatial (paper: parallel_for k0)
-        permutation: [M]
-        split: 0
+        factors: [Q=1, R=1, S=1, P=1] 
+        permutation: [M, C, P]
 
   - !Parallel # Weight/accumulator buffers
     nodes:
-    - !Component # Weight buffer (per column)
+    - !Component # Weight buffer (per column, 8× width & banks for 64 MACs)
       name: PEWeightBuffer
       class: storage
       subclass: smartbuffer_RF
       attributes:
         depth: 4096
-        width: 128
+        width: 1024           # 128→1024 (8× capacity: 4096×64=262144 elements)
         datawidth: 16
-        n_banks: 8
+        n_banks: 64            # 8→64 (8× bandwidth, one bank per downstream MAC)
       constraints:
         dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
 
-    - !Component # Accumulator buffer (per column)
+    - !Component # Accumulator buffer (per column, 8× width & banks for 64 MACs)
       name: PEAccuBuffer
       class: storage
       subclass: smartbuffer_RF
       attributes:
         depth: 1024
         datawidth: 32
-        width: 32
+        width: 256             # 32→256 (8× capacity: 1024×8=8192 elements)
+        n_banks: 64             # one bank per downstream MAC (reg_mac meshY=64)
       constraints:
         dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
@@ -109,9 +110,8 @@ architecture:
     spatial: {meshY: 64}
     constraints:
       spatial:
-        factors: [P=1, Q=1, R=1, S=1, M=1, N=1]  # Only C is spatial (paper: parallel_for c0)
-        permutation: [C]
-        split: 0
+        factors: [Q=1, R=1, S=1, P=1]  
+        permutation: [C, M, P]
 
   - !Component # Weight registers
     name: PEWeightRegs

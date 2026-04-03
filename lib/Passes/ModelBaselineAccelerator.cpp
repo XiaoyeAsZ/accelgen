@@ -43,8 +43,6 @@ struct TimeloopResult {
   double energyUJ = 0.0;
   int64_t computes = 0;
   double utilization = 0.0;
-  int64_t dramAccesses = 0;   // DRAM total scalar accesses
-  int64_t sramAccesses = 0;   // On-chip (all non-DRAM buffers) total scalar accesses
   bool success = false;
 };
 
@@ -174,35 +172,6 @@ static TimeloopResult parseTimeloopStats(const std::string& statsPath,
   std::regex utilRe(R"(Utilization:\s+([\d.]+)%)");
   if (std::regex_search(content, match, utilRe))
     result.utilization = std::stod(match[1].str());
-
-  // Parse memory accesses from the summary section at the bottom.
-  // The summary section has lines like:
-  //   === DRAM ===
-  //       Total scalar accesses                   : 554147
-  //   === GlobalBuffer ===
-  //       Total scalar accesses                   : 2329015
-  // We sum DRAM separately; everything else (on-chip) as SRAM.
-  {
-    // Find the summary section — it starts after the "Networks" or
-    // "Operational Intensity Stats" header and has "=== XXX ===" + accesses.
-    // We look for the LAST occurrence of each buffer's summary block.
-    std::regex bufferRe(R"(=== (\w+) ===\s*\n\s*Total scalar accesses\s*:\s*(\d+))");
-    auto summaryStart = content.cbegin();
-    // Find "Operational Intensity Stats" to start from summary section
-    auto opIntPos = content.find("Operational Intensity Stats");
-    if (opIntPos != std::string::npos)
-      summaryStart = content.cbegin() + opIntPos;
-    while (std::regex_search(summaryStart, content.cend(), match, bufferRe)) {
-      std::string bufName = match[1].str();
-      int64_t accesses = std::stoll(match[2].str());
-      if (bufName == "DRAM") {
-        result.dramAccesses = accesses;
-      } else if (bufName != "mac") {
-        result.sramAccesses += accesses;
-      }
-      summaryStart = match.suffix().first;
-    }
-  }
 
   return result;
 }
@@ -624,12 +593,8 @@ class ModelBaselineAccelerator
     int64_t totalComputes = 0;
     int successCount = 0;
 
-    int64_t totalDramAcc = 0;
-    int64_t totalSramAcc = 0;
-
     llvm::errs() << "SSA        Operator                       Arch        Type         "
-                 << "      Cycles   Energy(uJ)     Computes    Util%"
-                 << "     DRAM_Access   SRAM_Access\n";
+                 << "      Cycles   Energy(uJ)     Computes    Util%\n";
     llvm::errs() << std::string(145, '-') << "\n";
 
     for (auto& r : results) {
@@ -643,13 +608,10 @@ class ModelBaselineAccelerator
         llvm::errs() << r.opType;
         for (size_t pad = r.opType.size(); pad < 13; pad++) llvm::errs() << ' ';
         llvm::errs() << r.cycles << "\t" << r.energyUJ << "\t"
-                     << r.computes << "\t" << r.utilization << "%"
-                     << "\t" << r.dramAccesses << "\t" << r.sramAccesses << "\n";
+                     << r.computes << "\t" << r.utilization << "%\n";
         totalCycles += r.cycles;
         totalEnergy += r.energyUJ;
         totalComputes += r.computes;
-        totalDramAcc += r.dramAccesses;
-        totalSramAcc += r.sramAccesses;
         successCount++;
       } else {
         llvm::errs() << r.ssaName;
@@ -660,14 +622,14 @@ class ModelBaselineAccelerator
         for (size_t pad = r.archName.size(); pad < 12; pad++) llvm::errs() << ' ';
         llvm::errs() << r.opType;
         for (size_t pad = r.opType.size(); pad < 13; pad++) llvm::errs() << ' ';
-        llvm::errs() << "FAILED\tFAILED\tFAILED\tN/A\tN/A\tN/A\n";
+        llvm::errs() << "FAILED\tFAILED\tFAILED\tN/A\n";
       }
     }
 
     llvm::errs() << std::string(145, '-') << "\n";
     llvm::errs() << "           TOTAL                                                    "
                  << totalCycles << "\t" << totalEnergy << "\t"
-                 << totalComputes << "\t\t" << totalDramAcc << "\t" << totalSramAcc << "\n";
+                 << totalComputes << "\n";
     llvm::errs()
         << "================================================================\n";
     llvm::errs() << "  Total operators: " << results.size()

@@ -30,9 +30,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: NoC[1..1]
             class: storage
@@ -65,9 +65,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: GlobalBuffer[1..1]
             class: smartbuffer_SRAM
@@ -89,9 +89,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: PEInputBuffer[1..1]
             class: storage
@@ -113,9 +113,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: inter_distributed_buffers_spatial[1..1]
             class: dummy_storage
@@ -155,9 +155,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: PEAccuBuffer[1..64]
             class: storage
@@ -179,9 +179,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: inter_reg_mac_spatial[1..64]
             class: dummy_storage
@@ -222,9 +222,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - read
-              - write
-              - update
               - leak
+              - update
+              - write
             enabled: true
           - name: mac[1..4096]
             class: intmac
@@ -279,9 +279,8 @@ architecture_constraints:
         permutation: GQSR
         target: PEInputBuffer
       - type: spatial
-        factors: P=1,Q=1,R=1,S=1,C=1,N=1
-        permutation: GSRQPMCN
-        split: 0
+        factors: Q=1,R=1,S=1,P=1
+        permutation: GPSRQ
         target: inter_distributed_buffers_spatial
       - factors: C=1,M=1,R=1,S=1,N=1,P=1,Q=1,G=1
         permutation: CMRSNPQG
@@ -314,9 +313,8 @@ architecture_constraints:
         permutation: GQSR
         target: PEAccuBuffer
       - type: spatial
-        factors: P=1,Q=1,R=1,S=1,M=1,N=1
-        permutation: GNSRQPCM
-        split: 0
+        factors: Q=1,R=1,S=1,P=1
+        permutation: GPSRQ
         target: inter_reg_mac_spatial
       - factors: C=1,M=1,R=1,S=1,N=1,P=1,Q=1,G=1
         permutation: CMRSNPQG
@@ -1024,7 +1022,7 @@ mapper:
     live_status: false
     num_threads: 32
     timeout: 10000
-    victory_condition: 500
+    victory_condition: 250
     algorithm: random_pruned
     diagnostics: true
     out_prefix: timeloop-mapper

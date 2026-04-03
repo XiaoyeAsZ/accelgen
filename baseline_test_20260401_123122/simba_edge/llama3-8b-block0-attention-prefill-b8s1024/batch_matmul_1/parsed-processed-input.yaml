@@ -30,9 +30,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: NoC[1..1]
             class: storage
@@ -65,9 +65,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: GlobalBuffer[1..1]
             class: smartbuffer_SRAM
@@ -89,19 +89,19 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: PEInputBuffer[1..1]
             class: storage
             subclass: smartbuffer_RF
             attributes:
                 depth: 8192
-                width: 128
+                width: 1024
                 datawidth: 16
+                n_banks: 8
                 has_power_gating: false
-                n_banks: 2
                 cluster_size: 1
                 reduction_supported: true
                 multiple_buffering: 1
@@ -113,9 +113,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: inter_distributed_buffers_spatial[1..1]
             class: dummy_storage
@@ -140,9 +140,9 @@ architecture:
             subclass: smartbuffer_RF
             attributes:
                 depth: 4096
-                width: 128
+                width: 1024
                 datawidth: 16
-                n_banks: 8
+                n_banks: 64
                 has_power_gating: false
                 cluster_size: 1
                 reduction_supported: true
@@ -155,9 +155,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: PEAccuBuffer[1..64]
             class: storage
@@ -165,9 +165,9 @@ architecture:
             attributes:
                 depth: 1024
                 datawidth: 32
-                width: 32
+                width: 256
+                n_banks: 64
                 has_power_gating: false
-                n_banks: 2
                 cluster_size: 1
                 reduction_supported: true
                 multiple_buffering: 1
@@ -179,9 +179,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: inter_reg_mac_spatial[1..64]
             class: dummy_storage
@@ -222,9 +222,9 @@ architecture:
                 power_gated_at: null
             required_actions:
               - update
-              - read
-              - write
               - leak
+              - write
+              - read
             enabled: true
           - name: mac[1..4096]
             class: intmac
@@ -279,9 +279,9 @@ architecture_constraints:
         permutation: GQSR
         target: PEInputBuffer
       - type: spatial
-        factors: P=1,Q=1,R=1,S=1,C=1,N=1
-        permutation: GSRQPMCN
-        split: 0
+        factors: Q=1,R=1,S=1,P=1
+        permutation: GPSRQMCN
+        split: 3
         target: inter_distributed_buffers_spatial
       - factors: C=1,M=1,R=1,S=1,N=1,P=1,Q=1,G=1
         permutation: CMRSNPQG
@@ -314,9 +314,9 @@ architecture_constraints:
         permutation: GQSR
         target: PEAccuBuffer
       - type: spatial
-        factors: P=1,Q=1,R=1,S=1,M=1,N=1
-        permutation: GNSRQPCM
-        split: 0
+        factors: Q=1,R=1,S=1,P=1
+        permutation: GPSRQCMN
+        split: 3
         target: inter_reg_mac_spatial
       - factors: C=1,M=1,R=1,S=1,N=1,P=1,Q=1,G=1
         permutation: CMRSNPQG
@@ -1023,8 +1023,8 @@ mapper:
     version: '0.4'
     live_status: false
     num_threads: 32
-    timeout: 10000
-    victory_condition: 500
+    timeout: 20000
+    victory_condition: 250
     algorithm: random_pruned
     diagnostics: true
     out_prefix: timeloop-mapper

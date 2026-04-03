@@ -2,90 +2,67 @@ architecture:
   # ============================================================================
   # Gemmini Output-Stationary (OS) - Server Configuration
   # ============================================================================
-  # Scaled-up version of edge Gemmini (same flat structure, larger resources):
-  #   DRAM → Scratchpad (banked SRAM) → Spatial Array + Accumulator
-  # No NoC — single accelerator with DMA engine direct to DRAM/L2.
-  #
-  # Concrete sizes scaled to match config/server.json:
+  # Same structure as edge, scaled up per config/server.json:
   #   - DRAM bandwidth: 1024
-  #   - Scratchpad: sram_bank(1024) × sram_width(512) × sram_depth(256)
-  #   - MAC array: 512×512 = 262144 MACs (mulf_bf16=262656 = 262144+512 PPU)
-  #   - bf16 datawidth=16
-  #   - OS dataflow: partial sums stay in Accumulator/PE
+  #   - Scratchpad: 1024 banks × 256 depth = 262144 entries, 512-bit wide
+  #   - MAC array: 512×512 = 262144 PEs
+  #   - bf16 datawidth=16, fp32 accumulation
   # ============================================================================
   version: 0.4
   nodes:
   - !Container
-    name: System
-    attributes:
-      datawidth: 16
-      technology: "45nm"
+    name: system
 
-  # ========================= Off-chip Memory ================================
-  # DMA engine reads/writes DRAM directly (no NoC)
   - !Component
     name: DRAM
     class: DRAM
     attributes:
       type: "LPDDR4"
-      width: 1024            # server dram bandwidth=1024
+      width: 1024
       datawidth: 16
 
-  # ========================= Scratchpad (banked SRAM) =======================
-  # Paper: "The spatial array reads data from a local, explicitly managed
-  #         scratchpad of banked SRAMs"
-  # In OS mode: Scratchpad holds Inputs + Weights; Outputs go to Accumulator
+  - !Container
+    name: gemmini
+    attributes:
+      technology: "45nm"
+
+  # Scratchpad: shared banked SRAM, holds Inputs + Weights only
   - !Component
-    name: Scratchpad
+    name: scratchpad
     class: smartbuffer_SRAM
     attributes:
-      depth: 262144          # sram_bank(1024) × sram_depth(256) = 262144
-      width: 512             # sram_width=512
+      depth: 262144          # 1024 banks × 256 depth
+      width: 512
+      n_banks: 1024
       datawidth: 16
-      n_banks: 1024          # sram_bank=1024
-      nports: 2
     constraints:
       dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
 
-  # ========================= PE Columns (512, spatial on M) =================
+  # Single 2D systolic array: meshX maps M (columns), meshY maps C (rows)
   - !Container
-    name: PECols
-    spatial: {meshX: 512}
+    name: PE
+    spatial: {meshX: 512, meshY: 512}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1, C=1]
-        permutation: [M]
-        split: 0
+        permutation: [P, M]
+        factors: [R=1, S=1, Q=1]
 
-  # ========================= Accumulator SRAM (per column) ==================
-  # OS: partial sums stay here
+  # Accumulator: per-PE output buffer, wider bitwidth for partial sums
   - !Component
-    name: Accumulator
+    name: accumulator
     class: smartbuffer_SRAM
     attributes:
-      depth: 1024
+      depth: 192
       width: 32
       datawidth: 32
-      n_banks: 2
-      nports: 2
     constraints:
       dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
+      temporal: {permutation: [R, S, Q]}
 
-  # ========================= PE Rows (512, spatial on C/K reduction) ========
-  - !Container
-    name: PERows
-    spatial: {meshY: 512}
-    constraints:
-      spatial:
-        factors: [R=1, S=1, P=1, Q=1, M=1, N=1]
-        permutation: [C]
-        split: 0
-
-  # ========================= PE Registers (OS) =============================
   - !Parallel
     nodes:
     - !Component
-      name: WeightReg
+      name: weight_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -94,10 +71,10 @@ architecture:
         datawidth: 16
       constraints:
         dataspace: {keep: [Weights]}
-        temporal: {factors: [R=1, S=1, M=1, C=1]}
+        temporal: {factors: [R=1, S=1]}
 
     - !Component
-      name: InputReg
+      name: input_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -106,11 +83,10 @@ architecture:
         datawidth: 16
       constraints:
         dataspace: {keep: [Inputs]}
-        temporal: {factors: [P=1, Q=1, C=1, N=1]}
+        temporal: {factors: [Q=1, N=1]}
 
-    # OS: Output partial sum stays in register across C/K iterations
     - !Component
-      name: OutputReg
+      name: output_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -119,9 +95,8 @@ architecture:
         datawidth: 32
       constraints:
         dataspace: {keep: [Outputs]}
-        temporal: {factors: [P=1, Q=1, M=1, N=1]}
+        temporal: {factors: [Q=1, N=1]}
 
-  # ========================= MAC Unit =======================================
   - !Component
     name: mac
     class: intmac
