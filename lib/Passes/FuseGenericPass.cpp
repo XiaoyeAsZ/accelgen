@@ -60,6 +60,86 @@ class ArgumentTransposePattern
   }
 };
 
+class TransposeGenericPattern
+    : public mlir::OpRewritePattern<linalg::GenericOp> {
+  using mlir::OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      linalg::GenericOp genericOp,
+      mlir::PatternRewriter& rewriter) const override {
+    if (!genericOp->hasAttr("accelgen.transpose")) return mlir::failure();
+
+    auto ctx = rewriter.getContext();
+
+    llvm::SmallVector<mlir::Operation*> users;
+    for (auto use : genericOp->getUsers()) {
+      if (!use->hasAttr("accelgen.memory_transformation")) users.push_back(use);
+    }
+
+    // genericOp.dump();
+    // ECHO(users.size(), "\n")
+    // users[0]->dump();
+
+    bool hasGeneric = false;
+    for (auto use : users) {
+      auto generic = mlir::dyn_cast<linalg::GenericOp>(use);
+      if (!generic) continue;
+      hasGeneric = true;
+
+      mlir::Value updateInput = genericOp.getInputs()[0];
+
+      auto index = std::distance(
+          generic.getInputs().begin(),
+          std::find(generic.getInputs().begin(), generic.getInputs().end(),
+                    genericOp.getResults()[0]));
+
+      // ECHO("index", "\n")
+      // ECHO(index, "\n")
+      // updateInput.dump();
+      llvm::SmallVector<mlir::Value> originInputs = generic.getInputs();
+      originInputs[index] = updateInput;
+      llvm::SmallVector<mlir::Value> originOutputs = generic.getOutputs();
+
+      auto originIndexingMaps = generic.getIndexingMapsArray();
+      auto accDims =
+          getAffineMapAccessDims(genericOp.getIndexingMapsArray()[0]);
+      auto transAccDims =
+          getAffineMapAccessDims(genericOp.getIndexingMapsArray()[1]);
+      llvm::DenseMap<int64_t, int64_t> dimMap;
+      for (auto [i, s] : llvm::enumerate(accDims)) dimMap[s] = i;
+      llvm::SmallVector<int64_t> permuIndex;
+      for (auto s : transAccDims) permuIndex.push_back(dimMap[s]);
+
+      auto dimsToAdjust = getAffineMapAccessDims(originIndexingMaps[index]);
+      llvm::SmallVector<AffineExpr> dimsAfterAdjust;
+      assert(dimsToAdjust.size() == permuIndex.size());
+      for (auto i : permuIndex)
+        dimsAfterAdjust.push_back(getAffineDimExpr(dimsToAdjust[i], ctx));
+      auto updateAffineMap = AffineMap::get(
+          originIndexingMaps[index].getNumDims(), 0, dimsAfterAdjust, ctx);
+
+      originIndexingMaps[index] = updateAffineMap;
+
+      rewriter.setInsertionPointAfter(generic);
+      auto updateGeneric = rewriter.create<linalg::GenericOp>(
+          generic.getLoc(), generic.getResults().getTypes(), originInputs,
+          originOutputs, originIndexingMaps, generic.getIteratorTypesArray());
+
+      rewriter.cloneRegionBefore(generic.getRegion(), updateGeneric.getRegion(),
+                                 updateGeneric.getRegion().begin());
+
+      // updateGeneric.dump();
+
+      rewriter.replaceOp(generic, updateGeneric.getResults()[0]);
+      // rewriter.eraseOp(generic);
+    }
+
+    if (hasGeneric) return mlir::success();
+
+    return mlir::failure();
+  }
+};
+
 class ExpandGenericPattern : public mlir::OpRewritePattern<linalg::GenericOp> {
   using mlir::OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
 
@@ -156,7 +236,9 @@ class ExpandCollapseGenericPattern
   mlir::LogicalResult matchAndRewrite(
       linalg::GenericOp genericOp,
       mlir::PatternRewriter& rewriter) const override {
-    genericOp.dump();
+    if (genericOp->hasAttr("accelgen.memory_transformation"))
+      return mlir::failure();
+    // genericOp.dump();
     auto context = rewriter.getContext();
     bool hasExpandFront = false;
 
@@ -325,10 +407,10 @@ class ExpandCollapseGenericPattern
       llvm::SmallVector<ReassociationIndices> updateReassMaps;
       while (srcP < shapeAfterExpand.size()) {
         ReassociationIndices tmpReassIdx;
-        ECHO(shapeAfterExpand.size(), "\n")
-        ECHO(shapeInUpdateGeneric.size(), "\n")
-        ECHO(srcP, "\n")
-        ECHO(updateP, "\n")
+        // ECHO(shapeAfterExpand.size(), "\n")
+        // ECHO(shapeInUpdateGeneric.size(), "\n")
+        // ECHO(srcP, "\n")
+        // ECHO(updateP, "\n")
         if (shapeAfterExpand[srcP] == shapeInUpdateGeneric[updateP]) {
           tmpReassIdx.push_back(updateP);
           srcP++;
@@ -449,19 +531,19 @@ class ExpandCollapseGenericPattern
             });
 
         llvm::SmallVector<AffineExpr> dimExprs;
-        ECHO("here!!!!!!", "\n")
-        ECHO(needInsertExpand[idxOperand], "\n")
-        ECHO_LIST(srcShape, ",")
-        for (auto [xx, yy] : updateShapeMap) {
-          ECHO(xx, "\n")
-          ECHO(yy, "\n")
-        }
+        // ECHO("here!!!!!!", "\n")
+        // ECHO(needInsertExpand[idxOperand], "\n")
+        // ECHO_LIST(srcShape, ",")
+        // for (auto [xx, yy] : updateShapeMap) {
+        //   ECHO(xx, "\n")
+        //   ECHO(yy, "\n")
+        // }
         int64_t srcP = 0, updateP = 0;
         while (srcP < srcShape.size()) {
-          ECHO(srcShape.size(), "\n")
-          ECHO(updateShapeMap.size(), "\n")
-          ECHO(srcP, "\n")
-          ECHO(updateP, "\n")
+          // ECHO(srcShape.size(), "\n")
+          // ECHO(updateShapeMap.size(), "\n")
+          // ECHO(srcP, "\n")
+          // ECHO(updateP, "\n")
           if (srcShape[srcP] == updateShapeMap[updateP].second) {
             dimExprs.push_back(
                 getAffineDimExpr(updateShapeMap[updateP].first, getContext()));
@@ -479,8 +561,8 @@ class ExpandCollapseGenericPattern
         updateIndexingMaps[idxOperand] =
             AffineMap::get(updateNumDims, 0, dimExprs, context);
 
-        ECHO("affine map check 1", "\n")
-        updateIndexingMaps[idxOperand].dump();
+        // ECHO("affine map check 1", "\n")
+        // updateIndexingMaps[idxOperand].dump();
       } else if (preCollapse && prePreGeneric &&
                  prePreGeneric->hasAttr("accelgen.expand")) {
         auto shaped = mlir::dyn_cast<mlir::ShapedType>(
@@ -506,19 +588,19 @@ class ExpandCollapseGenericPattern
                 updateShapeMap.push_back({dim, shape});
               }
             });
-        shaped.dump();
-        ECHO("check", "\n")
-        for (auto xx : dimShapeReassMap) {
-          ECHO_LIST(xx, ",")
-        }
-        for (auto xx : dimDimReassMap) {
-          ECHO_LIST(xx, ",")
-        }
-        genericOp.getIndexingMapsArray()[idxOperand].dump();
-        for (auto [xx, yy] : updateShapeMap) {
-          ECHO(xx, "\n")
-          ECHO(yy, "\n")
-        }
+        // shaped.dump();
+        // ECHO("check", "\n")
+        // for (auto xx : dimShapeReassMap) {
+        //   ECHO_LIST(xx, ",")
+        // }
+        // for (auto xx : dimDimReassMap) {
+        //   ECHO_LIST(xx, ",")
+        // }
+        // genericOp.getIndexingMapsArray()[idxOperand].dump();
+        // for (auto [xx, yy] : updateShapeMap) {
+        //   ECHO(xx, "\n")
+        //   ECHO(yy, "\n")
+        // }
         llvm::SmallVector<AffineExpr> dimExprs;
         int64_t srcP = 0, updateP = 0;
         while (srcP < srcShape.size()) {
@@ -539,8 +621,8 @@ class ExpandCollapseGenericPattern
         updateIndexingMaps[idxOperand] =
             AffineMap::get(updateNumDims, 0, dimExprs, context);
 
-        ECHO("affine map check 2", "\n")
-        updateIndexingMaps[idxOperand].dump();
+        // ECHO("affine map check 2", "\n")
+        // updateIndexingMaps[idxOperand].dump();
 
       } else {
         llvm::SmallVector<AffineExpr> dimExprs;
@@ -559,12 +641,12 @@ class ExpandCollapseGenericPattern
                 dimExprs.push_back(getAffineConstantExpr(0, getContext()));
               }
             });
-        for (auto xx : dimExprs) xx.dump();
-        ECHO(updateNumDims, "\n")
+        // for (auto xx : dimExprs) xx.dump();
+        // ECHO(updateNumDims, "\n")
         updateIndexingMaps[idxOperand] =
             AffineMap::get(updateNumDims, 0, dimExprs, context);
-        ECHO("affine map check 3", "\n")
-        updateIndexingMaps[idxOperand].dump();
+        // ECHO("affine map check 3", "\n")
+        // updateIndexingMaps[idxOperand].dump();
       }
     }
 
@@ -612,13 +694,12 @@ class ExpandCollapseGenericPattern
               .getIndexingMapsArray()[idxOutputs + genericOp.getInputs().size()]
               .getResults()
               .size());
-      ECHO(updateCollapseReassMap.size(), ",")
-      ECHO(
-          genericOp
-              .getIndexingMapsArray()[idxOutputs + genericOp.getInputs().size()]
-              .getResults()
-              .size(),
-          "\n")
+      // ECHO(updateCollapseReassMap.size(), ",")
+      // ECHO(
+      //     genericOp
+      //         .getIndexingMapsArray()[idxOutputs +
+      //         genericOp.getInputs().size()] .getResults() .size(),
+      //     "\n")
       int64_t tmp = 0;
       traverseAffineMapResults(
           genericOp.getIndexingMapsArray()[idxOutputs +
@@ -653,8 +734,9 @@ class FuseGenericPass : public impl::FuseGenericPassBase<FuseGenericPass> {
     mlir::MLIRContext& ctx = getContext();
     mlir::RewritePatternSet patterns(&ctx);
     patterns.add<ArgumentTransposePattern>(&ctx);
-    // patterns.add<ExpandGenericPattern>(&ctx);
-    patterns.add<ExpandCollapseGenericPattern>(&ctx);
+    patterns.add<TransposeGenericPattern>(&ctx);
+    patterns.add<ExpandGenericPattern>(&ctx);
+    // patterns.add<ExpandCollapseGenericPattern>(&ctx);
     if (mlir::failed(applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {
       signalPassFailure();

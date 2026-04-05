@@ -40,23 +40,26 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
 
     PerfModel model = PerfModel();
     ArchConfig archCfg;
-    archCfg.bandwidth = 128;
-    archCfg.sramCapacity = 1024 * 1024;
-    archCfg.nSramBank = 32;
-    archCfg.computeResource["mulf_bf16_bf16_bf16"] = 64 * 64 + 64;
-    archCfg.computeResource["mulf_fp32_fp32_fp32"] = 64 * 64 + 64;
-    archCfg.computeResource["addf_bf16_bf16_bf16"] = 64 * 64 + 64;
-    archCfg.computeResource["negf_bf16_bf16"] = 64;
-    archCfg.computeResource["addf_fp32_fp32_fp32"] = 64;
-    archCfg.computeResource["subf_fp32_fp32_fp32"] = 64;
-    archCfg.computeResource["divf_fp32_fp32_fp32"] = 64;
-    archCfg.computeResource["divf_bf16_bf16_bf16"] = 64;
-    archCfg.computeResource["truncf_fp32_bf16"] = 64;
-    archCfg.computeResource["truncf_fp64_bf16"] = 64;
-    archCfg.computeResource["truncf_fp64_fp32"] = 64;
-    archCfg.computeResource["extf_bf16_fp32"] = 64;
-    archCfg.computeResource["maximumf_fp32_fp32_fp32"] = 64;
-    archCfg.computeResource["transpose_bf16_bf16"] = 16 * 16;
+
+    archCfg.load(configPath);
+
+    // archCfg.bandwidth = 128;
+    // archCfg.sramCapacity = 1024 * 1024;
+    // archCfg.nSramBank = 32;
+    // archCfg.computeResource["mulf_bf16_bf16_bf16"] = 64 * 64 + 64;
+    // archCfg.computeResource["mulf_fp32_fp32_fp32"] = 64 * 64 + 64;
+    // archCfg.computeResource["addf_bf16_bf16_bf16"] = 64 * 64 + 64;
+    // archCfg.computeResource["negf_bf16_bf16"] = 64;
+    // archCfg.computeResource["addf_fp32_fp32_fp32"] = 64;
+    // archCfg.computeResource["subf_fp32_fp32_fp32"] = 64;
+    // archCfg.computeResource["divf_fp32_fp32_fp32"] = 64;
+    // archCfg.computeResource["divf_bf16_bf16_bf16"] = 64;
+    // archCfg.computeResource["truncf_fp32_bf16"] = 64;
+    // archCfg.computeResource["truncf_fp64_bf16"] = 64;
+    // archCfg.computeResource["truncf_fp64_fp32"] = 64;
+    // archCfg.computeResource["extf_bf16_fp32"] = 64;
+    // archCfg.computeResource["maximumf_fp32_fp32_fp32"] = 64;
+    // archCfg.computeResource["transpose_bf16_bf16"] = 16 * 16;
 
     // GenericOpClusterDAG clusterDAG;
     ScheduledGenericOpCluster scheduledCluster("pruning_brute_force");
@@ -142,6 +145,9 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
       clusterFuncOp->setAttr("sramAccess",
                              mlir::FloatAttr::get(Float64Type::get(&ctx),
                                                   cluster->metric.sramAccess));
+      clusterFuncOp->setAttr(
+          "flops",
+          mlir::FloatAttr::get(Float64Type::get(&ctx), cluster->metric.flops));
 
       // clusterFuncOp.setPrivate();
 

@@ -60,6 +60,9 @@ static llvm::cl::opt<std::string> passPipeline(
     "pass-pipeline", llvm::cl::desc("MLIR pass pipeline"), llvm::cl::init(""));
 
 int main(int argc, char** argv) {
+  mlir::registerPassManagerCLOptions();
+  mlir::registerDefaultTimingManagerCLOptions();
+
   llvm::cl::ParseCommandLineOptions(argc, argv, "AccelGen compiler\n");
 
   auto fileOrErr = llvm::MemoryBuffer::getFile(inputFilename);

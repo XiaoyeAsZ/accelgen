@@ -35,6 +35,63 @@ class CollapseArgumentPattern
 
     if (collapseOp.getSrc().getDefiningOp() != nullptr) return mlir::failure();
 
+    mlir::Value input = collapseOp.getSrc();
+    auto blockArg = mlir::dyn_cast<BlockArgument>(input);
+    if (!blockArg) return mlir::failure();
+    if (!input.hasOneUse()) return mlir::failure();
+
+    auto func = collapseOp->getParentOfType<func::FuncOp>();
+    if (!func) return mlir::failure();
+
+    auto outType =
+        mlir::dyn_cast<RankedTensorType>(collapseOp.getResult().getType());
+
+    rewriter.modifyOpInPlace(func, [&]() {
+      blockArg.setType(outType);
+      SmallVector<Type> newArgTypes(func.getArgumentTypes());
+      newArgTypes[blockArg.getArgNumber()] = outType;
+      func.setType(
+          rewriter.getFunctionType(newArgTypes, func.getResultTypes()));
+    });
+
+    rewriter.replaceOp(collapseOp, blockArg);
+
+    return mlir::success();
+  }
+};
+
+class ExpandArgumentPattern
+    : public mlir::OpRewritePattern<tensor::ExpandShapeOp> {
+  using mlir::OpRewritePattern<tensor::ExpandShapeOp>::OpRewritePattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      tensor::ExpandShapeOp expandOp,
+      mlir::PatternRewriter& rewriter) const override {
+    mlir::MLIRContext* ctx = rewriter.getContext();
+
+    if (expandOp.getSrc().getDefiningOp() != nullptr) return mlir::failure();
+
+    mlir::Value input = expandOp.getSrc();
+    auto blockArg = mlir::dyn_cast<BlockArgument>(input);
+    if (!blockArg) return mlir::failure();
+    if (!input.hasOneUse()) return mlir::failure();
+
+    auto func = expandOp->getParentOfType<func::FuncOp>();
+    if (!func) return mlir::failure();
+
+    auto outType =
+        mlir::dyn_cast<RankedTensorType>(expandOp.getResult().getType());
+
+    rewriter.modifyOpInPlace(func, [&]() {
+      blockArg.setType(outType);
+      SmallVector<Type> newArgTypes(func.getArgumentTypes());
+      newArgTypes[blockArg.getArgNumber()] = outType;
+      func.setType(
+          rewriter.getFunctionType(newArgTypes, func.getResultTypes()));
+    });
+
+    rewriter.replaceOp(expandOp, blockArg);
+
     return mlir::success();
   }
 };
@@ -65,8 +122,7 @@ class CollapseExpandPattern
       auto collapseDims = getAffineMapAccessDims(collapseMap[idxShape]);
       auto expandDims = getAffineMapAccessDims(expandMap[idxShape]);
 
-      if (collapseDims.size() > 1 && expandDims.size() > 1 &&
-          collapseDims.size() <= expandDims.size()) {
+      if (collapseDims.size() > 1 && expandDims.size() > 1) {
         isMatch = true;
       } else if (collapseDims.size() == 1 && expandDims.size() == 1) {
         continue;
@@ -80,30 +136,60 @@ class CollapseExpandPattern
 
       int64_t srcP = 0, destP = 0;
       int64_t indexDim = 0;
-      llvm::SmallVector<ReassociationIndices> expandReassMap;
-      while (srcP < inputShape.size()) {
-        ReassociationIndices idx;
-        if (inputShape[srcP] == outputShape[destP]) {
-          srcP++;
-          destP++;
-          idx.push_back(indexDim++);
-        } else {
-          int64_t tmp = 1;
-          while (tmp != inputShape[srcP]) {
+      llvm::SmallVector<ReassociationIndices> reassMap;
+
+      // Expand
+      if (inputShape.size() < outputShape.size()) {
+        while (srcP < inputShape.size() && destP < outputShape.size()) {
+          ReassociationIndices idx;
+          if (inputShape[srcP] == outputShape[destP]) {
+            srcP++;
+            destP++;
             idx.push_back(indexDim++);
-            tmp *= outputShape[destP];
+          } else {
+            int64_t tmp = 1;
+            while (tmp != inputShape[srcP]) {
+              idx.push_back(indexDim++);
+              tmp *= outputShape[destP];
+              destP++;
+            }
+            srcP++;
+          }
+          reassMap.push_back(idx);
+        }
+
+        rewriter.setInsertionPointAfter(expandOp);
+        auto updateExpandOp = rewriter.create<tensor::ExpandShapeOp>(
+            expandOp.getLoc(), expandOp.getResult().getType(),
+            collapseOp.getSrc(), reassMap);
+        rewriter.replaceOp(expandOp, updateExpandOp);
+      }
+      // Collapse
+      else {
+        while (srcP < inputShape.size() && destP < outputShape.size()) {
+          ReassociationIndices idx;
+          if (inputShape[srcP] == outputShape[destP]) {
+            srcP++;
+            destP++;
+            idx.push_back(indexDim++);
+          } else {
+            int64_t tmp = 1;
+            while (tmp != outputShape[destP]) {
+              idx.push_back(indexDim++);
+              tmp *= inputShape[srcP];
+              srcP++;
+            }
             destP++;
           }
-          srcP++;
+          reassMap.push_back(idx);
         }
-        expandReassMap.push_back(idx);
-      }
 
-      rewriter.setInsertionPointAfter(expandOp);
-      auto updateExpandOp = rewriter.create<tensor::ExpandShapeOp>(
-          expandOp.getLoc(), expandOp.getResult().getType(),
-          collapseOp.getSrc(), expandReassMap);
-      rewriter.replaceOp(expandOp, updateExpandOp);
+        rewriter.setInsertionPointAfter(expandOp);
+        auto updateCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
+            expandOp.getLoc(), expandOp.getResult().getType(),
+            collapseOp.getSrc(), reassMap);
+        rewriter.replaceOp(expandOp, updateCollapseOp);
+      }
 
       return mlir::success();
     } else
@@ -120,6 +206,8 @@ class FoldTensorOpPass : public impl::FoldTensorOpPassBase<FoldTensorOpPass> {
     mlir::RewritePatternSet patterns(&ctx);
 
     patterns.add<CollapseExpandPattern>(&ctx);
+    patterns.add<CollapseArgumentPattern>(&ctx);
+    patterns.add<ExpandArgumentPattern>(&ctx);
     if (mlir::failed(applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {
       signalPassFailure();

@@ -1,0 +1,107 @@
+architecture:
+  # ============================================================
+  # Architecture Description
+  # ============================================================
+  version: 0.4
+  nodes: # Top-level is hierarchical
+  - !Container # Top-level system
+    name: system
+
+  - !Component # DRAM main memory
+    name: DRAM
+    class: DRAM
+    attributes:
+      type: "LPDDR4"
+      width: 8192
+      datawidth: 16
+
+  - !Container # OS accelerator
+    name: simple_os
+    attributes:
+      technology: "45nm"
+
+  - !Component # Shared global buffer
+    name: shared_glb
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 262144
+      width: 512
+      n_banks: 1024
+      datawidth: 16
+      read_bandwidth: 1024
+      write_bandwidth: 1024
+    constraints:
+      dataspace: {keep: [Inputs, Weights, Outputs]}
+
+  - !Container # Spatialize output positions first
+    name: PE_column
+    spatial: {meshX: 512}
+    constraints:
+      spatial:
+        permutation: [P, M, C]
+        factors: [P=512, M=1, C=1, R=1, S=1, Q=1, N=1, G=1]
+
+  - !Container # Then spatialize output channels inside each column
+    name: PE
+    spatial: {meshY: 512}
+    constraints:
+      spatial:
+        permutation: [M, P, C]
+        factors: [M=512, P=1, C=1, R=1, S=1, Q=1, N=1, G=1]
+
+  - !Parallel # Local operand buffers
+    nodes:
+    - !Component # Input scratchpad
+      name: input_spad
+      class: smartbuffer_SRAM
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+        read_bandwidth: 1
+        write_bandwidth: 1
+      constraints:
+        dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
+        temporal:
+          permutation: [C, M, P, R, S, Q, N, G]
+          factors: [C=1, M=1, P=1, R=1, S=1, Q=1, N=1, G=1]
+
+
+    - !Component # Weight scratchpad
+      name: weight_spad
+      class: smartbuffer_SRAM
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+        read_bandwidth: 1
+        write_bandwidth: 1
+      constraints:
+        dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
+        temporal:
+          permutation: [C, P, M, R, S, Q, N, G]
+          factors: [C=1, M=1, P=1, R=1, S=1, Q=1, N=1, G=1]
+
+
+    - !Component # Output scratchpad
+      name: output_spad
+      class: smartbuffer_SRAM
+      attributes:
+        depth: 1
+        width: 16
+        datawidth: 16
+        read_bandwidth: 1
+        write_bandwidth: 1
+      constraints:
+        dataspace: {keep: [Outputs], bypass: [Weights, Inputs]}
+        temporal:
+          permutation: [C, P, M, R, S, Q, N, G]
+          factors: [C=1, P=1, M=1, Q=1, N=1, G=1, R=1, S=1]
+
+
+  - !Component # MAC unit
+    name: mac
+    class: intmac
+    attributes:
+      multiplier_width: 16
+      adder_width: 32

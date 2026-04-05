@@ -95,6 +95,36 @@ static std::string toString(mlir::Type type) {
   assert(0);
 }
 
+llvm::SmallVector<int64_t> getTilingOfOperand(linalg::GenericOp genericOp,
+                                              mlir::OpOperand* operand);
+
+template <typename _Type>
+class Array2D {
+ private:
+  llvm::SmallVector<_Type> _dat;
+  llvm::SmallVector<int64_t, 2> _bounds;
+
+ public:
+  Array2D(llvm::ArrayRef<int64_t> bounds)
+      : _bounds(bounds.begin(), bounds.end()) {
+    assert(_bounds.size() == 2);
+    _dat = llvm::SmallVector<_Type>(_bounds[0] * _bounds[1]);
+  }
+  Array2D(llvm::ArrayRef<int64_t> bounds, llvm::ArrayRef<_Type> dat)
+      : _bounds(bounds.begin(), bounds.end()) {
+    assert(_bounds.size() == 2);
+    assert(_bounds[0] * _bounds[1] == dat.size());
+    _dat = llvm::SmallVector<_Type>(dat.begin(), dat.end());
+  }
+  ~Array2D() = default;
+
+  _Type& at(int64_t d0, int64_t d1) {
+    auto index = d0 * _bounds[0] + d1;
+    assert(index < _dat.size());
+    return _dat[index];
+  }
+};
+
 }  // namespace accelgen
 }  // namespace mlir
 

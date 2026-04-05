@@ -14,12 +14,129 @@ def DataPathOp : Dap_Op<"data_path", []> {
   }];
 
   let arguments = (ins
-    I32:$input,
-    I32Attr:$width
+    I32:$src,
+    I32:$dest
   );
 
   let results = (outs
-    I32:$output 
+  );
+}
+
+
+def MulfOp : Dap_Op<"mulf", []> {
+  let summary = "Mulf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Lhs,
+    AnyType:$Rhs,
+    AnyType:$result
+  );
+}
+
+def AddfOp : Dap_Op<"add", []> {
+  let summary = "Addf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Lhs,
+    AnyType:$Rhs,
+    AnyType:$result
+  );
+}
+
+def SubfOp : Dap_Op<"sub", []> {
+  let summary = "Subf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Lhs,
+    AnyType:$Rhs,
+    AnyType:$result
+  );
+}
+
+def DivfOp : Dap_Op<"div", []> {
+  let summary = "Divf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Lhs,
+    AnyType:$Rhs,
+    AnyType:$result
+  );
+}
+
+def MaxfOp : Dap_Op<"maximumf", []> {
+  let summary = "Maxf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Lhs,
+    AnyType:$Rhs,
+    AnyType:$result
+  );
+}
+
+def NegfOp : Dap_Op<"neg", []> {
+  let summary = "Negf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
+  );
+}
+
+def TruncfOp : Dap_Op<"truncf", []> {
+  let summary = "Negf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
+  );
+}
+
+def ExtfOp : Dap_Op<"extf", []> {
+  let summary = "Extf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
   );
 }
 
@@ -30,9 +147,7 @@ def SramOp : Dap_Op<"sram", []> {
 
   let arguments = (ins
     I32Attr:$width,
-    I32Attr:$depth,
-    I32Attr:$nbank,
-    I32Attr:$nbuffer
+    I32Attr:$depth
   );
 
   let results = (outs
@@ -53,13 +168,13 @@ def DataNodeOp : Dap_Op<"data_node", []> {
   }];
 
   let arguments = (ins
-    I32Attr:$fanin,
-    I32Attr:$fanout
+    I32:$din,
+    I32:$dout
   );
 
   let results = (outs
-    Variadic<I32>:$ports
   );
+
 }
 
 def ConcatOp : Dap_Op<"concat", []> {
@@ -105,6 +220,101 @@ def ReductionOp : Dap_Op<"reduction", []> {
   let results = (outs
     Variadic<I32>:$ports
   );
+}
+
+def DecomposeOp : Dap_Op<"decompose", []> {
+  let summary = "Decompose";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$fanout
+  );
+
+  let results = (outs
+    I32:$din,
+    Variadic<I32>:$douts
+  );
+
+  let builders = [
+    OpBuilder<(ins "int64_t":$fanout)>
+  ];
+}
+
+def ComposeOp : Dap_Op<"compose", []> {
+  let summary = "Compose";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$fanin
+  );
+
+  let results = (outs
+    Variadic<I32>:$dins,
+    I32:$dout
+  );
+
+  let builders = [
+    OpBuilder<(ins "int64_t":$fanin)>
+  ];
+}
+
+def MuxOp : Dap_Op<"mux", []> {
+  let summary = "Mux";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$fanin
+  );
+
+  let results = (outs
+    Variadic<I32>:$dins,
+    I32:$dout
+  );
+
+  let builders = [
+    OpBuilder<(ins "int64_t":$fanin)>
+  ];
+}
+
+def DemuxOp : Dap_Op<"demux", []> {
+  let summary = "Demux";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$fanout
+  );
+
+  let results = (outs
+    I32:$din,
+    Variadic<I32>:$dout
+  );
+
+  let builders = [
+    OpBuilder<(ins "int64_t":$fanout)>
+  ];
+}
+
+def BroadcastOp : Dap_Op<"broadcast", []> {
+  let summary = "Broadcast";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    I32Attr:$fanout
+  );
+
+  let results = (outs
+    I32:$din,
+    Variadic<I32>:$dout
+  );
+
+  let builders = [
+    OpBuilder<(ins "int64_t":$fanout)>
+  ];
 }
 
 #endif // DAP_OPS

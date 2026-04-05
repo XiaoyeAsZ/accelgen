@@ -5,6 +5,9 @@ def KernelSchedule: Pass<"kernel-schedule", "::mlir::func::FuncOp"> {
   let summary = "";
   let description = [{
   }];
+  let options = [
+    Option<"configPath", "config-path", "std::string", "", "">
+  ];
 }
 
 def MarkGenericPass: Pass<"mark-generic", "::mlir::ModuleOp"> {
@@ -54,6 +57,10 @@ def ConvertToDap: Pass<"convert-to-dap", "::mlir::ModuleOp"> {
   let summary = "";
   let description = [{
   }];
+
+  let options = [
+    Option<"configPath", "config-path", "std::string", "", "">
+  ];
 }
 
 def CollapseShapeDelayPass: Pass<"collapse-shape-delay", "::mlir::ModuleOp"> {
@@ -81,4 +88,13 @@ def FoldTensorOpPass: Pass<"fold-tensor-op", "::mlir::ModuleOp"> {
   let summary = "";
   let description = [{
   }];
+}
+
+def ModelPerformance: Pass<"model-performance", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+  let options = [
+    Option<"configPath", "config-path", "std::string", "", "">
+  ];
 }

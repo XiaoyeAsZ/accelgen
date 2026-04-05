@@ -4,6 +4,7 @@
 #include <queue>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "accelgen/Utils/AffineMapUtils.h"
 
 namespace mlir::accelgen {
 
@@ -167,6 +168,22 @@ llvm::ArrayRef<int64_t> getOperandShape(const mlir::Value& operand) {
   auto shape = mlir::dyn_cast<ShapedType>(operand.getType());
   assert(shape);
   return shape.getShape();
+}
+
+llvm::SmallVector<int64_t> getTilingOfOperand(linalg::GenericOp genericOp,
+                                              mlir::OpOperand* operand) {
+  assert(genericOp->hasAttr("tiling_size") && "no tiling size");
+  llvm::SmallVector<int64_t> tiling;
+  auto arrayAttr = mlir::dyn_cast<ArrayAttr>(genericOp->getAttr("tiling_size"));
+  auto accDims =
+      getAffineMapAccessDims(genericOp.getMatchingIndexingMap(operand));
+  for (auto [indexDim, itemDim] : llvm::enumerate(accDims)) {
+    int64_t t = mlir::cast<mlir::IntegerAttr>(arrayAttr[itemDim])
+                    .getValue()
+                    .getZExtValue();
+    tiling.push_back(t);
+  }
+  return tiling;
 }
 
 }  // namespace mlir::accelgen

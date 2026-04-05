@@ -15,6 +15,11 @@
 #include <span>
 #include <variant>
 #include <vector>
+#include "mlir/Dialect/Math/IR/Math.h"
+
+#include <nlohmann/json.hpp>
+#include <iostream>
+#include <fstream>
 
 #include "accelgen/DSE/KernelScheduleDSE.h"
 #include "accelgen/Utils/AffineMapUtils.h"
@@ -23,6 +28,25 @@
 #include "accelgen/Utils/OperationUtils.h"
 
 namespace mlir::accelgen {
+
+void ArchConfig::load(llvm::StringRef cfgPath) {
+  std::ifstream f(cfgPath.str());
+  nlohmann::json config = nlohmann::json::parse(f);
+
+  this->cycle = config["system"]["cycle"];
+  this->bandwidth = config["dram"]["bandwidth"];
+  this->nSramBank = config["sram"]["sram_bank"];
+  this->sramWidth = config["sram"]["sram_width"];
+  this->sramDepth = config["sram"]["sram_depth"];
+  this->sramCapacity = this->nSramBank * this->sramWidth / 8 * this->sramDepth;
+
+  auto comps = config["compute"];
+
+  for (auto& [key, val] : comps.items()) {
+    int64_t value = val["num"].get<int64_t>();
+    this->computeResource[key] = value;
+  }
+}
 
 Parameter::Parameter(int64_t bound)
     : _bound(bound), _valid(false), _const(false) {}
@@ -1059,17 +1083,17 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation* op) {
                    operand.getDefiningOp<tensor::CollapseShapeOp>()) {
       if (producer.getSrc().getDefiningOp() == nullptr) continue;
 
-      // Check : continous access
-      auto inputDims =
-          getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
-      if (!checkReuseDistance(order, inputDims, mask)) {
-        return false;
-      }
-
       // Check : the same access order
       if (auto producerGeneric =
               producer.getSrc().getDefiningOp<linalg::GenericOp>()) {
         if (isMember(producerGeneric)) {
+          // Check : continous access
+          auto inputDims =
+              getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
+          if (!checkReuseDistance(order, inputDims, mask)) {
+            return false;
+          }
+
           std::vector<int64_t> operandDimsOrder =
               getDimsInOrder(generic, operand);
           std::vector<int64_t> producerOperandDimsOrder =
@@ -2264,10 +2288,14 @@ void PruningSolver::generateCandidateOrders(
     cluster.applyOrder(
         std::unordered_map<mlir::Operation*, llvm::SmallVector<int64_t>>(
             {{*curOp, order}}));
+    // ECHO("CHECKING", "\n")
+    // ECHO_LIST(order, ",")
     if (cluster.checkOpOrder(*curOp)) {
       candidate[(*curOp)] = order;
       generateCandidateOrders(cluster, std::next(curOp), candidate, orders);
       candidate.erase(*curOp);
+    } else {
+      // ECHO("ORDER FAILED", "\n")
     }
   }
 }
@@ -2392,6 +2420,8 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
         // ECHO("get here", "\n")
 
         inferUnrollFactor(localCluster, archCfg);
+
+        // ECHO("get here", "\n")
 
         for (const auto& orderMap : orders) {
           localCluster.applyOrder(orderMap);
@@ -2561,7 +2591,8 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
     assert(generic);
     for (auto& arith : generic.getRegion().front().getOperations()) {
       // Process airth resources
-      if (mlir::isa<arith::ArithDialect>(arith.getDialect())) {
+      if (mlir::isa<arith::ArithDialect>(arith.getDialect()) ||
+          mlir::isa<math::MathDialect>(arith.getDialect())) {
         std::string resourceName = toString(&arith);
         for (auto operand : arith.getOperands())
           resourceName = resourceName + "_" + toString(operand.getType());
@@ -2575,7 +2606,6 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
         arithResourceUse[resourceName] += ratioUnrollFactor[index];
         isArithStage[index] = true;
       }
-
       // Process sram port resources
     }
   }
@@ -2594,11 +2624,18 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
 
   // r_i * scale = actual unroll factor
   llvm::SmallVector<int64_t> unrollFactor(nPipelineOp);
+  // int64_t bottleneckCycles = 0;
   for (auto [idx, ratio] : llvm::enumerate(ratioUnrollFactor)) {
     // Notice !!!!! : Temporal fix, use LP to make sure larger than 1
-    if (isArithStage[idx])
+    if (isArithStage[idx]) {
       unrollFactor[idx] =
           std::max(1L, int64_t(bottleneckScale * ratioUnrollFactor[idx]));
+      // bottleneckCycles =
+      //     std::max(int64_t(ceil(flops[idx] / double_t(unrollFactor[idx]))),
+      //              bottleneckCycles);
+    } else {
+      unrollFactor[idx] = 1024;
+    }
   }
 
   // Allocate unroll factor for 2 dimension with lowerest access order, e.g.
@@ -2612,7 +2649,7 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
     auto tiling = cluster.getParameter().at(op)["tiling_size"];
 
     assert(tiling.size() > 1);
-    if (!isArithStage[index]) continue;
+    // if (!isArithStage[index]) continue;
 
     llvm::SmallVector<int64_t> dimsUnroll;
     // First round
@@ -2950,8 +2987,8 @@ void ScheduledGenericOpCluster::schedule(mlir::MLIRContext* ctx,
 
   /****test */
 
-  // auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data() + 2,
-  //                                       genericOpsTopOrder.data() + 3);
+  // auto mergedCluster = GenericOpCluster(genericOpsTopOrder.data() + 0,
+  //                                       genericOpsTopOrder.data() + 2);
   // ECHO(mergedCluster.checkConnectivity(), "\n")
   // EvaluationMetric mergedMetric = solver->solve(mergedCluster, model,
   // archCfg);

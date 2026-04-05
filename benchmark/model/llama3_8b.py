@@ -66,11 +66,13 @@ class SimpleLlamaMLP(LlamaMLP):
 
 
 def build_model(
-    batch: int, length: int, action: str, block: int, layer: str
+    batch: int, length: int, action: str, block: int, layer: str, local_path: str = None
 ) -> tuple[torch.nn.Module, torch.Tensor]:
-    config = AutoConfig.from_pretrained(
-        "meta-llama/Meta-Llama-3-8B", attn_implementation="eager"
-    )
+    if local_path:
+        model_path = local_path
+    else:
+        model_path = "meta-llama/Meta-Llama-3-8B"
+    config = AutoConfig.from_pretrained(model_path, attn_implementation="eager")
     if layer == "attention":
         model = AutoModel.from_config(config).layers[block].self_attn
         model.__class__ = SimpleLlamaAttention
