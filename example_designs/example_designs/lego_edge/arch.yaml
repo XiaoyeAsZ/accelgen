@@ -1,97 +1,75 @@
 architecture:
   # ============================================================================
-  # Lego - Edge Configuration (Flexible WS/OS Dataflow)
+  # Lego - Edge Configuration (Flexible Dataflow)
   # ============================================================================
-  # Same hardware structure as Gemmini (DAC 2021) Fig 1:
-  #   DRAM → Scratchpad (banked SRAM) → Spatial Array + Accumulator
-  # No NoC — single accelerator with DMA engine direct to DRAM/L2.
+  # SAME hardware as gemmini_edge (DAC 2021) Fig 1:
+  #   DRAM → Scratchpad (banked SRAM) → 2D Systolic Array + Accumulator
   #
-  # Key difference from gemmini_edge: NO dataflow constraints.
-  # Mapper is free to explore both Output-Stationary and Weight-Stationary.
-  #
-  # Sizes match config/edge.json:
-  #   - DRAM bandwidth: 128
-  #   - Scratchpad: sram_bank(256) × sram_width(512) × sram_depth(256)
-  #   - MAC array: 64×64 = 4096 MACs (mulf_bf16=4160 = 4096+64 PPU)
-  #   - bf16 datawidth=16
+  # Key difference from gemmini_edge: relaxed mapping constraints.
+  # - No spatial permutation constraint  → mapper can map any dim to X/Y
+  # - No temporal constraints on accumulator/registers → free dataflow
+  # Mapper is free to explore Weight-Stationary, Output-Stationary, etc.
   # ============================================================================
   version: 0.4
   nodes:
   - !Container
-    name: System
-    attributes:
-      datawidth: 16
-      technology: "45nm"
+    name: system
 
-  # ========================= Off-chip Memory ================================
   - !Component
     name: DRAM
     class: DRAM
     attributes:
       type: "LPDDR4"
-      width: 128             # edge dram bandwidth=128
+      width: 1024             # 128 bytes × 8 = 1024 bits
       datawidth: 16
 
+  - !Container
+    name: gemmini
+    attributes:
+      technology: "45nm"
+
   # ========================= Scratchpad (banked SRAM) =======================
-  # Hardware data path: Scratchpad feeds Inputs+Weights to PE array input side.
-  # This constraint is physical wiring, same for both WS and OS.
+  # Physical wiring: feeds Inputs+Weights to PE array. Same for any dataflow.
   - !Component
-    name: Scratchpad
+    name: scratchpad
     class: smartbuffer_SRAM
     attributes:
-      depth: 65536           # sram_bank(256) × sram_depth(256) = 65536
-      width: 512             # sram_width=512
+      depth: 65536           # 256 banks × 256 depth
+      width: 512
+      n_banks: 256
       datawidth: 16
-      n_banks: 256           # sram_bank=256
-      nports: 2
     constraints:
       dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
 
-  # ========================= PE Columns (spatial dim 1) =====================
-  # No spatial constraint on which dimension — mapper decides M or C
+  # ========================= 2D Systolic PE Array ===========================
+  # Same 64×64 hardware as gemmini_edge.
+  # Relaxed: no permutation constraint — mapper decides dimension mapping.
   - !Container
-    name: PECols
-    spatial: {meshX: 64}
+    name: PE
+    spatial: {meshX: 64, meshY: 64}
     constraints:
       spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1]
-        permutation: [M, C]
-        split: 0
+        factors: [R=1, S=1, Q=1, N=1]
 
-  # ========================= Accumulator SRAM (per column) ==================
-  # Hardware data path: Accumulator is the output-side wider-bitwidth buffer.
-  # Always holds Outputs/partial sums, same for both WS and OS.
+  # ========================= Accumulator (per-PE output buffer) =============
+  # Physical wiring: holds Outputs/partial sums. Same for any dataflow.
+  # Relaxed: no temporal constraints.
   - !Component
-    name: Accumulator
+    name: accumulator
     class: smartbuffer_SRAM
     attributes:
-      depth: 1024
+      depth: 192
       width: 32
       datawidth: 32
-      n_banks: 2
-      nports: 2
     constraints:
       dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
-  # ========================= PE Rows (spatial dim 2) ========================
-  # No spatial constraint on which dimension — mapper decides
-  - !Container
-    name: PERows
-    spatial: {meshY: 64}
-    constraints:
-      spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1]
-        permutation: [C, M]
-        split: 0
-
   # ========================= PE Registers ===================================
-  # No temporal constraints — mapper freely chooses which data is stationary
-  # OS: OutputReg stationary, Weight/Input flow
-  # WS: WeightReg stationary, Input/Output flow
+  # Relaxed: no temporal constraints — mapper freely chooses dataflow.
   - !Parallel
     nodes:
     - !Component
-      name: WeightReg
+      name: weight_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -102,7 +80,7 @@ architecture:
         dataspace: {keep: [Weights]}
 
     - !Component
-      name: InputReg
+      name: input_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -113,7 +91,7 @@ architecture:
         dataspace: {keep: [Inputs]}
 
     - !Component
-      name: OutputReg
+      name: output_reg
       class: storage
       subclass: aladdin_register
       attributes:
@@ -128,5 +106,5 @@ architecture:
     name: mac
     class: intmac
     attributes:
-      multiplier_width: 16   # bf16
-      adder_width: 32        # fp32 accumulation
+      multiplier_width: 16
+      adder_width: 32

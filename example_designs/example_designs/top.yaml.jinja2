@@ -62,6 +62,12 @@ components:
 # ==============================================================================
 # MAPPER SPECIFICATION
 # ==============================================================================
+# Use architecture-specific mapper.yaml if it exists, otherwise use default
+{% set arch_mapper = cwd() ~ '/' ~ architecture ~ '/mapper.yaml'%}
+{% if path_exists(arch_mapper) %}
+mapper: {{include(arch_mapper, 'mapper')}}
+{% else %}
 mapper: {{include(cwd() ~ '/_include/mapper.yaml', 'mapper')}}
+{% endif %}
 
 

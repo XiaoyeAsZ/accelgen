@@ -1,11 +1,11 @@
 architecture:
     version: '0.4'
     local:
-      - name: System_top_level.DRAM[1..1]
+      - name: system_top_level.DRAM[1..1]
         class: DRAM
         attributes:
             type: "LPDDR4"
-            width: 128
+            width: 1024
             datawidth: 16
             has_power_gating: false
             n_banks: 2
@@ -16,29 +16,28 @@ architecture:
             allow_overbooking: false
             meshX: 1
             meshY: 1
-            technology: "45nm"
             power_gated_at: null
             version: '0.4'
+            technology: "SET ME"
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1
             cycle_seconds: 1e-09
             n_instances: 1
         required_actions:
-          - read
-          - write
           - leak
           - update
+          - write
+          - read
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.Scratchpad[1..1]
+      - name: system_top_level.scratchpad[1..1]
         class: smartbuffer_SRAM
         attributes:
             depth: 65536
             width: 512
-            datawidth: 16
             n_banks: 256
-            nports: 2
+            datawidth: 16
             has_power_gating: false
             cluster_size: 1
             reduction_supported: true
@@ -47,8 +46,8 @@ architecture:
             allow_overbooking: false
             meshX: 1
             meshY: 1
-            technology: "45nm"
             power_gated_at: null
+            technology: "45nm"
             version: '0.4'
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1
@@ -56,14 +55,14 @@ architecture:
             n_instances: 1
             n_rw_ports: 1
         required_actions:
-          - read
-          - write
           - leak
           - update
+          - write
+          - read
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.inter_PECols_spatial[1..1]
+      - name: system_top_level.inter_PE_spatial[1..1]
         class: dummy_storage
         attributes:
             width: 1
@@ -88,24 +87,23 @@ architecture:
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.Accumulator[1..64]
+      - name: system_top_level.accumulator[1..4096]
         class: smartbuffer_SRAM
         attributes:
-            depth: 1024
+            depth: 192
             width: 32
             datawidth: 32
-            n_banks: 2
-            nports: 2
             has_power_gating: false
+            n_banks: 2
             cluster_size: 1
             reduction_supported: true
             multiple_buffering: 1
             min_utilization: 0
             allow_overbooking: false
             meshX: 64
-            meshY: 1
-            technology: "45nm"
+            meshY: 64
             power_gated_at: null
+            technology: "45nm"
             version: '0.4'
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1
@@ -113,39 +111,14 @@ architecture:
             n_instances: 1
             n_rw_ports: 1
         required_actions:
-          - read
-          - write
           - leak
           - update
+          - write
+          - read
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.inter_PERows_spatial[1..64]
-        class: dummy_storage
-        attributes:
-            width: 1
-            depth: 1
-            datawidth: 1
-            technology: -1
-            has_power_gating: false
-            n_banks: 2
-            cluster_size: 1
-            reduction_supported: true
-            multiple_buffering: 1
-            min_utilization: 0
-            allow_overbooking: false
-            meshX: 64
-            meshY: 1
-            power_gated_at: null
-            version: '0.4'
-            global_cycle_seconds: 1e-09
-            action_latency_cycles: 1
-            cycle_seconds: 1e-09
-            n_instances: 1
-        enabled: true
-        area_scale: 1.0
-        energy_scale: 1.0
-      - name: System_top_level.WeightReg[1..4096]
+      - name: system_top_level.weight_reg[1..4096]
         class: storage
         subclass: aladdin_register
         attributes:
@@ -161,22 +134,22 @@ architecture:
             allow_overbooking: false
             meshX: 64
             meshY: 64
-            technology: "45nm"
             power_gated_at: null
+            technology: "45nm"
             version: '0.4'
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1
             cycle_seconds: 1e-09
             n_instances: 1
         required_actions:
-          - read
-          - write
           - leak
           - update
+          - write
+          - read
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.InputReg[1..4096]
+      - name: system_top_level.input_reg[1..4096]
         class: storage
         subclass: aladdin_register
         attributes:
@@ -192,22 +165,22 @@ architecture:
             allow_overbooking: false
             meshX: 64
             meshY: 64
-            technology: "45nm"
             power_gated_at: null
+            technology: "45nm"
             version: '0.4'
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1
             cycle_seconds: 1e-09
             n_instances: 1
         required_actions:
-          - read
-          - write
           - leak
           - update
+          - write
+          - read
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.OutputReg[1..4096]
+      - name: system_top_level.output_reg[1..4096]
         class: storage
         subclass: aladdin_register
         attributes:
@@ -223,22 +196,22 @@ architecture:
             allow_overbooking: false
             meshX: 64
             meshY: 64
-            technology: "45nm"
             power_gated_at: null
+            technology: "45nm"
             version: '0.4'
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1
             cycle_seconds: 1e-09
             n_instances: 1
         required_actions:
-          - read
-          - write
           - leak
           - update
+          - write
+          - read
         enabled: true
         area_scale: 1.0
         energy_scale: 1.0
-      - name: System_top_level.mac[1..4096]
+      - name: system_top_level.mac[1..4096]
         class: intmac
         attributes:
             multiplier_width: 16
@@ -246,9 +219,8 @@ architecture:
             has_power_gating: false
             meshX: 64
             meshY: 64
-            datawidth: 16
-            technology: "45nm"
             power_gated_at: null
+            technology: "45nm"
             version: '0.4'
             global_cycle_seconds: 1e-09
             action_latency_cycles: 1

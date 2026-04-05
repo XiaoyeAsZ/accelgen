@@ -1,0 +1,51 @@
+compound_components:
+  version: 0.4
+  classes:
+  # ============================================================================
+  # Zero-Energy MAC for Data Movement Operations
+  # ============================================================================
+  # Timeloop requires a compute unit at the leaf, but for data movement ops
+  # we only care about memory access counts, not compute energy.
+  # We keep minimal subcomponents (required by Accelergy parser) but set
+  # energy_scale: 0 on all action references so compute energy = 0.
+  # ============================================================================
+  - name: zero_mac
+    attributes:
+      technology: "must_specify"
+      datawidth: "must_specify"
+      global_cycle_seconds: "must_specify"
+
+    subcomponents:
+    - name: adder
+      class: aladdin_adder
+      attributes:
+        width: 1
+        global_cycle_seconds: "global_cycle_seconds"
+    - name: multiplier
+      class: aladdin_multiplier
+      attributes:
+        width_a: 1
+        width_b: 1
+        global_cycle_seconds: "global_cycle_seconds"
+
+    actions:
+    - name: compute
+      subcomponents:
+      - name: adder
+        actions:
+        - name: read
+          energy_scale: 0
+      - name: multiplier
+        actions:
+        - name: read
+          energy_scale: 0
+    - name: leak
+      subcomponents:
+      - name: adder
+        actions:
+        - name: leak
+          energy_scale: 0
+      - name: multiplier
+        actions:
+        - name: leak
+          energy_scale: 0

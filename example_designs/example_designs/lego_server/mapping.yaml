@@ -1,0 +1,49 @@
+mapping:
+  # ---- scratchpad: only keep Inputs + Weights ----
+  - target: scratchpad
+    type: dataspace
+    keep: [Inputs, Weights]
+    bypass: [Outputs]
+
+  # ---- PE spatial: map P, M dimensions to the 64×64 mesh ----
+  - target: PE
+    type: spatial
+    permutation: [P, M]
+    factors: [R=1, S=1, Q=1]
+
+  # ---- accumulator: only keep Outputs ----
+  - target: accumulator
+    type: dataspace
+    keep: [Outputs]
+    bypass: [Inputs, Weights]
+
+  - target: accumulator
+    type: temporal
+    permutation: [R, S, Q]
+
+  # ---- weight_reg ----
+  - target: weight_reg
+    type: dataspace
+    keep: [Weights]
+
+  - target: weight_reg
+    type: temporal
+    factors: [R=1, S=1]
+
+  # ---- input_reg ----
+  - target: input_reg
+    type: dataspace
+    keep: [Inputs]
+
+  - target: input_reg
+    type: temporal
+    factors: [Q=1, N=1]
+
+  # ---- output_reg ----
+  - target: output_reg
+    type: dataspace
+    keep: [Outputs]
+
+  - target: output_reg
+    type: temporal
+    factors: [Q=1, N=1]

@@ -1,124 +1,75 @@
 architecture:
-  # ============================================================================
-  # Lego - Server Configuration (Flexible WS/OS Dataflow)
-  # ============================================================================
-  # Scaled-up version of edge Lego (same flat structure, larger resources):
-  #   DRAM → Scratchpad (banked SRAM) → Spatial Array + Accumulator
-  # No NoC — single accelerator with DMA engine direct to DRAM/L2.
-  #
-  # Key difference from gemmini_server: NO dataflow constraints.
-  # Mapper is free to explore both Output-Stationary and Weight-Stationary.
-  #
-  # Sizes match config/server.json:
-  #   - DRAM bandwidth: 1024
-  #   - Scratchpad: sram_bank(1024) × sram_width(512) × sram_depth(256)
-  #   - MAC array: 512×512 = 262144 MACs (mulf_bf16=262656 = 262144+512 PPU)
-  #   - bf16 datawidth=16
-  # ============================================================================
   version: 0.4
   nodes:
   - !Container
-    name: System
-    attributes:
-      datawidth: 16
-      technology: "45nm"
+    name: system
 
-  # ========================= Off-chip Memory ================================
   - !Component
     name: DRAM
     class: DRAM
     attributes:
       type: "LPDDR4"
-      width: 1024            # server dram bandwidth=1024
+      width: 8192             # 1024 bytes × 8 = 8192 bits
       datawidth: 16
 
-  # ========================= Scratchpad (banked SRAM) =======================
-  # Hardware data path: Scratchpad feeds Inputs+Weights to PE array input side.
-  # This constraint is physical wiring, same for both WS and OS.
-  - !Component
-    name: Scratchpad
-    class: smartbuffer_SRAM
-    attributes:
-      depth: 262144          # sram_bank(1024) × sram_depth(256) = 262144
-      width: 512             # sram_width=512
-      datawidth: 16
-      n_banks: 1024          # sram_bank=1024
-      nports: 2
-    constraints:
-      dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
-
-  # ========================= PE Columns (512, spatial dim 1) ================
   - !Container
-    name: PECols
-    spatial: {meshX: 512}
-    constraints:
-      spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1]
-        permutation: [M, C]
-        split: 0
+    name: lego
+    attributes:
+      technology: "45nm"
 
-  # ========================= Accumulator SRAM (per column) ==================
-  # Hardware data path: output-side wider-bitwidth accumulation buffer.
+  # Scratchpad: shared banked SRAM, holds Inputs + Weights only
   - !Component
-    name: Accumulator
+    name: scratchpad
     class: smartbuffer_SRAM
     attributes:
-      depth: 1024
+      depth: 262144          # 1024 banks × 256 depth
+      width: 512
+      n_banks: 1024
+      datawidth: 16
+
+  # Single 2D systolic array: meshX maps M (columns), meshY maps C (rows)
+  - !Container
+    name: PE
+    spatial: {meshX: 64, meshY: 64}
+
+  # Accumulator: per-PE output buffer, wider bitwidth for partial sums
+  - !Component
+    name: accumulator
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 192
       width: 32
       datawidth: 32
-      n_banks: 2
-      nports: 2
-    constraints:
-      dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
 
-  # ========================= PE Rows (512, spatial dim 2) ===================
-  - !Container
-    name: PERows
-    spatial: {meshY: 512}
-    constraints:
-      spatial:
-        factors: [R=1, S=1, P=1, Q=1, N=1]
-        permutation: [C, M]
-        split: 0
-
-  # ========================= PE Registers ===================================
-  # No temporal constraints — mapper freely chooses WS or OS
   - !Parallel
     nodes:
     - !Component
-      name: WeightReg
+      name: weight_reg
       class: storage
       subclass: aladdin_register
       attributes:
         depth: 1
         width: 16
         datawidth: 16
-      constraints:
-        dataspace: {keep: [Weights]}
 
     - !Component
-      name: InputReg
+      name: input_reg
       class: storage
       subclass: aladdin_register
       attributes:
         depth: 1
         width: 16
         datawidth: 16
-      constraints:
-        dataspace: {keep: [Inputs]}
 
     - !Component
-      name: OutputReg
+      name: output_reg
       class: storage
       subclass: aladdin_register
       attributes:
         depth: 1
         width: 32
         datawidth: 32
-      constraints:
-        dataspace: {keep: [Outputs]}
 
-  # ========================= MAC Unit =======================================
   - !Component
     name: mac
     class: intmac

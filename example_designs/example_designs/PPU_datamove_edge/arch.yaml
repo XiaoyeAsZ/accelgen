@@ -1,0 +1,97 @@
+architecture:
+  # ============================================================================
+  # PPU Data Movement Architecture - Edge Configuration
+  # ============================================================================
+  # A dedicated PPU for pure data movement operations (transpose, reshape,
+  # slice, concat, fill, type-cast). Uses standard 16-bit intmac as the
+  # required compute leaf; mac energy is subtracted in post-processing
+  # so results reflect memory access costs only.
+  #
+  # Memory hierarchy: DRAM → GlobalBuffer → PE array → Registers → zero_mac
+  # Matches gemmini_edge DRAM/SRAM parameters.
+  # ============================================================================
+  version: 0.4
+  nodes:
+  - !Container
+    name: System
+    attributes:
+      datawidth: 16
+      technology: "45nm"
+
+  # ========================= Off-chip Memory ================================
+  - !Component
+    name: DRAM
+    class: DRAM
+    attributes:
+      type: "LPDDR4"
+      width: 1024             # 128 bytes × 8 = 1024 bits (edge config)
+      datawidth: 16
+
+  # ========================= On-chip Global Buffer ==========================
+  - !Component
+    name: GlobalBuffer
+    class: smartbuffer_SRAM
+    attributes:
+      depth: 65536            # matching gemmini_edge scratchpad
+      width: 512
+      datawidth: 16
+      n_banks: 256
+      nports: 2
+    constraints:
+      dataspace: {keep: [Inputs, Outputs], bypass: [Weights]}
+
+  # ========================= PE Array =======================================
+  - !Container
+    name: PE
+    spatial: {meshX: 64}      # 64 parallel lanes (matching edge array dim)
+    constraints:
+      spatial:
+        factors: [C=1, M=1, R=1, S=1, G=1]
+        permutation: [N, P, Q, M, C, R, S]
+
+  # Per-lane register files (smartbuffer_RF with depth=16 for tiling flexibility)
+  - !Parallel
+    nodes:
+    - !Component
+      name: InputReg
+      class: storage
+      subclass: smartbuffer_RF
+      attributes:
+        depth: 16
+        width: 64
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
+
+    - !Component
+      name: WeightReg
+      class: storage
+      subclass: smartbuffer_RF
+      attributes:
+        depth: 16
+        width: 64
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
+
+    - !Component
+      name: OutputReg
+      class: storage
+      subclass: smartbuffer_RF
+      attributes:
+        depth: 16
+        width: 64
+        datawidth: 16
+      constraints:
+        dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
+
+  # Compute unit for Timeloop (required leaf node).
+  # Uses standard 16-bit intmac matching data width.
+  # For datamove ops, compute energy is subtracted in post-processing
+  # so only memory access energy is reported.
+  - !Component
+    name: mac
+    class: intmac
+    attributes:
+      multiplier_width: 16
+      adder_width: 16

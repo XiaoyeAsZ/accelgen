@@ -1,33 +1,30 @@
 DRAM [ Weights:131072 (131072) Inputs:33554432 (33554432) Outputs:268435456 (268435456) ] 
 -----------------------------------------------------------------------------------------
-| for P in [0:64)
-|   for N in [0:4)
-|     for M in [0:8)
-
-Scratchpad [ Weights:16384 (16384) Inputs:131072 (131072) ] 
------------------------------------------------------------
+| for C in [0:2)
+|   for M in [0:2)
+|     for N in [0:8)
 |       for P in [0:2)
-|         for N in [0:8)
-|           for M in [0:8)
 
-inter_PECols_spatial [ ] 
-Accumulator [ Outputs:1024 (1024) ] 
------------------------------------
-|             for C in [0:16)
-|               for M in [0:2)
-|                 for N in [0:8)
-|                   for P in [0:2)
+scratchpad [ Weights:32768 (32768) Inputs:1048576 (1048576) ] 
+-------------------------------------------------------------
+|         for P in [0:32)
+|           for N in [0:2)
+|             for C in [0:8)
 
-inter_PERows_spatial [ ] 
-------------------------
-|                     for M in [0:8) (Spatial-Y)
-|                       for C in [0:8) (Spatial-Y)
+inter_PE_spatial [ ] 
+--------------------
+|               for C in [0:4) (Spatial-Y)
+|                 for N in [0:16) (Spatial-Y)
+|                   for M in [0:64) (Spatial-X)
 
-WeightReg [ Weights:1 (1) ] 
----------------------------
-|                         for P in [0:4)
+accumulator [ Outputs:128 (128) ] 
+---------------------------------
+|                     for C in [0:2)
+|                       for M in [0:8)
+|                         for P in [0:16)
 
-InputReg [ Inputs:1 (1) ] 
-OutputReg [ Outputs:1 (1) ] 
----------------------------
+weight_reg [ Weights:1 (1) ] 
+input_reg [ Inputs:1 (1) ] 
+output_reg [ Outputs:1 (1) ] 
+----------------------------
 |                           << Compute >>

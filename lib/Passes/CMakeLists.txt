@@ -34,4 +34,5 @@ add_mlir_dialect_library(MLIRAccelgen
         MLIRIR
         MLIRInferTypeOpInterface
         MLIRFuncDialect
+        MLIRTensorDialect
         )

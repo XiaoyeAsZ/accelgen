@@ -78,8 +78,13 @@ def ModelBaselineAccelerator: Pass<"model-baseline-accelerator", "::mlir::Module
   let options = [
     Option<"acceleratorName", "accelerator-name", "std::string","", "">,
     Option<"ppuName", "ppu-name", "std::string","", "">,
+    Option<"datamoveArchName", "datamove-arch-name", "std::string","", "">,
     Option<"configPath", "config-path", "std::string","", "">,
-    Option<"mlirFile", "mlir-file", "std::string","", "">
+    Option<"mlirFile", "mlir-file", "std::string","", "">,
+    Option<"skipLinear", "skip-linear", "bool", "false",
+           "Skip linear (batch_matmul) ops">,
+    Option<"skipNonlinear", "skip-nonlinear", "bool", "false",
+           "Skip nonlinear (elementwise/reduction) and datamove ops">
   ];
 }
 

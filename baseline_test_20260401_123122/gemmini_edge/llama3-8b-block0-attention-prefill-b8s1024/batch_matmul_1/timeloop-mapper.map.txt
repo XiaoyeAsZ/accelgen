@@ -1,39 +1,30 @@
 DRAM [ Weights:4194304 (4194304) Inputs:33554432 (33554432) Outputs:8388608 (8388608) ] 
 ---------------------------------------------------------------------------------------
-| for N in [0:2)
-|   for C in [0:4)
-|     for P in [0:16)
+| for C in [0:16)
+|   for P in [0:16)
+|     for M in [0:8)
+
+scratchpad [ Weights:32768 (32768) Inputs:131072 (131072) ] 
+-----------------------------------------------------------
 |       for M in [0:2)
+|         for P in [0:8)
+|           for C in [0:4)
 
-Scratchpad [ Weights:524288 (524288) Inputs:262144 (262144) ] 
--------------------------------------------------------------
-|         for M in [0:2)
-|           for P in [0:2)
-|             for N in [0:2)
-|               for C in [0:16)
+inter_PE_spatial [ ] 
+--------------------
+|             for C in [0:16) (Spatial-Y)
+|               for M in [0:64) (Spatial-X)
 
-inter_PECols_spatial [ ] 
-------------------------
-|                 for P in [0:2) (Spatial-X)
-|                   for M in [0:32) (Spatial-X)
+accumulator [ Outputs:64 (64) ] 
+-------------------------------
+|                 for C in [0:4)
+|                   for P in [0:8)
 
-Accumulator [ Outputs:256 (256) ] 
----------------------------------
-|                     for C in [0:8)
-|                       for M in [0:2)
-|                         for P in [0:4)
-|                           for N in [0:2)
+weight_reg [ Weights:1 (1) ] 
+----------------------------
+|                     for N in [0:8)
 
-inter_PERows_spatial [ ] 
-------------------------
-|                             for M in [0:4) (Spatial-Y)
-|                               for C in [0:8) (Spatial-Y)
-
-WeightReg [ Weights:1 (1) ] 
----------------------------
-|                                 for P in [0:4)
-
-InputReg [ Inputs:1 (1) ] 
-OutputReg [ Outputs:1 (1) ] 
----------------------------
-|                                   << Compute >>
+input_reg [ Inputs:1 (1) ] 
+output_reg [ Outputs:1 (1) ] 
+----------------------------
+|                       << Compute >>
