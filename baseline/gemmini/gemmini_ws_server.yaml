@@ -12,10 +12,10 @@ architecture:
     class: DRAM
     attributes:
       type: "LPDDR4"
-      width: 1024
+      width: 8192
       datawidth: 16
-      read_bandwidth: 128
-      write_bandwidth: 128
+      read_bandwidth: 1024
+      write_bandwidth: 1024
 
   - !Container # OS accelerator
     name: simple_os
@@ -26,30 +26,30 @@ architecture:
     name: shared_glb
     class: smartbuffer_SRAM
     attributes:
-      depth: 65536
+      depth: 262144
       width: 512
-      n_banks: 256
+      n_banks: 1024
       datawidth: 16
-      read_bandwidth: 256
-      write_bandwidth: 256
+      read_bandwidth: 1024
+      write_bandwidth: 1024
     constraints:
       dataspace: {keep: [Inputs, Weights, Outputs]}
 
   - !Container # Spatialize output positions first
     name: PE_column
-    spatial: {meshX: 64}
+    spatial: {meshX: 512}
     constraints:
       spatial:
-        permutation: []
-        factors: [R=1, S=1, Q=1, N=1]
+        permutation: [M, C, P, G]
+        factors: [M=512, P=1, C=1, R=1, S=1, Q=1, N=1, G=1]
 
   - !Container # Then spatialize output channels inside each column
     name: PE
-    spatial: {meshY: 32}
+    spatial: {meshY: 256}
     constraints:
       spatial:
-        permutation: []
-        factors: [R=1, S=1, Q=1, N=1]
+        permutation: [M, P, C]
+        factors: [C=256, P=1, M=1, R=1, S=1, Q=1, N=1, G=1]
 
   - !Parallel # Local operand buffers
     nodes:

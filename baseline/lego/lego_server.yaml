@@ -14,6 +14,8 @@ architecture:
       type: "LPDDR4"
       width: 8192
       datawidth: 16
+      read_bandwidth: 1024
+      write_bandwidth: 1024
 
   - !Container # OS accelerator
     name: simple_os
@@ -39,15 +41,15 @@ architecture:
     constraints:
       spatial:
         permutation: []
-        factors: [P=512, M=1, C=1, R=1, S=1, Q=1, N=1, G=1]
+        factors: [R=1, S=1, Q=1, N=1]
 
   - !Container # Then spatialize output channels inside each column
     name: PE
-    spatial: {meshY: 512}
+    spatial: {meshY: 256}
     constraints:
       spatial:
         permutation: []
-        factors: [M=512, P=1, C=1, R=1, S=1, Q=1, N=1, G=1]
+        factors: [R=1, S=1, Q=1, N=1]
 
   - !Parallel # Local operand buffers
     nodes:
