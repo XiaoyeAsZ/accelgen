@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from torch_to_mlir import dump_to_mlir
 
 if __name__ == "__main__":
@@ -12,16 +13,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.model == "llama3-8b":
+        config_path = Path(__file__).resolve().parent / "model/llama3_8b"
         from model.llama3_8b import build_model
     elif args.model == "qwen3-8b":
+        config_path = Path(__file__).resolve().parent / "model/qwen3_8b"
         from model.qwen3_8b import build_model
     elif args.model == "gemma-7b":
+        config_path = Path(__file__).resolve().parent / "model/gemma_7b"
         from model.gemma_7b import build_model
     else:
         raise NotImplementedError()
 
     model, dummy_input = build_model(
-        args.batch, args.length, args.action, args.block, args.layer
+        args.batch, args.length, args.action, args.block, args.layer, device="cpu"
     )
     dump_to_mlir(
         f"./mlir/{args.model}-block{args.block}-{args.layer}-{args.action}-b{args.batch}s{args.length}.mlir",

@@ -1,11 +1,15 @@
 #!/bin/bash
 
+
 models=("llama3-8b" "qwen3-8b" "gemma-7b")
 actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
-batches=(8)
-lengths=(1024)
+lengths=(128 256 512 1024 4096)
+configs=("edge" "server")
+
+: > ./test/performance.log
+: > ./test/runtime.log
 
 for model in "${models[@]}"
 do
@@ -15,18 +19,19 @@ do
         do
             for layer in "${layers[@]}"
             do
-                for batch in "${batches[@]}"
+                for config in "${configs[@]}"
                 do
+                    if [ "$config" = "edge" ]; then
+                        batch=1
+                    else
+                        batch=8
+                    fi
+
                     for length in "${lengths[@]}"
                     do
-
-                        echo "Running: model=$model action=$action block=$block layer=$layer batch=$batch length=$length"
-
-
                         /home/accelgen/build/bin/accelgen-opt "/home/accelgen/benchmark/mlir/${model}-block${block}-${layer}-${action}-b${batch}s${length}.mlir" \
                         -pass-pipeline="linalg-generalize-named-ops,mark-generic,eliminate-dead-op,fuse-generic,fold-tensor-op" \
-                        -o "/home/accelgen/test/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic.mlir" 
-
+                        -o "/home/accelgen/eval/generic/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic.mlir"
                     done
                 done
             done

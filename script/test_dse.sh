@@ -6,9 +6,10 @@ layer="attention"
 action="prefill"
 batch="8"
 sequence="1024"
+config="server"
 
 ./build/bin/accelgen-opt ./test/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}-generic-test.mlir \
--pass-pipeline="builtin.module(func.func(kernel-schedule))" \
+-pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/$config.json})" \
 -o ./test/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}-generic-test-dump.mlir \
 -mlir-print-ir-after-all \
 -mlir-print-ir-after-failure \

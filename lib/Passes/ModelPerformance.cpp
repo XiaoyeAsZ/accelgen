@@ -44,7 +44,8 @@ class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
     auto module = getOperation();
     module.walk([&](func::FuncOp func) {
       auto sramAccAttr = mlir::dyn_cast<FloatAttr>(func->getAttr("sramAccess"));
-      auto dramAccAttr = mlir::dyn_cast<FloatAttr>(func->getAttr("dramAccess"));
+      auto dramAccAttr =
+          mlir::dyn_cast<FloatAttr>(func->getAttr("externalAccess"));
       auto flopsAttr = mlir::dyn_cast<FloatAttr>(func->getAttr("flops"));
       auto cyclesAttr = mlir::dyn_cast<FloatAttr>(func->getAttr("cycles"));
       assert(sramAccAttr && dramAccAttr && flopsAttr && cyclesAttr);
@@ -54,7 +55,7 @@ class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
       auto flops = flopsAttr.getValueAsDouble();
       auto cycles = cyclesAttr.getValueAsDouble();
 
-      totalLatency += (cycles * archCfg.cycle * 1e-9);
+      totalLatency += (cycles * archCfg.cycle * 1e-6);
       totalFlops += flops;
       totalDramAcc += dramAcc;
 
@@ -90,6 +91,9 @@ class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
     auto dramAccess = totalDramAcc;
 
     llvm::outs() << "===== Model Performance =====\n";
+    llvm::outs() << "Latency: " << totalLatency << "\n";
+    llvm::outs() << "Energy: " << totalEnergy << "\n";
+    llvm::outs() << "Flops: " << totalFlops << "\n";
     llvm::outs() << "Throughput: " << throughput << "\n";
     llvm::outs() << "Energy Efficiency: " << energyEfficiency << "\n";
     llvm::outs() << "DRAM Access: " << dramAccess << "\n";

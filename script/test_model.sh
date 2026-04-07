@@ -6,7 +6,7 @@ layer="attention"
 action="prefill"
 batch="8"
 sequence="1024"
-config="/home/accelgen/config/edge.json"
+config="server"
 
-./build/bin/accelgen-opt ./test/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}-generic-scheduled.mlir \
--pass-pipeline="model-performance{config-path=$config}"
+./build/bin/accelgen-opt ./test/${model}-block${block}-${layer}-${action}-b${batch}s${sequence}-generic-scheduled-${config}.mlir \
+-pass-pipeline="model-performance{config-path=/home/accelgen/config/$config.json}"

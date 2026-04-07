@@ -177,6 +177,8 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
 
       // ECHO("check clone cluster", "\n")
       for (Operation* op : opClusterWithTensorOp) {
+        ECHO("clone", "\n")
+        op->dump();
         builder.clone(*op, mapper);
       }
 

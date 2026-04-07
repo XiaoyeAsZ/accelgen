@@ -1668,12 +1668,33 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
   std::unordered_map<mlir::Operation*,
                      std::unordered_map<std::string, double_t>>
       statisticDat;
+  llvm::DenseMap<mlir::Operation*, llvm::SmallVector<int64_t>> analysisTileMap;
   for (auto kv : parameter) {
     statisticDat[kv.first]["factor"] = 1;
     statisticDat[kv.first]["flops"] = 0;
     statisticDat[kv.first]["external_access"] = 0;
     statisticDat[kv.first]["sram_access"] = 0;
     statisticDat[kv.first]["cycles"] = 0;
+    auto generic = mlir::dyn_cast<linalg::GenericOp>(kv.first);
+    assert(generic);
+    auto loopBound = parameter[generic]["loop_bound"];
+    auto tilingSize = parameter[generic]["tiling_size"];
+    auto iteratorTypes = generic.getIteratorTypesArray();
+    analysisTileMap[generic] =
+        llvm::SmallVector<int64_t>(generic.getNumLoops());
+    for (auto [idxAnaTileSize, itemAnaTileSize] :
+         llvm::enumerate(analysisTileMap[generic])) {
+      switch (iteratorTypes[idxAnaTileSize]) {
+        case mlir::utils::IteratorType::reduction:
+          analysisTileMap[generic][idxAnaTileSize] = loopBound[idxAnaTileSize];
+          break;
+        case mlir::utils::IteratorType::parallel:
+          analysisTileMap[generic][idxAnaTileSize] = tilingSize[idxAnaTileSize];
+          break;
+        default:
+          break;
+      }
+    }
   }
   std::vector<mlir::Operation*> nodeSetTopOrder = cluster.getNodeSetTopOrder();
 
@@ -1709,20 +1730,23 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     // }
 
     // Analysis tile : least tile size for producing a output tile
-    auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
-    for (auto [idxAnaTileSize, itemAnaTileSize] :
-         llvm::enumerate(analysisTileSize)) {
-      switch (iteratorTypes[idxAnaTileSize]) {
-        case mlir::utils::IteratorType::reduction:
-          analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
-          break;
-        case mlir::utils::IteratorType::parallel:
-          analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
-          break;
-        default:
-          break;
-      }
-    }
+    // auto analysisTileSize =
+    // llvm::SmallVector<int64_t>(genericOp.getNumLoops()); for (auto
+    // [idxAnaTileSize, itemAnaTileSize] :
+    //      llvm::enumerate(analysisTileSize)) {
+    //   switch (iteratorTypes[idxAnaTileSize]) {
+    //     case mlir::utils::IteratorType::reduction:
+    //       analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
+    //       break;
+    //     case mlir::utils::IteratorType::parallel:
+    //       analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    // }
+
+    auto analysisTileSize = analysisTileMap[genericOp];
 
     // Analyze analysis tile size with tiling size to get how many tiles are
     // need for each inputs, i.e. factor, forward this factor to producer
@@ -1748,10 +1772,15 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     }
 
     // FLops for each stage = flops of one analysis tile * n tile (factor)
+    int64_t nArithOp = 0;
+    for (auto& arithOp : genericOp.getRegion().front()) {
+      if (mlir::isa<linalg::YieldOp>(arithOp)) nArithOp++;
+    }
     auto flops =
         std::accumulate(analysisTileSize.begin(), analysisTileSize.end(),
                         int64_t(1), std::multiplies<>());
-    statisticDat[*riter]["flops"] = flops * statisticDat[*riter]["factor"];
+    statisticDat[*riter]["flops"] =
+        flops * statisticDat[*riter]["factor"] * nArithOp;
 
     // Cycles for each stage
     double_t cycles = 1;
@@ -1765,6 +1794,9 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
       // ECHO(dimUnrollFactor, "\n")
       cycles *= ceil(double_t(dimTileSize) / dimUnrollFactor);
     }
+    // if (statisticDat[*riter]["factor"] != 1) {
+    //   (*riter)->dump();
+    // }
     statisticDat[*riter]["cycles"] = cycles * statisticDat[*riter]["factor"];
   }
 
@@ -1781,20 +1813,22 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     auto outerOrder = cluster.getParameter()[op]["outer_order"];
 
     // Analysis tile : least tile size for producing a output tile
-    auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
-    for (auto [idxAnaTileSize, itemAnaTileSize] :
-         llvm::enumerate(analysisTileSize)) {
-      switch (iteratorTypes[idxAnaTileSize]) {
-        case mlir::utils::IteratorType::reduction:
-          analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
-          break;
-        case mlir::utils::IteratorType::parallel:
-          analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
-          break;
-        default:
-          break;
-      }
-    }
+    // auto analysisTileSize =
+    // llvm::SmallVector<int64_t>(genericOp.getNumLoops()); for (auto
+    // [idxAnaTileSize, itemAnaTileSize] :
+    //      llvm::enumerate(analysisTileSize)) {
+    //   switch (iteratorTypes[idxAnaTileSize]) {
+    //     case mlir::utils::IteratorType::reduction:
+    //       analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
+    //       break;
+    //     case mlir::utils::IteratorType::parallel:
+    //       analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    // }
+    auto analysisTileSize = analysisTileMap[genericOp];
 
     // Get dim mask to check whetehr one value is accessed one pass
     llvm::SmallVector<int64_t> dimMask;
@@ -1952,20 +1986,22 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
     auto unrollFactor = cluster.getParameter()[genericOp]["unroll_factor"];
     auto innerOrder = cluster.getParameter()[genericOp]["inner_order"];
 
-    auto analysisTileSize = llvm::SmallVector<int64_t>(genericOp.getNumLoops());
-    for (auto [idxAnaTileSize, itemAnaTileSize] :
-         llvm::enumerate(analysisTileSize)) {
-      switch (iteratorTypes[idxAnaTileSize]) {
-        case mlir::utils::IteratorType::reduction:
-          analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
-          break;
-        case mlir::utils::IteratorType::parallel:
-          analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
-          break;
-        default:
-          break;
-      }
-    }
+    // auto analysisTileSize =
+    // llvm::SmallVector<int64_t>(genericOp.getNumLoops()); for (auto
+    // [idxAnaTileSize, itemAnaTileSize] :
+    //      llvm::enumerate(analysisTileSize)) {
+    //   switch (iteratorTypes[idxAnaTileSize]) {
+    //     case mlir::utils::IteratorType::reduction:
+    //       analysisTileSize[idxAnaTileSize] = loopBound[idxAnaTileSize];
+    //       break;
+    //     case mlir::utils::IteratorType::parallel:
+    //       analysisTileSize[idxAnaTileSize] = tilingSize[idxAnaTileSize];
+    //       break;
+    //     default:
+    //       break;
+    //   }
+    // }
+    auto analysisTileSize = analysisTileMap[genericOp];
 
     llvm::SmallVector<int64_t> mask;
     for (auto [t, u] : llvm::zip(analysisTileSize, unrollFactor)) {
@@ -2036,18 +2072,30 @@ EvaluationMetric PerfModel::evaluate(GenericOpCluster& cluster,
 
   int64_t nOutputTiles = 1;
   for (auto [idxDim, itemDim] : llvm::enumerate(lastStageOutputAccDims)) {
-    auto dimTileSize =
-        cluster.getParameter()[lastStageNode]["tiling_size"][itemDim];
+    // auto dimTileSize =
+    //     cluster.getParameter()[lastStageNode]["tiling_size"][itemDim];
     auto dimLoopBound =
         cluster.getParameter()[lastStageNode]["loop_bound"][itemDim];
+
+    auto analysisDimSize = analysisTileMap[lastStageNode][itemDim];
     // if (dimLoopBound % dimTileSize != 0) {
     //   ECHO(dimLoopBound, "\n")
     //   ECHO(dimTileSize, "\n")
     //   assert(0);
     // }
     // assert(dimLoopBound % dimTileSize == 0);
-    nOutputTiles *= int64_t(ceil(dimLoopBound / double_t(dimTileSize)));
+    nOutputTiles *= int64_t(ceil(dimLoopBound / double_t(analysisDimSize)));
   }
+
+  // if (int64_t(bottleneckCycles * nOutputTiles) == 1024) {
+  //   for (auto node : cluster.getNodeSetTopOrder()) {
+  //     node->dump();
+  //     ECHO_LIST(parameter[node]["tiling_size"], ",")
+  //     ECHO_LIST(parameter[node]["unroll_factor"], ",")
+  //     ECHO_LIST(analysisTileMap[node], ",")
+  //     ECHO(nOutputTiles, "\n")
+  //   }
+  // }
 
   metric.cycles = bottleneckCycles * nOutputTiles;
   metric.externalAccess = externalAccess * nOutputTiles;
@@ -2428,6 +2476,20 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
 
           auto metric = model.evaluate(localCluster, archCfg);
 
+          // ECHO("tiling vec:", "\n")
+          // for (auto [xx, yy] : localCluster.getParameter()) {
+          //   ECHO_LIST(yy["tiling_size"], ",")
+          // }
+          // ECHO("unroll vec:", "\n")
+          // for (auto [xx, yy] : localCluster.getParameter()) {
+          //   ECHO_LIST(yy["unroll_factor"], ",")
+          // }
+          // ECHO(metric.cycles, "\n")
+          // ECHO(metric.flops, "\n")
+          // ECHO(metric.externalAccess, "\n")
+          // ECHO(metric.sramAccess, "\n")
+          // ECHO(metric.eval(), "\n")
+
           if (metric.eval() > threadBest.eval()) {
             // ECHO("tiling vec:", "\n")
             // for (auto [xx, yy] : localCluster.getParameter()) {
@@ -2442,6 +2504,8 @@ EvaluationMetric PruningSolver::solve(GenericOpCluster& cluster,
             // ECHO(metric.externalAccess, "\n")
             // ECHO(metric.sramAccess, "\n")
             // ECHO(metric.eval(), "\n")
+
+            // ECHO("update", "\n")
 
             foundInThread = true;
             threadBest = metric;

@@ -4,8 +4,8 @@ models=("llama3-8b" "qwen3-8b" "gemma-7b")
 actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
-batches=(8)
-lengths=(1024)
+batches=(1 8)
+lengths=(128 256 512 1024 4096)
 
 for model in "${models[@]}"
 do

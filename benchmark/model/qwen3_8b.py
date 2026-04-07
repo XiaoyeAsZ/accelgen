@@ -2,6 +2,7 @@ import torch
 from transformers import AutoConfig, AutoModel
 from transformers.models.qwen3 import Qwen3Model
 from transformers.models.qwen3.modeling_qwen3 import (
+    Qwen3DecoderLayer,
     Qwen3Attention,
     Qwen3MLP,
     apply_rotary_pos_emb,
@@ -76,15 +77,23 @@ class SimpleQwen3MLP(Qwen3MLP):
 
 
 def build_model(
-    batch: int, length: int, action: str, block: int, layer: str, local_path: str = None
+    batch: int,
+    length: int,
+    action: str,
+    block: int,
+    layer: str,
+    device: str = None,
+    local_path: str = None,
 ) -> tuple[torch.nn.Module, torch.Tensor]:
     if local_path:
         model_path = local_path
     else:
         model_path = "Qwen/Qwen3-8B"
     config = AutoConfig.from_pretrained(model_path, attn_implementation="eager")
+    model_block = Qwen3DecoderLayer(config, layer_idx=block)
+    model_block = model_block.to(device=device, dtype=torch.bfloat16)
     if layer == "attention":
-        model = AutoModel.from_config(config).layers[block].self_attn
+        model = model_block.self_attn
         model.__class__ = SimpleQwen3Attention
         model.eval()
         if action == "prefill":
@@ -128,7 +137,7 @@ def build_model(
         else:
             raise NotImplementedError()
     elif layer == "ffn":
-        model = AutoModel.from_config(config).layers[block].mlp
+        model = model_block.mlp
         model.__class__ = SimpleQwen3MLP
         model.eval()
         if action == "prefill":
