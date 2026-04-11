@@ -1,108 +1,107 @@
 architecture:
-  # ============================================================================
-  # Lego - Edge Configuration (Flexible Dataflow)
-  # ============================================================================
-  # SAME hardware as gemmini_edge (DAC 2021) Fig 1:
-  #   DRAM → Scratchpad (banked SRAM) → 2D Systolic Array + Accumulator
-  #
-  # Key difference from gemmini_edge: relaxed mapping constraints.
-  # - No spatial permutation constraint  → mapper can map any dim to X/Y
-  # - No temporal constraints on accumulator/registers → free dataflow
-  # Mapper is free to explore Weight-Stationary, Output-Stationary, etc.
-  # ============================================================================
+  # ============================================================
+  # Architecture Description
+  # ============================================================
   version: 0.4
-  nodes:
-  - !Container
+  nodes: # Top-level is hierarchical
+  - !Container # Top-level system
     name: system
 
-  - !Component
+  - !Component # DRAM main memory
     name: DRAM
     class: DRAM
     attributes:
       type: "LPDDR4"
-      width: 1024             # 128 bytes × 8 = 1024 bits
+      width: 1024
       datawidth: 16
+      read_bandwidth: 128
+      write_bandwidth: 128
 
-  - !Container
-    name: gemmini
+  - !Container # OS accelerator
+    name: simple_os
     attributes:
       technology: "45nm"
 
-  # ========================= Scratchpad (banked SRAM) =======================
-  # Physical wiring: feeds Inputs+Weights to PE array. Same for any dataflow.
-  - !Component
-    name: scratchpad
+  - !Component # Shared global buffer
+    name: shared_glb
     class: smartbuffer_SRAM
     attributes:
-      depth: 65536           # 256 banks × 256 depth
+      depth: 65536
       width: 512
       n_banks: 256
       datawidth: 16
+      read_bandwidth: 256
+      write_bandwidth: 256
     constraints:
-      dataspace: {keep: [Inputs, Weights], bypass: [Outputs]}
+      dataspace: {keep: [Inputs, Weights, Outputs]}
 
-  # ========================= 2D Systolic PE Array ===========================
-  # Same 64×64 hardware as gemmini_edge.
-  # Relaxed: no permutation constraint — mapper decides dimension mapping.
-  - !Container
-    name: PE
-    spatial: {meshX: 64, meshY: 64}
+  - !Container # Spatialize output positions first
+    name: PE_column
+    spatial: {meshX: 64}
     constraints:
       spatial:
+        permutation: []
         factors: [R=1, S=1, Q=1, N=1]
 
-  # ========================= Accumulator (per-PE output buffer) =============
-  # Physical wiring: holds Outputs/partial sums. Same for any dataflow.
-  # Relaxed: no temporal constraints.
-  - !Component
-    name: accumulator
-    class: smartbuffer_SRAM
-    attributes:
-      depth: 192
-      width: 32
-      datawidth: 32
+  - !Container # Then spatialize output channels inside each column
+    name: PE
+    spatial: {meshY: 32}
     constraints:
-      dataspace: {keep: [Outputs], bypass: [Inputs, Weights]}
+      spatial:
+        permutation: []
+        factors: [R=1, S=1, Q=1, N=1]
 
-  # ========================= PE Registers ===================================
-  # Relaxed: no temporal constraints — mapper freely chooses dataflow.
-  - !Parallel
+  - !Parallel # Local operand buffers
     nodes:
-    - !Component
-      name: weight_reg
-      class: storage
-      subclass: aladdin_register
+    - !Component # Input scratchpad
+      name: input_spad
+      class: smartbuffer_SRAM
       attributes:
         depth: 1
         width: 16
         datawidth: 16
+        read_bandwidth: 1
+        write_bandwidth: 1
       constraints:
-        dataspace: {keep: [Weights]}
+        dataspace: {keep: [Inputs], bypass: [Weights, Outputs]}
+        temporal:
+          permutation: [C, M, P, R, S, Q, N, G]
+          factors: [C=1, M=1, P=1, R=1, S=1, Q=1, N=1, G=1]
 
-    - !Component
-      name: input_reg
-      class: storage
-      subclass: aladdin_register
+
+    - !Component # Weight scratchpad
+      name: weight_spad
+      class: smartbuffer_SRAM
       attributes:
         depth: 1
         width: 16
         datawidth: 16
+        read_bandwidth: 1
+        write_bandwidth: 1
       constraints:
-        dataspace: {keep: [Inputs]}
+        dataspace: {keep: [Weights], bypass: [Inputs, Outputs]}
+        temporal:
+          permutation: [C, P, M, R, S, Q, N, G]
+          factors: [C=1, M=1, P=1, R=1, S=1, Q=1, N=1, G=1]
 
-    - !Component
-      name: output_reg
-      class: storage
-      subclass: aladdin_register
+
+    - !Component # Output scratchpad
+      name: output_spad
+      class: smartbuffer_SRAM
       attributes:
         depth: 1
-        width: 32
-        datawidth: 32
+        width: 16
+        datawidth: 16
+        read_bandwidth: 1
+        write_bandwidth: 1
       constraints:
-        dataspace: {keep: [Outputs]}
+        dataspace: {keep: [Outputs], bypass: [Weights, Inputs]}
+        temporal:
+          permutation: [C, P, M, R, S, Q, N, G]
+          factors: [C=1, P=1, M=1, Q=1, N=1, G=1, R=1, S=1]
 
-  # ========================= MAC Unit =======================================
-  - !Component
+
+  - !Component # MAC unit
     name: mac
     class: intmac
     attributes:

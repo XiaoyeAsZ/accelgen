@@ -45,7 +45,6 @@ struct TimeloopResult {
   int64_t computes = 0;
   double utilization = 0.0;
   int64_t dramAccesses = 0;      // DRAM total scalar accesses
-  int64_t sramAccesses = 0;      // on-chip buffer total scalar accesses
   double macEnergyPJ = 0.0;      // MAC compute energy (pJ), for subtracting from datamove total
   bool success = false;
 };
@@ -102,15 +101,10 @@ static std::string generateBatchMatmulProblemYaml(
   oss << "{{include_text('" << problemBasePath << "')}}\n";
   oss << "problem:\n";
   oss << "  <<<: *problem_base\n";
-  oss << "  instance:\n";
-  oss << "    N: " << batch << "\n";
-  oss << "    C: " << K << "\n";
-  oss << "    M: " << N_gemm << "\n";
-  oss << "    R: 1\n";
-  oss << "    S: 1\n";
-  oss << "    P: " << M_gemm << "\n";
-  oss << "    Q: 1\n";
-  oss << "    G: 1\n";
+  oss << "  instance: {G: " << batch
+      << ", P: " << M_gemm
+      << ", M: " << N_gemm
+      << ", C: " << K << "}\n";
   return oss.str();
 }
 
@@ -206,8 +200,6 @@ static TimeloopResult parseTimeloopStats(const std::string& statsPath,
           int64_t acc = std::stoll(accMatch[1].str());
           if (currentLevel == "DRAM") {
             result.dramAccesses = acc;
-          } else if (currentLevel != "inter_PE_spatial") {
-            result.sramAccesses += acc;
           }
           lvlStart = accMatch.suffix().first;
         }
@@ -400,8 +392,26 @@ class ModelBaselineAccelerator
       mlirStem = fn.str();
     }
 
+    // Parse mlirStem into hierarchical directory structure:
+    //   "gemma-7b-block0-attention-prefill-b1s128"
+    //   → model="gemma-7b", layer="attention", phase="prefill", config="b1s128"
+    // Output: baseline_test/<arch>/<model>/<layer>/<phase>/<config>/
+    std::string modelName = "unknown", layerName = "unknown";
+    std::string phaseName = "unknown", configName = "unknown";
+    {
+      std::regex stemRe(R"(^(.+?-\d+b)-block\d+-(\w+)-(\w+)-(\w+)$)");
+      std::smatch stemMatch;
+      if (std::regex_match(mlirStem, stemMatch, stemRe)) {
+        modelName = stemMatch[1].str();
+        layerName = stemMatch[2].str();
+        phaseName = stemMatch[3].str();
+        configName = stemMatch[4].str();
+      }
+    }
+
     std::string outputBase = "baseline_test/" + linearArchName +
-                             "/" + mlirStem;
+                             "/" + modelName + "/" + layerName +
+                             "/" + phaseName + "/" + configName;
 
     // problem_base.yaml provides the YAML anchor *problem_base
     std::string problemBasePath =
@@ -447,6 +457,14 @@ class ModelBaselineAccelerator
                 int64_t K = shapeA[2];
                 int64_t N_gemm = shapeB[2];
 
+                // Override batch based on architecture target:
+                //   "edge" architectures → batch=1
+                //   "server" architectures → batch=8
+                if (linearArchName.find("edge") != std::string::npos)
+                  batch = 1;
+                else if (linearArchName.find("server") != std::string::npos)
+                  batch = 8;
+
                 std::string opName =
                     "batch_matmul_" + std::to_string(batchMatmulIdx++);
 
@@ -486,7 +504,8 @@ class ModelBaselineAccelerator
                 isTypeCastOnly = false;
             }
             // Broadcasts (yield-only body) and type-cast-only → data movement
-            if (bodyOpCount == 0) {
+            // [DISABLED] broadcast: pure replication, no real compute/memory cost
+            if (false && bodyOpCount == 0) {
               // Broadcast: small input → large output, pure data copy
               // Map broadcast dimension to M (Output includes M, Input does not)
               // so Timeloop correctly models input reuse across broadcast dim.
@@ -510,6 +529,18 @@ class ModelBaselineAccelerator
                 Q = inputElems;
               }
 
+              // Override batch (first dim) based on architecture target
+              if (inShape.size() >= 2 && inShape[0] > 0) {
+                int64_t origBatch = inShape[0];
+                int64_t newBatch = origBatch;
+                if (dmArchName.find("edge") != std::string::npos)
+                  newBatch = 1;
+                else if (dmArchName.find("server") != std::string::npos)
+                  newBatch = 8;
+                if (newBatch != origBatch)
+                  P = std::max((int64_t)1, P / origBatch) * newBatch;
+              }
+
               std::string opName = "broadcast_" + std::to_string(datamoveIdx++);
               llvm::errs() << "\n[ModelBaseline] Found " << opName
                            << " (datamove) inputElems=" << inputElems
@@ -527,7 +558,8 @@ class ModelBaselineAccelerator
               results.push_back(result);
               return;
             }
-            if (isTypeCastOnly) {
+            // [DISABLED] type_cast: in-pipeline format conversion, no extra memory round-trip
+            if (false && isTypeCastOnly) {
               auto outputs = genericOp.getOutputs();
               if (outputs.empty()) return;
               auto outShape = getOperandShape(outputs[0]);
@@ -541,6 +573,18 @@ class ModelBaselineAccelerator
               } else {
                 Q = totalElems;
               }
+              // Override batch (first dim) based on architecture target
+              if (outShape.size() >= 2 && outShape[0] > 0) {
+                int64_t origBatch = outShape[0];
+                int64_t newBatch = origBatch;
+                if (dmArchName.find("edge") != std::string::npos)
+                  newBatch = 1;
+                else if (dmArchName.find("server") != std::string::npos)
+                  newBatch = 8;
+                if (newBatch != origBatch)
+                  N = std::max((int64_t)1, N / origBatch) * newBatch;
+              }
+
               std::string opName = "type_cast_" + std::to_string(datamoveIdx++);
               llvm::errs() << "\n[ModelBaseline] Found " << opName
                            << " (datamove) elems=" << totalElems << "\n";
@@ -606,6 +650,18 @@ class ModelBaselineAccelerator
                 N = outShape[0];
               }
 
+              // Override batch (first dim) based on architecture target
+              if (outShape.size() >= 2 && outShape[0] > 0) {
+                int64_t origBatch = outShape[0];
+                int64_t newBatch = origBatch;
+                if (nonlinearArchName.find("edge") != std::string::npos)
+                  newBatch = 1;
+                else if (nonlinearArchName.find("server") != std::string::npos)
+                  newBatch = 8;
+                if (newBatch != origBatch)
+                  N = std::max((int64_t)1, N / origBatch) * newBatch;
+              }
+
               std::string opName =
                   firstName + "_reduction_" + std::to_string(genericIdx++);
 
@@ -647,6 +703,18 @@ class ModelBaselineAccelerator
                 N = outShape[0]; Q = outShape[1];
               } else {
                 Q = outShape[0];
+              }
+
+              // Override batch (first dim) based on architecture target
+              if (outShape.size() >= 2 && outShape[0] > 0) {
+                int64_t origBatch = outShape[0];
+                int64_t newBatch = origBatch;
+                if (nonlinearArchName.find("edge") != std::string::npos)
+                  newBatch = 1;
+                else if (nonlinearArchName.find("server") != std::string::npos)
+                  newBatch = 8;
+                if (newBatch != origBatch)
+                  N = std::max((int64_t)1, N / origBatch) * newBatch;
               }
 
               for (auto& bodyOp : genericOp.getBody()->getOperations()) {
@@ -703,6 +771,18 @@ class ModelBaselineAccelerator
             } else {
               Q = totalElems;
             }
+            // Override batch (first dim) based on architecture target
+            if (outShape.size() >= 2 && outShape[0] > 0) {
+              int64_t origBatch = outShape[0];
+              int64_t newBatch = origBatch;
+              if (dmArchName.find("edge") != std::string::npos)
+                newBatch = 1;
+              else if (dmArchName.find("server") != std::string::npos)
+                newBatch = 8;
+              if (newBatch != origBatch)
+                N = std::max((int64_t)1, N / origBatch) * newBatch;
+            }
+
             std::string opName = "transpose_" + std::to_string(datamoveIdx++);
             llvm::errs() << "\n[ModelBaseline] Found " << opName
                          << " (datamove) elems=" << totalElems << "\n";
@@ -716,151 +796,211 @@ class ModelBaselineAccelerator
             result.archName = dmArchName;
             results.push_back(result);
           })
-          .Case<linalg::FillOp>([&](linalg::FillOp fillOp) {
-            if (skipNonlinear) {
-              llvm::errs() << "\n[ModelBaseline] Skipping fill (skip-nonlinear)\n";
-              return;
-            }
-            auto outShape = getOperandShape(fillOp.getOutputs()[0]);
-            int64_t totalElems = getTotalElements(outShape);
-            int64_t N = 1, P = 1, Q = 1;
-            if (outShape.size() >= 3) {
-              N = outShape[0]; P = outShape[1]; Q = 1;
-              for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
-            } else if (outShape.size() == 2) {
-              P = outShape[0]; Q = outShape[1];
-            } else {
-              Q = totalElems;
-            }
-            std::string opName = "fill_" + std::to_string(datamoveIdx++);
-            llvm::errs() << "\n[ModelBaseline] Found " << opName
-                         << " (datamove) elems=" << totalElems << "\n";
-            std::string problemYaml =
-                generateProblemYaml(problemBasePath, N, 1, P, Q);
-            std::string outDir = outputBase + "/" + opName;
-            auto result = runTimeloop(exampleDesignsDir, dmArchName,
-                                      problemYaml, outDir, opName,
-                                      "datamove");
-            result.ssaName = getSSAName(fillOp, asmState);
-            result.archName = dmArchName;
-            results.push_back(result);
-          })
-          .Case<tensor::ExpandShapeOp>([&](tensor::ExpandShapeOp op) {
-            if (skipNonlinear) {
-              llvm::errs() << "\n[ModelBaseline] Skipping expand_shape (skip-nonlinear)\n";
-              return;
-            }
-            auto outShape = getOperandShape(op.getResult());
-            int64_t totalElems = getTotalElements(outShape);
-            int64_t N = 1, P = 1, Q = 1;
-            if (outShape.size() >= 3) {
-              N = outShape[0]; P = outShape[1]; Q = 1;
-              for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
-            } else if (outShape.size() == 2) {
-              P = outShape[0]; Q = outShape[1];
-            } else {
-              Q = totalElems;
-            }
-            std::string opName = "expand_shape_" + std::to_string(datamoveIdx++);
-            llvm::errs() << "\n[ModelBaseline] Found " << opName
-                         << " (datamove) elems=" << totalElems << "\n";
-            std::string problemYaml =
-                generateProblemYaml(problemBasePath, N, 1, P, Q);
-            std::string outDir = outputBase + "/" + opName;
-            auto result = runTimeloop(exampleDesignsDir, dmArchName,
-                                      problemYaml, outDir, opName,
-                                      "datamove");
-            result.ssaName = getSSAName(op, asmState);
-            result.archName = dmArchName;
-            results.push_back(result);
-          })
-          .Case<tensor::CollapseShapeOp>([&](tensor::CollapseShapeOp op) {
-            if (skipNonlinear) {
-              llvm::errs() << "\n[ModelBaseline] Skipping collapse_shape (skip-nonlinear)\n";
-              return;
-            }
-            auto outShape = getOperandShape(op.getResult());
-            int64_t totalElems = getTotalElements(outShape);
-            int64_t N = 1, P = 1, Q = 1;
-            if (outShape.size() >= 3) {
-              N = outShape[0]; P = outShape[1]; Q = 1;
-              for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
-            } else if (outShape.size() == 2) {
-              P = outShape[0]; Q = outShape[1];
-            } else {
-              Q = totalElems;
-            }
-            std::string opName = "collapse_shape_" + std::to_string(datamoveIdx++);
-            llvm::errs() << "\n[ModelBaseline] Found " << opName
-                         << " (datamove) elems=" << totalElems << "\n";
-            std::string problemYaml =
-                generateProblemYaml(problemBasePath, N, 1, P, Q);
-            std::string outDir = outputBase + "/" + opName;
-            auto result = runTimeloop(exampleDesignsDir, dmArchName,
-                                      problemYaml, outDir, opName,
-                                      "datamove");
-            result.ssaName = getSSAName(op, asmState);
-            result.archName = dmArchName;
-            results.push_back(result);
-          })
-          .Case<tensor::ExtractSliceOp>([&](tensor::ExtractSliceOp op) {
-            if (skipNonlinear) {
-              llvm::errs() << "\n[ModelBaseline] Skipping extract_slice (skip-nonlinear)\n";
-              return;
-            }
-            auto outShape = getOperandShape(op.getResult());
-            int64_t totalElems = getTotalElements(outShape);
-            int64_t N = 1, P = 1, Q = 1;
-            if (outShape.size() >= 3) {
-              N = outShape[0]; P = outShape[1]; Q = 1;
-              for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
-            } else if (outShape.size() == 2) {
-              P = outShape[0]; Q = outShape[1];
-            } else {
-              Q = totalElems;
-            }
-            std::string opName = "extract_slice_" + std::to_string(datamoveIdx++);
-            llvm::errs() << "\n[ModelBaseline] Found " << opName
-                         << " (datamove) elems=" << totalElems << "\n";
-            std::string problemYaml =
-                generateProblemYaml(problemBasePath, N, 1, P, Q);
-            std::string outDir = outputBase + "/" + opName;
-            auto result = runTimeloop(exampleDesignsDir, dmArchName,
-                                      problemYaml, outDir, opName,
-                                      "datamove");
-            result.ssaName = getSSAName(op, asmState);
-            result.archName = dmArchName;
-            results.push_back(result);
-          })
-          .Case<tensor::ConcatOp>([&](tensor::ConcatOp op) {
-            if (skipNonlinear) {
-              llvm::errs() << "\n[ModelBaseline] Skipping concat (skip-nonlinear)\n";
-              return;
-            }
-            auto outShape = getOperandShape(op.getResult());
-            int64_t totalElems = getTotalElements(outShape);
-            int64_t N = 1, P = 1, Q = 1;
-            if (outShape.size() >= 3) {
-              N = outShape[0]; P = outShape[1]; Q = 1;
-              for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
-            } else if (outShape.size() == 2) {
-              P = outShape[0]; Q = outShape[1];
-            } else {
-              Q = totalElems;
-            }
-            std::string opName = "concat_" + std::to_string(datamoveIdx++);
-            llvm::errs() << "\n[ModelBaseline] Found " << opName
-                         << " (datamove) elems=" << totalElems << "\n";
-            std::string problemYaml =
-                generateProblemYaml(problemBasePath, N, 1, P, Q);
-            std::string outDir = outputBase + "/" + opName;
-            auto result = runTimeloop(exampleDesignsDir, dmArchName,
-                                      problemYaml, outDir, opName,
-                                      "datamove");
-            result.ssaName = getSSAName(op, asmState);
-            result.archName = dmArchName;
-            results.push_back(result);
-          })
+          // .Case<linalg::FillOp>([&](linalg::FillOp fillOp) {
+          //   if (skipNonlinear) {
+          //     llvm::errs() << "\n[ModelBaseline] Skipping fill (skip-nonlinear)\n";
+          //     return;
+          //   }
+          //   auto outShape = getOperandShape(fillOp.getOutputs()[0]);
+          //   int64_t totalElems = getTotalElements(outShape);
+          //   int64_t N = 1, P = 1, Q = 1;
+          //   if (outShape.size() >= 3) {
+          //     N = outShape[0]; P = outShape[1]; Q = 1;
+          //     for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
+          //   } else if (outShape.size() == 2) {
+          //     P = outShape[0]; Q = outShape[1];
+          //   } else {
+          //     Q = totalElems;
+          //   }
+          //   // Override batch (first dim) based on architecture target
+          //   if (outShape.size() >= 2 && outShape[0] > 0) {
+          //     int64_t origBatch = outShape[0];
+          //     int64_t newBatch = origBatch;
+          //     if (dmArchName.find("edge") != std::string::npos)
+          //       newBatch = 1;
+          //     else if (dmArchName.find("server") != std::string::npos)
+          //       newBatch = 8;
+          //     if (newBatch != origBatch)
+          //       N = std::max((int64_t)1, N / origBatch) * newBatch;
+          //   }
+
+          //   std::string opName = "fill_" + std::to_string(datamoveIdx++);
+          //   llvm::errs() << "\n[ModelBaseline] Found " << opName
+          //                << " (datamove) elems=" << totalElems << "\n";
+          //   std::string problemYaml =
+          //       generateProblemYaml(problemBasePath, N, 1, P, Q);
+          //   std::string outDir = outputBase + "/" + opName;
+          //   auto result = runTimeloop(exampleDesignsDir, dmArchName,
+          //                             problemYaml, outDir, opName,
+          //                             "datamove");
+          //   result.ssaName = getSSAName(fillOp, asmState);
+          //   result.archName = dmArchName;
+          //   results.push_back(result);
+          // })
+          // .Case<tensor::ExpandShapeOp>([&](tensor::ExpandShapeOp op) {
+          //   if (skipNonlinear) {
+          //     llvm::errs() << "\n[ModelBaseline] Skipping expand_shape (skip-nonlinear)\n";
+          //     return;
+          //   }
+          //   auto outShape = getOperandShape(op.getResult());
+          //   int64_t totalElems = getTotalElements(outShape);
+          //   int64_t N = 1, P = 1, Q = 1;
+          //   if (outShape.size() >= 3) {
+          //     N = outShape[0]; P = outShape[1]; Q = 1;
+          //     for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
+          //   } else if (outShape.size() == 2) {
+          //     P = outShape[0]; Q = outShape[1];
+          //   } else {
+          //     Q = totalElems;
+          //   }
+          //   // Override batch (first dim) based on architecture target
+          //   if (outShape.size() >= 2 && outShape[0] > 0) {
+          //     int64_t origBatch = outShape[0];
+          //     int64_t newBatch = origBatch;
+          //     if (dmArchName.find("edge") != std::string::npos)
+          //       newBatch = 1;
+          //     else if (dmArchName.find("server") != std::string::npos)
+          //       newBatch = 8;
+          //     if (newBatch != origBatch)
+          //       N = std::max((int64_t)1, N / origBatch) * newBatch;
+          //   }
+
+          //   std::string opName = "expand_shape_" + std::to_string(datamoveIdx++);
+          //   llvm::errs() << "\n[ModelBaseline] Found " << opName
+          //                << " (datamove) elems=" << totalElems << "\n";
+          //   std::string problemYaml =
+          //       generateProblemYaml(problemBasePath, N, 1, P, Q);
+          //   std::string outDir = outputBase + "/" + opName;
+          //   auto result = runTimeloop(exampleDesignsDir, dmArchName,
+          //                             problemYaml, outDir, opName,
+          //                             "datamove");
+          //   result.ssaName = getSSAName(op, asmState);
+          //   result.archName = dmArchName;
+          //   results.push_back(result);
+          // })
+          // .Case<tensor::CollapseShapeOp>([&](tensor::CollapseShapeOp op) {
+          //   if (skipNonlinear) {
+          //     llvm::errs() << "\n[ModelBaseline] Skipping collapse_shape (skip-nonlinear)\n";
+          //     return;
+          //   }
+          //   auto outShape = getOperandShape(op.getResult());
+          //   int64_t totalElems = getTotalElements(outShape);
+          //   int64_t N = 1, P = 1, Q = 1;
+          //   if (outShape.size() >= 3) {
+          //     N = outShape[0]; P = outShape[1]; Q = 1;
+          //     for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
+          //   } else if (outShape.size() == 2) {
+          //     P = outShape[0]; Q = outShape[1];
+          //   } else {
+          //     Q = totalElems;
+          //   }
+          //   // Override batch (first dim) based on architecture target
+          //   if (outShape.size() >= 2 && outShape[0] > 0) {
+          //     int64_t origBatch = outShape[0];
+          //     int64_t newBatch = origBatch;
+          //     if (dmArchName.find("edge") != std::string::npos)
+          //       newBatch = 1;
+          //     else if (dmArchName.find("server") != std::string::npos)
+          //       newBatch = 8;
+          //     if (newBatch != origBatch)
+          //       N = std::max((int64_t)1, N / origBatch) * newBatch;
+          //   }
+
+          //   std::string opName = "collapse_shape_" + std::to_string(datamoveIdx++);
+          //   llvm::errs() << "\n[ModelBaseline] Found " << opName
+          //                << " (datamove) elems=" << totalElems << "\n";
+          //   std::string problemYaml =
+          //       generateProblemYaml(problemBasePath, N, 1, P, Q);
+          //   std::string outDir = outputBase + "/" + opName;
+          //   auto result = runTimeloop(exampleDesignsDir, dmArchName,
+          //                             problemYaml, outDir, opName,
+          //                             "datamove");
+          //   result.ssaName = getSSAName(op, asmState);
+          //   result.archName = dmArchName;
+          //   results.push_back(result);
+          // })
+          // .Case<tensor::ExtractSliceOp>([&](tensor::ExtractSliceOp op) {
+          //   if (skipNonlinear) {
+          //     llvm::errs() << "\n[ModelBaseline] Skipping extract_slice (skip-nonlinear)\n";
+          //     return;
+          //   }
+          //   auto outShape = getOperandShape(op.getResult());
+          //   int64_t totalElems = getTotalElements(outShape);
+          //   int64_t N = 1, P = 1, Q = 1;
+          //   if (outShape.size() >= 3) {
+          //     N = outShape[0]; P = outShape[1]; Q = 1;
+          //     for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
+          //   } else if (outShape.size() == 2) {
+          //     P = outShape[0]; Q = outShape[1];
+          //   } else {
+          //     Q = totalElems;
+          //   }
+          //   // Override batch (first dim) based on architecture target
+          //   if (outShape.size() >= 2 && outShape[0] > 0) {
+          //     int64_t origBatch = outShape[0];
+          //     int64_t newBatch = origBatch;
+          //     if (dmArchName.find("edge") != std::string::npos)
+          //       newBatch = 1;
+          //     else if (dmArchName.find("server") != std::string::npos)
+          //       newBatch = 8;
+          //     if (newBatch != origBatch)
+          //       N = std::max((int64_t)1, N / origBatch) * newBatch;
+          //   }
+
+          //   std::string opName = "extract_slice_" + std::to_string(datamoveIdx++);
+          //   llvm::errs() << "\n[ModelBaseline] Found " << opName
+          //                << " (datamove) elems=" << totalElems << "\n";
+          //   std::string problemYaml =
+          //       generateProblemYaml(problemBasePath, N, 1, P, Q);
+          //   std::string outDir = outputBase + "/" + opName;
+          //   auto result = runTimeloop(exampleDesignsDir, dmArchName,
+          //                             problemYaml, outDir, opName,
+          //                             "datamove");
+          //   result.ssaName = getSSAName(op, asmState);
+          //   result.archName = dmArchName;
+          //   results.push_back(result);
+          // })
+          // .Case<tensor::ConcatOp>([&](tensor::ConcatOp op) {
+          //   if (skipNonlinear) {
+          //     llvm::errs() << "\n[ModelBaseline] Skipping concat (skip-nonlinear)\n";
+          //     return;
+          //   }
+          //   auto outShape = getOperandShape(op.getResult());
+          //   int64_t totalElems = getTotalElements(outShape);
+          //   int64_t N = 1, P = 1, Q = 1;
+          //   if (outShape.size() >= 3) {
+          //     N = outShape[0]; P = outShape[1]; Q = 1;
+          //     for (size_t i = 2; i < outShape.size(); i++) Q *= outShape[i];
+          //   } else if (outShape.size() == 2) {
+          //     P = outShape[0]; Q = outShape[1];
+          //   } else {
+          //     Q = totalElems;
+          //   }
+          //   // Override batch (first dim) based on architecture target
+          //   if (outShape.size() >= 2 && outShape[0] > 0) {
+          //     int64_t origBatch = outShape[0];
+          //     int64_t newBatch = origBatch;
+          //     if (dmArchName.find("edge") != std::string::npos)
+          //       newBatch = 1;
+          //     else if (dmArchName.find("server") != std::string::npos)
+          //       newBatch = 8;
+          //     if (newBatch != origBatch)
+          //       N = std::max((int64_t)1, N / origBatch) * newBatch;
+          //   }
+
+          //   std::string opName = "concat_" + std::to_string(datamoveIdx++);
+          //   llvm::errs() << "\n[ModelBaseline] Found " << opName
+          //                << " (datamove) elems=" << totalElems << "\n";
+          //   std::string problemYaml =
+          //       generateProblemYaml(problemBasePath, N, 1, P, Q);
+          //   std::string outDir = outputBase + "/" + opName;
+          //   auto result = runTimeloop(exampleDesignsDir, dmArchName,
+          //                             problemYaml, outDir, opName,
+          //                             "datamove");
+          //   result.ssaName = getSSAName(op, asmState);
+          //   result.archName = dmArchName;
+          //   results.push_back(result);
+          // })
           .Default([](mlir::Operation*) {});
     });
 
@@ -898,30 +1038,35 @@ class ModelBaselineAccelerator
     int successCount = 0;
     int64_t totalCycles = 0;
     double totalEnergy = 0.0;
-    int64_t totalComputes = 0;
+    int64_t linComputes = 0;   // MACs (each MAC = 2 FLOPs)
+    int64_t elemComputes = 0;  // elementwise ops (each = 1 FLOP)
 
     // ---- Linear ops ----
     llvm::errs() << "\n--- Linear Ops (" << linearArchName << ") ---\n";
     llvm::errs() << "SSA        Operator                       "
-                 << "Cycles\tEnergy(uJ)\tComputes\tUtil%\n";
+                 << "Cycles\tEnergy(uJ)\tComputes\tUtil%\tDRAM_Acc\n";
     llvm::errs() << std::string(100, '-') << "\n";
-    int64_t linCycles = 0; double linEnergy = 0;
+    int64_t linCycles = 0; double linEnergy = 0; int64_t linDramAcc = 0;
     for (auto* r : linearResults) {
       pad(llvm::errs(), r->ssaName, 11);
       pad(llvm::errs(), r->opName, 31);
       if (r->success) {
         llvm::errs() << r->cycles << "\t" << r->energyUJ << "\t"
-                     << r->computes << "\t" << r->utilization << "%\n";
+                     << r->computes << "\t" << r->utilization << "%\t"
+                     << r->dramAccesses << "\n";
         linCycles += r->cycles; linEnergy += r->energyUJ;
         totalCycles += r->cycles; totalEnergy += r->energyUJ;
-        totalComputes += r->computes; successCount++;
+        linComputes += r->computes;
+        linDramAcc += r->dramAccesses;
+        successCount++;
       } else {
         llvm::errs() << "FAILED\n";
       }
     }
     llvm::errs() << std::string(100, '-') << "\n";
     llvm::errs() << "  Linear total: Cycles=" << linCycles
-                 << "  Energy=" << linEnergy << " uJ\n\n";
+                 << "  Energy=" << linEnergy << " uJ"
+                 << "  DRAM_Acc=" << linDramAcc << "\n\n";
 
     // ---- Elementwise ops ----
     llvm::errs() << "--- Elementwise Ops (" << nonlinearArchName << ") ---\n";
@@ -937,7 +1082,7 @@ class ModelBaselineAccelerator
                      << r->computes << "\t" << r->utilization << "%\n";
         elemCycles += r->cycles; elemEnergy += r->energyUJ;
         totalCycles += r->cycles; totalEnergy += r->energyUJ;
-        totalComputes += r->computes; successCount++;
+        elemComputes += r->computes; successCount++;
       } else {
         llvm::errs() << "FAILED\n";
       }
@@ -949,10 +1094,10 @@ class ModelBaselineAccelerator
     // ---- Data movement ops ----
     llvm::errs() << "--- Data Movement Ops (" << dmArchName << ") ---\n";
     llvm::errs() << "SSA        Operator                       "
-                 << "Cycles\tEnergy(uJ)\tMemEnergy(uJ)\tMacEnergy(pJ)\tDRAM_Acc\tSRAM_Acc\n";
+                 << "Cycles\tEnergy(uJ)\tMemEnergy(uJ)\tMacEnergy(pJ)\tDRAM_Acc\n";
     llvm::errs() << std::string(120, '-') << "\n";
     int64_t dmCycles = 0; double dmEnergy = 0; double dmMemEnergy = 0;
-    int64_t totalDramAcc = 0, totalSramAcc = 0;
+    int64_t totalDramAcc = linDramAcc;  // start with linear DRAM access
     for (auto* r : datamoveResults) {
       pad(llvm::errs(), r->ssaName, 11);
       pad(llvm::errs(), r->opName, 31);
@@ -961,11 +1106,12 @@ class ModelBaselineAccelerator
         if (memEnergyUJ < 0) memEnergyUJ = 0;
         llvm::errs() << r->cycles << "\t" << r->energyUJ << "\t"
                      << memEnergyUJ << "\t" << r->macEnergyPJ << "\t"
-                     << r->dramAccesses << "\t" << r->sramAccesses << "\n";
+                     << r->dramAccesses << "\n";
         dmCycles += r->cycles; dmEnergy += r->energyUJ;
         dmMemEnergy += memEnergyUJ;
-        totalCycles += r->cycles; totalEnergy += memEnergyUJ;  // use mem-only energy
-        totalDramAcc += r->dramAccesses; totalSramAcc += r->sramAccesses;
+        // Datamove energy NOT included in grand total;
+        // datamove is only for DRAM access statistics.
+        totalDramAcc += r->dramAccesses;
         successCount++;
       } else {
         llvm::errs() << "FAILED\n";
@@ -975,15 +1121,38 @@ class ModelBaselineAccelerator
     llvm::errs() << "  Datamove total: Cycles=" << dmCycles
                  << "  MemEnergy=" << dmMemEnergy << " uJ"
                  << "  (TotalEnergy=" << dmEnergy << " uJ)"
-                 << "  DRAM_Acc=" << totalDramAcc
-                 << "  SRAM_Acc=" << totalSramAcc << "\n\n";
+                 << "  DRAM_Acc=" << totalDramAcc << "\n\n";
+
+    // Include datamove cycles in total latency
+    totalCycles += dmCycles;
 
     // ---- Grand total ----
+    // FLOPs: linear MACs × 2 + elementwise computes × 1
+    // Latency: linear + elementwise + datamove cycles @ 1GHz (1ns per cycle)
+    // Energy: linear + elementwise only (datamove excluded)
+    int64_t totalFLOPs = 2 * linComputes + elemComputes;
+    double latencyUs = totalCycles * 1e-3;   // cycles × 1ns = ns, /1000 = us
+    double latencyMs = totalCycles * 1e-6;   // ns → ms
+    double throughputGFLOPS = (totalCycles > 0)
+        ? (double)totalFLOPs / (double)totalCycles  // FLOP / cycle @ 1GHz = GFLOPS
+        : 0.0;
+    double energyEfficiency = (totalEnergy > 0)
+        ? (double)totalFLOPs / (totalEnergy * 1e-6)  // FLOP / J = FLOPS/J
+        : 0.0;
+    double energyEffGFLOPSperJ = energyEfficiency / 1e9;  // → GFLOPS/J
+
     llvm::errs()
         << "================================================================\n";
-    llvm::errs() << "  GRAND TOTAL: Cycles=" << totalCycles
-                 << "  Energy=" << totalEnergy << " uJ"
-                 << "  Computes=" << totalComputes << "\n";
+    llvm::errs() << "  GRAND TOTAL (linear + elementwise + datamove):\n";
+    llvm::errs() << "    Latency:            " << totalCycles << " cycles"
+                 << " (" << latencyUs << " us, " << latencyMs << " ms)\n";
+    llvm::errs() << "    Energy:             " << totalEnergy << " uJ\n";
+    llvm::errs() << "    FLOPs:              " << totalFLOPs
+                 << " (linear_MACs=" << linComputes
+                 << ", elem_ops=" << elemComputes << ")\n";
+    llvm::errs() << "    Throughput:         " << throughputGFLOPS << " GFLOPS\n";
+    llvm::errs() << "    Energy Efficiency:  " << energyEffGFLOPSperJ << " GFLOPS/J\n";
+    llvm::errs() << "    DRAM Access (dm):   " << totalDramAcc << "\n";
     llvm::errs() << "  Operators: " << results.size()
                  << "  (linear=" << linearResults.size()
                  << "  elem=" << elemResults.size()
