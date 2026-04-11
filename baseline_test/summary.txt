@@ -1,5 +1,5 @@
 ================================================================================
-  Baseline Test Summary — 2026-04-11 09:10:52
+  Baseline Test Summary — 2026-04-11 12:54:01
 ================================================================================
 
 
@@ -5514,7 +5514,7 @@
 ######################################################################
 # Architecture: gemmini_ws_server
 #   PPU: PPU_server  DM: PPU_datamove_server
-#   Workloads: 59
+#   Workloads: 60
 ######################################################################
 
   Workload: gemma-7b-block0-attention-decode-b8s1024
@@ -7278,6 +7278,25 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=4907008 cycles  Energy=1149929.0000 uJ  FLOPs=309363474432  Thpt=63045.2400 GFLOPS  Eff=269.0284 GFLOPS/J  DRAM=7348420614 B  OK=12 Fail=0
 
+  Workload: qwen3-8b-block0-ffn-prefill-b8s256
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 gemmini_ws_server         51.6%        1523712    629373.8000      444596224
+    linear         %9         batch_matmul_1                 gemmini_ws_server         51.6%        1523712    629373.8000      444596224
+    linear         %16        batch_matmul_2                 gemmini_ws_server         50.5%        1556480    635491.5000      469762048
+    elementwise    %6         negf_0                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         exp_1                          PPU_server               100.0%         245760     50289.0500              -
+    elementwise    %6         addf_2                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         divf_3                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%          49152     11336.5500              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=7454720 cycles  Energy=2001211.0000 uJ  FLOPs=618726948864  Thpt=82998.0100 GFLOPS  Eff=309.1763 GFLOPS/J  DRAM=7549747206 B  OK=12 Fail=0
+
   Workload: qwen3-8b-block0-ffn-prefill-b8s4096
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -7317,7 +7336,7 @@
     Summary: Latency=12713984 cycles  Energy=3701632.0000 uJ  FLOPs=1237453897728  Thpt=97330.1400 GFLOPS  Eff=334.2995 GFLOPS/J  DRAM=7918845958 B  OK=12 Fail=0
 
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  gemmini_ws_server TOTAL: Latency=3692119378 cycles  Energy=255114216.9100 uJ  FLOPs=66116033978176  Thpt=17907.3392 GFLOPS  Eff=259.1625 GFLOPS/J  DRAM_Acc=411867435722 B  Workloads=59
+  gemmini_ws_server TOTAL: Latency=3699574098 cycles  Energy=257115427.9100 uJ  FLOPs=66734760927040  Thpt=18038.4983 GFLOPS  Eff=259.5518 GFLOPS/J  DRAM_Acc=419417182928 B  Workloads=60
 
 
 ######################################################################
@@ -9163,8 +9182,45 @@
 ######################################################################
 # Architecture: lego_server
 #   PPU: PPU_server  DM: PPU_datamove_server
-#   Workloads: 32
+#   Workloads: 60
 ######################################################################
+
+  Workload: gemma-7b-block0-attention-decode-b8s1024
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %7         batch_matmul_0                 lego_server                0.8%          98424     26069.0400      100786176
+    linear         %10        batch_matmul_1                 lego_server                0.8%          98424     26069.0400      100786176
+    linear         %12        batch_matmul_2                 lego_server                0.8%          98424     26069.0400      100786176
+    linear         %26        batch_matmul_3                 lego_server                0.8%           2058       545.0600        2107392
+    linear         %47        batch_matmul_4                 lego_server                0.8%           2062       545.9400        2111488
+    linear         %54        batch_matmul_5                 lego_server                0.8%          98432     26063.3700      100720640
+    elementwise    %13        mulf_0                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %15        negf_1                         PPU_server                50.0%             64         7.4500              -
+    elementwise    %16        mulf_2                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %17        addf_3                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %18        mulf_4                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %19        negf_5                         PPU_server                50.0%             64         7.4500              -
+    elementwise    %20        mulf_6                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %21        addf_7                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %28        mulf_8                         PPU_server               100.0%            256        59.1100              -
+    elementwise    %29        addf_9                         PPU_server               100.0%            256        59.1100              -
+    elementwise    %36:2      maximumf_reduction_10          PPU_server                 6.2%          12288       103.3600              -
+    elementwise    %37        subf_11                        PPU_server               100.0%            256        59.1100              -
+    elementwise    %38        exp_12                         PPU_server                12.5%          10240       261.9900              -
+    elementwise    %41        addf_reduction_13              PPU_server                12.5%           2048        34.8400              -
+    elementwise    %42        divf_14                        PPU_server               100.0%            256        59.1100              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_18 transpose_6                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_28 transpose_7                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_29 transpose_8                    PPU_datamove_server           -         196608     45311.1300      201326593
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=1276544 cycles  Energy=106102.0000 uJ  FLOPs=815628288  Thpt=638.9347 GFLOPS  Eff=7.6872 GFLOPS/J  DRAM=2559950866 B  OK=30 Fail=0
 
   Workload: gemma-7b-block0-attention-decode-b8s128
   ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -9314,6 +9370,43 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=1222008 cycles  Energy=105213.4000 uJ  FLOPs=810582016  Thpt=663.3197 GFLOPS  Eff=7.7042 GFLOPS/J  DRAM=2488623122 B  OK=30 Fail=0
 
+  Workload: gemma-7b-block0-attention-prefill-b8s1024
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               38.1%        2064384    730857.6000      536870912
+    linear         %8         batch_matmul_1                 lego_server               38.1%        2064384    730857.6000      536870912
+    linear         %10        batch_matmul_2                 lego_server               38.1%        2064384    730857.6000      536870912
+    linear         %23        batch_matmul_3                 lego_server               50.0%          32768     14633.9800       18874368
+    linear         %43        batch_matmul_4                 lego_server               29.6%          55296     16464.8500       12582912
+    linear         %50        batch_matmul_5                 lego_server               22.2%        3547137    944719.6000      310378496
+    elementwise    %11        mulf_0                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %13        negf_1                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %14        mulf_2                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %15        addf_3                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %16        mulf_4                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %17        negf_5                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %18        mulf_6                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %19        addf_7                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %25        mulf_8                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %26        addf_9                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %33:2      maximumf_reduction_10          PPU_server               100.0%         786432    111227.7000              -
+    elementwise    %34        subf_11                        PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %35        exp_12                         PPU_server               100.0%        1310720    200190.3000              -
+    elementwise    %38        addf_reduction_13              PPU_server                50.0%         524288     51945.3000              -
+    elementwise    %39        divf_14                        PPU_server               100.0%         262144     60461.3100              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_16 transpose_6                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_23 transpose_7                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_25 transpose_8                    PPU_datamove_server           -         196608     45311.1300      201326593
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=15071233 cycles  Energy=3879407.0000 uJ  FLOPs=835203366912  Thpt=55417.0600 GFLOPS  Eff=215.2915 GFLOPS/J  DRAM=6186598418 B  OK=30 Fail=0
+
   Workload: gemma-7b-block0-attention-prefill-b8s128
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -9388,6 +9481,80 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=5135360 cycles  Energy=969992.4000 uJ  FLOPs=206863073280  Thpt=40282.1000 GFLOPS  Eff=213.2626 GFLOPS/J  DRAM=2873098258 B  OK=30 Fail=0
 
+  Workload: gemma-7b-block0-attention-prefill-b8s4096
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               17.8%       17694720   3494957.0000     2315255808
+    linear         %8         batch_matmul_1                 lego_server               17.8%       17694720   3494957.0000     2315255808
+    linear         %10        batch_matmul_2                 lego_server               17.8%       17694720   3494957.0000     2315255808
+    linear         %23        batch_matmul_3                 lego_server               18.2%        1441792    352056.1000      419430400
+    linear         %43        batch_matmul_4                 lego_server               20.1%        1302528    274328.9000      150994944
+    linear         %49        batch_matmul_5                 lego_server               43.8%        7176192   2430459.0000      671088640
+    elementwise    %11        mulf_0                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %13        negf_1                         PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %14        mulf_2                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %15        addf_3                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %16        mulf_4                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %17        negf_5                         PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %18        mulf_6                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %19        addf_7                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %25        mulf_8                         PPU_server                 3.1%      134217728    967430.5000              -
+    elementwise    %26        addf_9                         PPU_server                 3.1%      134217728    967430.5000              -
+    elementwise    %33:2      maximumf_reduction_10          PPU_server                25.0%       50331648   1780963.0000              -
+    elementwise    %34        subf_11                        PPU_server                 3.1%      134217728    967430.5000              -
+    elementwise    %35        exp_12                         PPU_server                50.0%       41943040   4291301.0000              -
+    elementwise    %38        addf_reduction_13              PPU_server                50.0%        8388608    831036.7000              -
+    elementwise    %39        divf_14                        PPU_server                 3.1%      134217728    967430.5000              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_16 transpose_6                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_23 transpose_7                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_25 transpose_8                    PPU_datamove_server           -         196608     45311.1300      201326593
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=704471040 cycles  Energy=24737970.0000 uJ  FLOPs=3464830648320  Thpt=4918.3440 GFLOPS  Eff=140.0613 GFLOPS/J  DRAM=20669530130 B  OK=30 Fail=0
+
+  Workload: gemma-7b-block0-attention-prefill-b8s512
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               20.0%        1961984    540445.3000      834666496
+    linear         %8         batch_matmul_1                 lego_server               20.0%        1961984    540445.3000      834666496
+    linear         %10        batch_matmul_2                 lego_server               20.0%        1961984    540445.3000      834666496
+    linear         %23        batch_matmul_3                 lego_server               18.2%          22528      6056.2000       11534336
+    linear         %43        batch_matmul_4                 lego_server               25.0%          16384      5112.7400        6291456
+    linear         %50        batch_matmul_5                 lego_server               16.8%        2347008    498584.8000      482344960
+    elementwise    %11        mulf_0                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %13        negf_1                         PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %14        mulf_2                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %15        addf_3                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %16        mulf_4                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %17        negf_5                         PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %18        mulf_6                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %19        addf_7                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %25        mulf_8                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %26        addf_9                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %33:2      maximumf_reduction_10          PPU_server               100.0%         196608     26780.9200              -
+    elementwise    %34        subf_11                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %35        exp_12                         PPU_server               100.0%         327680     67051.6400              -
+    elementwise    %38        addf_reduction_13              PPU_server               100.0%          65536      9276.3000              -
+    elementwise    %39        divf_14                        PPU_server               100.0%          65536     15115.3800              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -         196608     45311.1300      201326593
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_16 transpose_6                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_23 transpose_7                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_25 transpose_8                    PPU_datamove_server           -         196608     45311.1300      201326593
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=10303488 cycles  Energy=2347564.0000 uJ  FLOPs=415017992192  Thpt=40279.3700 GFLOPS  Eff=176.7867 GFLOPS/J  DRAM=7954497554 B  OK=30 Fail=0
+
   Workload: gemma-7b-block0-ffn-decode-b8s1024
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -9448,6 +9615,26 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=5319528 cycles  Energy=470861.0000 uJ  FLOPs=3626434560  Thpt=681.7211 GFLOPS  Eff=7.7017 GFLOPS/J  DRAM=10877976582 B  OK=13 Fail=0
 
+  Workload: gemma-7b-block0-ffn-decode-b8s4096
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %7         batch_matmul_0                 lego_server                0.8%         592704    156719.6000      605380608
+    linear         %10        batch_matmul_1                 lego_server                0.8%         592704    156719.6000      605380608
+    linear         %17        batch_matmul_2                 lego_server                0.8%         590184    156344.9000      604348416
+    elementwise    %8         sqrt_0                         PPU_server               100.0%           1152       240.7900              -
+    elementwise    %8         divf_1                         PPU_server               100.0%            384        88.6300              -
+    elementwise    %8         erf_2                          PPU_server               100.0%           1920       392.9500              -
+    elementwise    %8         addf_3                         PPU_server               100.0%            384        88.6300              -
+    elementwise    %8         mulf_4                         PPU_server               100.0%            384        88.6300              -
+    elementwise    %8         mulf_5                         PPU_server               100.0%            384        88.6300              -
+    elementwise    %11        mulf_6                         PPU_server               100.0%            384        88.6300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=5319528 cycles  Energy=470861.0000 uJ  FLOPs=3626434560  Thpt=681.7211 GFLOPS  Eff=7.7017 GFLOPS/J  DRAM=10877976582 B  OK=13 Fail=0
+
   Workload: gemma-7b-block0-ffn-decode-b8s512
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -9487,6 +9674,46 @@
     datamove       %transposed_4 transpose_2                    PPU_datamove_server           -        1179648    271866.4000     1207959553
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=95813633 cycles  Energy=18148640.0000 uJ  FLOPs=3713468989440  Thpt=38757.2100 GFLOPS  Eff=204.6142 GFLOPS/J  DRAM=49476009990 B  OK=13 Fail=0
+
+  Workload: gemma-7b-block0-ffn-prefill-b8s128
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               25.3%        2334720    671467.9000      729808896
+    linear         %8         batch_matmul_1                 lego_server               25.3%        2334720    671467.9000      729808896
+    linear         %15        batch_matmul_2                 lego_server               17.7%        3339264    846430.5000     1028653056
+    elementwise    %6         sqrt_0                         PPU_server               100.0%         147456     30812.6100              -
+    elementwise    %6         divf_1                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         erf_2                          PPU_server               100.0%         245760     50288.8100              -
+    elementwise    %6         addf_3                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         mulf_4                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         mulf_5                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %9         mulf_6                         PPU_server               100.0%          49152     11336.5500              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=12186624 cycles  Energy=2327150.0000 uJ  FLOPs=464183623680  Thpt=38089.6000 GFLOPS  Eff=199.4644 GFLOPS/J  DRAM=12224299014 B  OK=13 Fail=0
+
+  Workload: gemma-7b-block0-ffn-prefill-b8s256
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               23.3%        5062656   1423588.0000     1365245952
+    linear         %8         batch_matmul_1                 lego_server               23.3%        5062656   1423588.0000     1365245952
+    linear         %15        batch_matmul_2                 lego_server               10.0%       11790336   2740072.0000     5140119552
+    elementwise    %6         sqrt_0                         PPU_server                75.0%         393216     48872.2600              -
+    elementwise    %6         divf_1                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %6         erf_2                          PPU_server                50.0%         983040    100577.7000              -
+    elementwise    %6         addf_3                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %6         mulf_4                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %6         mulf_5                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %9         mulf_6                         PPU_server               100.0%          98304     22673.0300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -        1179648    271866.4000     1207959553
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=27322368 cycles  Energy=5850063.0000 uJ  FLOPs=928367247360  Thpt=33978.2900 GFLOPS  Eff=158.6936 GFLOPS/J  DRAM=22988980230 B  OK=13 Fail=0
 
   Workload: gemma-7b-block0-ffn-prefill-b8s4096
   ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -9557,6 +9784,43 @@
     datamove       %transposed_30 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=1071788 cycles  Energy=88689.6600 uJ  FLOPs=678834176  Thpt=633.3661 GFLOPS  Eff=7.6540 GFLOPS/J  DRAM=2152468498 B  OK=30 Fail=0
+
+  Workload: llama3-8b-block0-attention-decode-b8s128
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %6         batch_matmul_0                 lego_server                0.8%         131584     34771.8400      134283264
+    linear         %13        batch_matmul_1                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %16        batch_matmul_2                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %34        batch_matmul_3                 lego_server                0.8%            131        34.5600         133120
+    linear         %52        batch_matmul_4                 lego_server                0.8%            131        34.5600         133120
+    linear         %56        batch_matmul_5                 lego_server                0.8%         131584     34771.8400      134283264
+    elementwise    %17        mulf_0                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %19        negf_1                         PPU_server                25.0%            128         7.4500              -
+    elementwise    %20        mulf_2                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %21        addf_3                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %22        mulf_4                         PPU_server                25.0%             64         3.7600              -
+    elementwise    %24        negf_5                         PPU_server                25.0%             32         1.9100              -
+    elementwise    %25        mulf_6                         PPU_server                25.0%             64         3.7600              -
+    elementwise    %26        addf_7                         PPU_server                25.0%             64         3.7600              -
+    elementwise    %35        mulf_8                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %36        addf_9                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %43:2      maximumf_reduction_10          PPU_server                12.5%           1536        26.7400              -
+    elementwise    %44        subf_11                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %45        exp_12                         PPU_server                50.0%            640        48.9400              -
+    elementwise    %48        addf_reduction_13              PPU_server                12.5%            512         8.7100              -
+    elementwise    %49        divf_14                        PPU_server                50.0%            128        14.8300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_19 transpose_6                    PPU_datamove_server           -           8192      1888.0300        8388609
+    datamove       %transposed_29 transpose_7                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_30 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=996886 cycles  Energy=87214.4600 uJ  FLOPs=672182272  Thpt=674.2820 GFLOPS  Eff=7.7072 GFLOPS/J  DRAM=2031329298 B  OK=30 Fail=0
 
   Workload: llama3-8b-block0-attention-decode-b8s256
   ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -9632,6 +9896,80 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=1339617 cycles  Energy=93748.3800 uJ  FLOPs=701640704  Thpt=523.7622 GFLOPS  Eff=7.4843 GFLOPS/J  DRAM=2567802898 B  OK=30 Fail=0
 
+  Workload: llama3-8b-block0-attention-decode-b8s512
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %6         batch_matmul_0                 lego_server                0.8%         131584     34771.8400      134283264
+    linear         %13        batch_matmul_1                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %16        batch_matmul_2                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %34        batch_matmul_3                 lego_server                0.8%            517       136.6600         529408
+    linear         %55        batch_matmul_4                 lego_server                0.8%            519       137.3300         531456
+    linear         %59        batch_matmul_5                 lego_server                0.8%         131584     34771.8400      134283264
+    elementwise    %17        mulf_0                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %19        negf_1                         PPU_server                25.0%            128         7.4500              -
+    elementwise    %20        mulf_2                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %21        addf_3                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %22        mulf_4                         PPU_server                25.0%             64         3.7600              -
+    elementwise    %24        negf_5                         PPU_server                25.0%             32         1.9100              -
+    elementwise    %25        mulf_6                         PPU_server                25.0%             64         3.7600              -
+    elementwise    %26        addf_7                         PPU_server                25.0%             64         3.7600              -
+    elementwise    %36        mulf_8                         PPU_server               100.0%            256        59.1100              -
+    elementwise    %37        addf_9                         PPU_server               100.0%            256        59.1100              -
+    elementwise    %44:2      maximumf_reduction_10          PPU_server                 6.2%          12288       103.3300              -
+    elementwise    %45        subf_11                        PPU_server               100.0%            256        59.1100              -
+    elementwise    %46        exp_12                         PPU_server               100.0%           1280       261.9900              -
+    elementwise    %49        addf_reduction_13              PPU_server                12.5%           2048        36.3800              -
+    elementwise    %50        divf_14                        PPU_server               100.0%            256        59.1100              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_19 transpose_6                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_29 transpose_7                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_30 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=1035676 cycles  Energy=87913.7600 uJ  FLOPs=675033088  Thpt=651.7802 GFLOPS  Eff=7.6784 GFLOPS/J  DRAM=2083250194 B  OK=30 Fail=0
+
+  Workload: llama3-8b-block0-attention-prefill-b8s1024
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               20.1%        5210112   1243895.0000      838860800
+    linear         %12        batch_matmul_1                 lego_server               11.2%        2351104    434797.8000      327155712
+    linear         %15        batch_matmul_2                 lego_server               11.2%        2351104    434797.8000      327155712
+    linear         %32        batch_matmul_3                 lego_server               11.8%          69632     11248.5500       10485760
+    linear         %52        batch_matmul_4                 lego_server               22.2%          36864      9378.3100       11534336
+    linear         %55        batch_matmul_5                 lego_server               20.1%        5210112   1243895.0000      838860800
+    elementwise    %16        mulf_0                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %18        negf_1                         PPU_server                50.0%          65536      7557.7300              -
+    elementwise    %19        mulf_2                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %20        addf_3                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %21        mulf_4                         PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %23        negf_5                         PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %24        mulf_6                         PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %25        addf_7                         PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %34        mulf_8                         PPU_server                50.0%        1048576    120922.8000              -
+    elementwise    %35        addf_9                         PPU_server                50.0%        1048576    120922.8000              -
+    elementwise    %42:2      maximumf_reduction_10          PPU_server                25.0%        6291456    212830.6000              -
+    elementwise    %43        subf_11                        PPU_server                50.0%        1048576    120922.8000              -
+    elementwise    %44        exp_12                         PPU_server               100.0%        2621440    536411.6000              -
+    elementwise    %47        addf_reduction_13              PPU_server               100.0%         524288    103889.1000              -
+    elementwise    %48        divf_14                        PPU_server                50.0%        1048576    120922.8000              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -          16384      3775.9900       16777217
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -          16384      3775.9900       16777217
+    datamove       %transposed_16 transpose_6                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_24 transpose_7                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_26 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=30064640 cycles  Energy=4780964.0000 uJ  FLOPs=695126196224  Thpt=23121.0600 GFLOPS  Eff=145.3946 GFLOPS/J  DRAM=6520045586 B  OK=30 Fail=0
+
   Workload: llama3-8b-block0-attention-prefill-b8s128
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -9706,6 +10044,80 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=4519936 cycles  Energy=983768.3000 uJ  FLOPs=172321931264  Thpt=38124.8600 GFLOPS  Eff=175.1652 GFLOPS/J  DRAM=3972530194 B  OK=30 Fail=0
 
+  Workload: llama3-8b-block0-attention-prefill-b8s4096
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %4         batch_matmul_0                 lego_server               22.4%       18743296   4511597.0000     4429185024
+    linear         %10        batch_matmul_1                 lego_server               16.8%        6258688   1219283.0000      704643072
+    linear         %13        batch_matmul_2                 lego_server               16.8%        6258688   1219283.0000      704643072
+    linear         %30        batch_matmul_3                 lego_server               86.5%         151552    114673.4000      155189248
+    linear         %50        batch_matmul_4                 lego_server               20.1%         651264    208291.2000      402653184
+    linear         %53        batch_matmul_5                 lego_server               22.4%       18743296   4511597.0000     4429185024
+    elementwise    %14        mulf_0                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %16        negf_1                         PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %17        mulf_2                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %18        addf_3                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %19        mulf_4                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %21        negf_5                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %22        mulf_6                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %23        addf_7                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %32        mulf_8                         PPU_server                 6.2%      134217728   1934809.0000              -
+    elementwise    %33        addf_9                         PPU_server                 6.2%      134217728   1934809.0000              -
+    elementwise    %40:2      maximumf_reduction_10          PPU_server                12.5%      201326592   3369249.0000              -
+    elementwise    %41        subf_11                        PPU_server                 6.2%      134217728   1934809.0000              -
+    elementwise    %42        exp_12                         PPU_server                12.5%      335544320   8582791.0000              -
+    elementwise    %45        addf_reduction_13              PPU_server                50.0%       16777216   1662216.0000              -
+    elementwise    %46        divf_14                        PPU_server                 6.2%      134217728   1934809.0000              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_16 transpose_6                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_24 transpose_7                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_26 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=1144045568 cycles  Energy=33402730.0000 uJ  FLOPs=2873920323584  Thpt=2512.0680 GFLOPS  Eff=86.0385 GFLOPS/J  DRAM=24872222738 B  OK=30 Fail=0
+
+  Workload: llama3-8b-block0-attention-prefill-b8s512
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               50.0%        1048832    410403.1000      318767104
+    linear         %12        batch_matmul_1                 lego_server               16.7%         786432    160448.2000      171966464
+    linear         %15        batch_matmul_2                 lego_server               16.7%         786432    160448.2000      171966464
+    linear         %32        batch_matmul_3                 lego_server               25.0%           8192      2327.8000        3145728
+    linear         %52        batch_matmul_4                 lego_server               30.8%           6656      2428.2300        4194304
+    linear         %55        batch_matmul_5                 lego_server               50.0%        1048832    410403.1000      318767104
+    elementwise    %16        mulf_0                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %18        negf_1                         PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %19        mulf_2                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %20        addf_3                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %21        mulf_4                         PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %23        negf_5                         PPU_server               100.0%           4096       944.7700              -
+    elementwise    %24        mulf_6                         PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %25        addf_7                         PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %34        mulf_8                         PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %35        addf_9                         PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %42:2      maximumf_reduction_10          PPU_server                25.0%        1572864     52545.4600              -
+    elementwise    %43        subf_11                        PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %44        exp_12                         PPU_server               100.0%         655360    134103.1000              -
+    elementwise    %47        addf_reduction_13              PPU_server               100.0%         131072     25976.6300              -
+    elementwise    %48        divf_14                        PPU_server               100.0%         131072     30230.6900              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_3 transpose_1                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_4 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_6 transpose_3                    PPU_datamove_server           -           8192      1888.0300        8388609
+    datamove       %transposed_7 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_9 transpose_5                    PPU_datamove_server           -           8192      1888.0300        8388609
+    datamove       %transposed_16 transpose_6                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_24 transpose_7                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_26 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=7482368 cycles  Energy=1513072.0000 uJ  FLOPs=345616941056  Thpt=46190.8500 GFLOPS  Eff=228.4207 GFLOPS/J  DRAM=3554672658 B  OK=30 Fail=0
+
   Workload: llama3-8b-block0-ffn-decode-b8s1024
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -9726,6 +10138,44 @@
     Summary: Latency=4133282 cycles  Energy=365547.0000 uJ  FLOPs=2819719168  Thpt=682.1986 GFLOPS  Eff=7.7137 GFLOPS/J  DRAM=8460042246 B  OK=12 Fail=0
 
   Workload: llama3-8b-block0-ffn-decode-b8s128
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %7         batch_matmul_0                 lego_server                0.8%         459569    121727.5000      470597632
+    linear         %11        batch_matmul_1                 lego_server                0.8%         459569    121727.5000      470597632
+    linear         %18        batch_matmul_2                 lego_server                0.8%         459232    121662.3000      470253568
+    elementwise    %8         negf_0                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %8         exp_1                          PPU_server                87.5%           1280       171.1300              -
+    elementwise    %8         addf_2                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %8         divf_3                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %9         mulf_4                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %12        mulf_5                         PPU_server               100.0%            224        51.7300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         917504    211451.7000      939524097
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=4133282 cycles  Energy=365547.0000 uJ  FLOPs=2819719168  Thpt=682.1986 GFLOPS  Eff=7.7137 GFLOPS/J  DRAM=8460042246 B  OK=12 Fail=0
+
+  Workload: llama3-8b-block0-ffn-decode-b8s256
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %7         batch_matmul_0                 lego_server                0.8%         459569    121727.5000      470597632
+    linear         %11        batch_matmul_1                 lego_server                0.8%         459569    121727.5000      470597632
+    linear         %18        batch_matmul_2                 lego_server                0.8%         459232    121662.3000      470253568
+    elementwise    %8         negf_0                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %8         exp_1                          PPU_server                87.5%           1280       171.1300              -
+    elementwise    %8         addf_2                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %8         divf_3                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %9         mulf_4                         PPU_server               100.0%            224        51.7300              -
+    elementwise    %12        mulf_5                         PPU_server               100.0%            224        51.7300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         917504    211451.7000      939524097
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=4133282 cycles  Energy=365547.0000 uJ  FLOPs=2819719168  Thpt=682.1986 GFLOPS  Eff=7.7137 GFLOPS/J  DRAM=8460042246 B  OK=12 Fail=0
+
+  Workload: llama3-8b-block0-ffn-decode-b8s4096
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -9782,6 +10232,44 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=80510976 cycles  Energy=13995430.0000 uJ  FLOPs=2887392428032  Thpt=35863.3400 GFLOPS  Eff=206.3097 GFLOPS/J  DRAM=16978542598 B  OK=12 Fail=0
 
+  Workload: llama3-8b-block0-ffn-prefill-b8s128
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               55.9%         821248    432761.9000      551550976
+    linear         %9         batch_matmul_1                 lego_server               55.9%         821248    432761.9000      551550976
+    linear         %16        batch_matmul_2                 lego_server               18.2%        2519040    645411.9000      503316480
+    elementwise    %6         negf_0                         PPU_server               100.0%          28672      6613.0100              -
+    elementwise    %6         exp_1                          PPU_server               100.0%         143360     21895.8800              -
+    elementwise    %6         addf_2                         PPU_server               100.0%          28672      6613.0100              -
+    elementwise    %6         divf_3                         PPU_server               100.0%          28672      6613.0100              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%          28672      6613.0100              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%          28672      6613.0100              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         917504    211451.7000      939524097
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=7200768 cycles  Energy=1565897.0000 uJ  FLOPs=360924053504  Thpt=50122.9900 GFLOPS  Eff=230.4904 GFLOPS/J  DRAM=8849981446 B  OK=12 Fail=0
+
+  Workload: llama3-8b-block0-ffn-prefill-b8s256
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               16.4%        5607425   1165336.0000      809500672
+    linear         %9         batch_matmul_1                 lego_server               16.4%        5607425   1165336.0000      809500672
+    linear         %16        batch_matmul_2                 lego_server               19.1%        4808704   1275559.0000     1006632960
+    elementwise    %6         negf_0                         PPU_server               100.0%          57344     13225.9600              -
+    elementwise    %6         exp_1                          PPU_server               100.0%         286720     43791.6800              -
+    elementwise    %6         addf_2                         PPU_server               100.0%          57344     13225.9600              -
+    elementwise    %6         divf_3                         PPU_server               100.0%          57344     13225.9600              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%          57344     13225.9600              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%          57344     13225.9600              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         917504    211451.7000      939524097
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         917504    211451.7000      939524097
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=19349506 cycles  Energy=3716153.0000 uJ  FLOPs=721848107008  Thpt=37305.7600 GFLOPS  Eff=194.2461 GFLOPS/J  DRAM=10888413190 B  OK=12 Fail=0
+
   Workload: llama3-8b-block0-ffn-prefill-b8s4096
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -9814,6 +10302,108 @@
     datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         917504    211451.7000      939524097
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=23236353 cycles  Energy=5577072.0000 uJ  FLOPs=1443696214016  Thpt=62130.9300 GFLOPS  Eff=258.8627 GFLOPS/J  DRAM=10921967622 B  OK=12 Fail=0
+
+  Workload: qwen3-8b-block0-attention-decode-b8s1024
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %6         batch_matmul_0                 lego_server                0.8%         131584     34771.8400      134283264
+    linear         %26        batch_matmul_1                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %42        batch_matmul_2                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %60        batch_matmul_3                 lego_server                0.8%           1033       273.3100        1057792
+    linear         %81        batch_matmul_4                 lego_server                0.8%           1043       274.4800        1057792
+    linear         %84        batch_matmul_5                 lego_server                0.8%         131584     34771.8400      134283264
+    elementwise    %9         fpowi_0                        PPU_server               100.0%             64        14.8300              -
+    elementwise    %12        addf_reduction_1               PPU_server                25.0%            256         8.6800              -
+    elementwise    %13        divf_2                         PPU_server                50.0%              1         0.2500              -
+    elementwise    %14        addf_3                         PPU_server                50.0%              1         0.2500              -
+    elementwise    %15        rsqrt_4                        PPU_server                25.0%              6         0.3800              -
+    elementwise    %16        mulf_5                         PPU_server               100.0%             64        14.8300              -
+    elementwise    %19        mulf_6                         PPU_server               100.0%             64        14.8300              -
+    elementwise    %29        fpowi_7                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %32        addf_reduction_8               PPU_server                12.5%            128         2.2700              -
+    elementwise    %33        divf_9                         PPU_server                12.5%              1         0.2100              -
+    elementwise    %34        addf_10                        PPU_server                12.5%              1         0.2100              -
+    elementwise    %35        rsqrt_11                       PPU_server                12.5%              3         0.2300              -
+    elementwise    %36        mulf_12                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %39        mulf_13                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %43        mulf_14                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %45        negf_15                        PPU_server                25.0%            128         7.4500              -
+    elementwise    %46        mulf_16                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %47        addf_17                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %48        mulf_18                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %50        negf_19                        PPU_server                25.0%             32         1.9100              -
+    elementwise    %51        mulf_20                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %52        addf_21                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %62        mulf_22                        PPU_server               100.0%            512       118.1500              -
+    elementwise    %63        addf_23                        PPU_server               100.0%            512       118.1500              -
+    elementwise    %70:2      maximumf_reduction_24          PPU_server                12.5%          12288       207.6800              -
+    elementwise    %71        subf_25                        PPU_server               100.0%            512       118.1500              -
+    elementwise    %72        exp_26                         PPU_server               100.0%           2560       391.3300              -
+    elementwise    %75        addf_reduction_27              PPU_server                25.0%           2048        68.6300              -
+    elementwise    %76        divf_28                        PPU_server               100.0%            512       118.1500              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_5 transpose_1                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_6 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_8 transpose_3                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_9 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_11 transpose_5                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_21 transpose_6                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_31 transpose_7                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_32 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=1072425 cycles  Energy=88757.9100 uJ  FLOPs=678999616  Thpt=633.1442 GFLOPS  Eff=7.6500 GFLOPS/J  DRAM=2152468498 B  OK=44 Fail=0
+
+  Workload: qwen3-8b-block0-attention-decode-b8s128
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %6         batch_matmul_0                 lego_server                0.8%         131584     34771.8400      134283264
+    linear         %26        batch_matmul_1                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %42        batch_matmul_2                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %60        batch_matmul_3                 lego_server                0.8%            131        34.5600         133120
+    linear         %78        batch_matmul_4                 lego_server                0.8%            131        34.5600         133120
+    linear         %81        batch_matmul_5                 lego_server                0.8%         131584     34771.8400      134283264
+    elementwise    %9         fpowi_0                        PPU_server               100.0%             64        14.8300              -
+    elementwise    %12        addf_reduction_1               PPU_server                25.0%            256         8.6800              -
+    elementwise    %13        divf_2                         PPU_server                50.0%              1         0.2500              -
+    elementwise    %14        addf_3                         PPU_server                50.0%              1         0.2500              -
+    elementwise    %15        rsqrt_4                        PPU_server                25.0%              6         0.3800              -
+    elementwise    %16        mulf_5                         PPU_server               100.0%             64        14.8300              -
+    elementwise    %19        mulf_6                         PPU_server               100.0%             64        14.8300              -
+    elementwise    %29        fpowi_7                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %32        addf_reduction_8               PPU_server                12.5%            128         2.2700              -
+    elementwise    %33        divf_9                         PPU_server                12.5%              1         0.2100              -
+    elementwise    %34        addf_10                        PPU_server                12.5%              1         0.2100              -
+    elementwise    %35        rsqrt_11                       PPU_server                12.5%              3         0.2300              -
+    elementwise    %36        mulf_12                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %39        mulf_13                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %43        mulf_14                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %45        negf_15                        PPU_server                25.0%            128         7.4500              -
+    elementwise    %46        mulf_16                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %47        addf_17                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %48        mulf_18                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %50        negf_19                        PPU_server                25.0%             32         1.9100              -
+    elementwise    %51        mulf_20                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %52        addf_21                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %61        mulf_22                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %62        addf_23                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %69:2      maximumf_reduction_24          PPU_server                12.5%           1536        26.7400              -
+    elementwise    %70        subf_25                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %71        exp_26                         PPU_server                50.0%            640        48.9400              -
+    elementwise    %74        addf_reduction_27              PPU_server                12.5%            512         8.7100              -
+    elementwise    %75        divf_28                        PPU_server                50.0%            128        14.8300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_5 transpose_1                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_6 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_8 transpose_3                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_9 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_11 transpose_5                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_21 transpose_6                    PPU_datamove_server           -           8192      1888.0300        8388609
+    datamove       %transposed_31 transpose_7                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_32 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=997523 cycles  Energy=87282.7100 uJ  FLOPs=672347712  Thpt=674.0173 GFLOPS  Eff=7.7031 GFLOPS/J  DRAM=2031329298 B  OK=44 Fail=0
 
   Workload: qwen3-8b-block0-attention-decode-b8s256
   ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -9917,6 +10507,108 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=1340254 cycles  Energy=93816.6300 uJ  FLOPs=701806144  Thpt=523.6367 GFLOPS  Eff=7.4806 GFLOPS/J  DRAM=2567802898 B  OK=44 Fail=0
 
+  Workload: qwen3-8b-block0-attention-decode-b8s512
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %6         batch_matmul_0                 lego_server                0.8%         131584     34771.8400      134283264
+    linear         %26        batch_matmul_1                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %42        batch_matmul_2                 lego_server                0.8%          32856      8696.4100       33595392
+    linear         %60        batch_matmul_3                 lego_server                0.8%            517       136.6600         529408
+    linear         %81        batch_matmul_4                 lego_server                0.8%            519       137.3300         531456
+    linear         %84        batch_matmul_5                 lego_server                0.8%         131584     34771.8400      134283264
+    elementwise    %9         fpowi_0                        PPU_server               100.0%             64        14.8300              -
+    elementwise    %12        addf_reduction_1               PPU_server                25.0%            256         8.6800              -
+    elementwise    %13        divf_2                         PPU_server                50.0%              1         0.2500              -
+    elementwise    %14        addf_3                         PPU_server                50.0%              1         0.2500              -
+    elementwise    %15        rsqrt_4                        PPU_server                25.0%              6         0.3800              -
+    elementwise    %16        mulf_5                         PPU_server               100.0%             64        14.8300              -
+    elementwise    %19        mulf_6                         PPU_server               100.0%             64        14.8300              -
+    elementwise    %29        fpowi_7                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %32        addf_reduction_8               PPU_server                12.5%            128         2.2700              -
+    elementwise    %33        divf_9                         PPU_server                12.5%              1         0.2100              -
+    elementwise    %34        addf_10                        PPU_server                12.5%              1         0.2100              -
+    elementwise    %35        rsqrt_11                       PPU_server                12.5%              3         0.2300              -
+    elementwise    %36        mulf_12                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %39        mulf_13                        PPU_server               100.0%             16         3.7600              -
+    elementwise    %43        mulf_14                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %45        negf_15                        PPU_server                25.0%            128         7.4500              -
+    elementwise    %46        mulf_16                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %47        addf_17                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %48        mulf_18                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %50        negf_19                        PPU_server                25.0%             32         1.9100              -
+    elementwise    %51        mulf_20                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %52        addf_21                        PPU_server                25.0%             64         3.7600              -
+    elementwise    %62        mulf_22                        PPU_server               100.0%            256        59.1100              -
+    elementwise    %63        addf_23                        PPU_server               100.0%            256        59.1100              -
+    elementwise    %70:2      maximumf_reduction_24          PPU_server                 6.2%          12288       103.3300              -
+    elementwise    %71        subf_25                        PPU_server               100.0%            256        59.1100              -
+    elementwise    %72        exp_26                         PPU_server               100.0%           1280       261.9900              -
+    elementwise    %75        addf_reduction_27              PPU_server                12.5%           2048        36.3800              -
+    elementwise    %76        divf_28                        PPU_server               100.0%            256        59.1100              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_5 transpose_1                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_6 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_8 transpose_3                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_9 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_11 transpose_5                    PPU_datamove_server           -             64         3.7500          16385
+    datamove       %transposed_21 transpose_6                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_31 transpose_7                    PPU_datamove_server           -             64        14.8200          65537
+    datamove       %transposed_32 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=1036313 cycles  Energy=87982.0100 uJ  FLOPs=675198528  Thpt=651.5392 GFLOPS  Eff=7.6743 GFLOPS/J  DRAM=2083250194 B  OK=44 Fail=0
+
+  Workload: qwen3-8b-block0-attention-prefill-b8s1024
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               20.1%        5210112   1243895.0000      838860800
+    linear         %25        batch_matmul_1                 lego_server               11.2%        2351104    434797.8000      327155712
+    linear         %41        batch_matmul_2                 lego_server               11.2%        2351104    434797.8000      327155712
+    linear         %58        batch_matmul_3                 lego_server               11.8%          69632     11248.5500       10485760
+    linear         %78        batch_matmul_4                 lego_server               22.2%          36864      9378.3100       11534336
+    linear         %80        batch_matmul_5                 lego_server               20.1%        5210112   1243895.0000      838860800
+    elementwise    %8         fpowi_0                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %11        addf_reduction_1               PPU_server                50.0%         131072      9281.4800              -
+    elementwise    %12        divf_2                         PPU_server               100.0%            512       118.1500              -
+    elementwise    %13        addf_3                         PPU_server               100.0%            512       118.1500              -
+    elementwise    %14        rsqrt_4                        PPU_server               100.0%           1536       321.0300              -
+    elementwise    %15        mulf_5                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %18        mulf_6                         PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %28        fpowi_7                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %31        addf_reduction_8               PPU_server               100.0%          16384      2195.8500              -
+    elementwise    %32        divf_9                         PPU_server               100.0%            128        29.5900              -
+    elementwise    %33        addf_10                        PPU_server               100.0%            128        29.5900              -
+    elementwise    %34        rsqrt_11                       PPU_server               100.0%            384        80.3100              -
+    elementwise    %35        mulf_12                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %38        mulf_13                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %42        mulf_14                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %44        negf_15                        PPU_server                50.0%          65536      7557.7300              -
+    elementwise    %45        mulf_16                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %46        addf_17                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %47        mulf_18                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %49        negf_19                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %50        mulf_20                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %51        addf_21                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %60        mulf_22                        PPU_server                50.0%        1048576    120922.8000              -
+    elementwise    %61        addf_23                        PPU_server                50.0%        1048576    120922.8000              -
+    elementwise    %68:2      maximumf_reduction_24          PPU_server                25.0%        6291456    212830.6000              -
+    elementwise    %69        subf_25                        PPU_server                50.0%        1048576    120922.8000              -
+    elementwise    %70        exp_26                         PPU_server               100.0%        2621440    536411.6000              -
+    elementwise    %73        addf_reduction_27              PPU_server               100.0%         524288    103889.1000              -
+    elementwise    %74        divf_28                        PPU_server                50.0%        1048576    120922.8000              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_5 transpose_1                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_6 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_8 transpose_3                    PPU_datamove_server           -          16384      3775.9900       16777217
+    datamove       %transposed_9 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_11 transpose_5                    PPU_datamove_server           -          16384      3775.9900       16777217
+    datamove       %transposed_18 transpose_6                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_26 transpose_7                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_28 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=30461056 cycles  Energy=4849821.0000 uJ  FLOPs=695295606784  Thpt=22825.7200 GFLOPS  Eff=143.3652 GFLOPS/J  DRAM=6520045586 B  OK=44 Fail=0
+
   Workload: qwen3-8b-block0-attention-prefill-b8s128
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -10019,6 +10711,108 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=4619680 cycles  Energy=1001227.0000 uJ  FLOPs=172364283904  Thpt=37310.8700 GFLOPS  Eff=172.1530 GFLOPS/J  DRAM=3972530194 B  OK=44 Fail=0
 
+  Workload: qwen3-8b-block0-attention-prefill-b8s4096
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %4         batch_matmul_0                 lego_server               22.4%       18743296   4511597.0000     4429185024
+    linear         %23        batch_matmul_1                 lego_server               16.8%        6258688   1219283.0000      704643072
+    linear         %39        batch_matmul_2                 lego_server               16.8%        6258688   1219283.0000      704643072
+    linear         %56        batch_matmul_3                 lego_server               86.5%         151552    114673.4000      155189248
+    linear         %76        batch_matmul_4                 lego_server               20.1%         651264    208291.2000      402653184
+    linear         %78        batch_matmul_5                 lego_server               22.4%       18743296   4511597.0000     4429185024
+    elementwise    %7         fpowi_0                        PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %10        addf_reduction_1               PPU_server               100.0%         262144     43501.7500              -
+    elementwise    %11        divf_2                         PPU_server               100.0%           2048       472.4200              -
+    elementwise    %12        addf_3                         PPU_server               100.0%           2048       472.4200              -
+    elementwise    %13        rsqrt_4                        PPU_server               100.0%           6144      1018.2400              -
+    elementwise    %14        mulf_5                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %17        mulf_6                         PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %26        fpowi_7                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %29        addf_reduction_8               PPU_server                50.0%         131072      9015.5200              -
+    elementwise    %30        divf_9                         PPU_server               100.0%            512       118.1500              -
+    elementwise    %31        addf_10                        PPU_server               100.0%            512       118.1500              -
+    elementwise    %32        rsqrt_11                       PPU_server                50.0%           3072       254.6100              -
+    elementwise    %33        mulf_12                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %36        mulf_13                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %40        mulf_14                        PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %42        negf_15                        PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %43        mulf_16                        PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %44        addf_17                        PPU_server               100.0%         262144     60461.3100              -
+    elementwise    %45        mulf_18                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %47        negf_19                        PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %48        mulf_20                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %49        addf_21                        PPU_server               100.0%          65536     15115.3800              -
+    elementwise    %58        mulf_22                        PPU_server                 6.2%      134217728   1934809.0000              -
+    elementwise    %59        addf_23                        PPU_server                 6.2%      134217728   1934809.0000              -
+    elementwise    %66:2      maximumf_reduction_24          PPU_server                12.5%      201326592   3369249.0000              -
+    elementwise    %67        subf_25                        PPU_server                 6.2%      134217728   1934809.0000              -
+    elementwise    %68        exp_26                         PPU_server                12.5%      335544320   8582791.0000              -
+    elementwise    %71        addf_reduction_27              PPU_server                50.0%       16777216   1662216.0000              -
+    elementwise    %72        divf_28                        PPU_server                 6.2%      134217728   1934809.0000              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_5 transpose_1                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_6 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_8 transpose_3                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_9 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_11 transpose_5                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_18 transpose_6                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_26 transpose_7                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_28 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=1145436160 cycles  Energy=33684440.0000 uJ  FLOPs=2874597965824  Thpt=2509.6100 GFLOPS  Eff=85.3391 GFLOPS/J  DRAM=24872222738 B  OK=44 Fail=0
+
+  Workload: qwen3-8b-block0-attention-prefill-b8s512
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               50.0%        1048832    410403.1000      318767104
+    linear         %25        batch_matmul_1                 lego_server               16.7%         786432    160448.2000      171966464
+    linear         %41        batch_matmul_2                 lego_server               16.7%         786432    160448.2000      171966464
+    linear         %58        batch_matmul_3                 lego_server               25.0%           8192      2327.8000        3145728
+    linear         %78        batch_matmul_4                 lego_server               30.8%           6656      2428.2300        4194304
+    linear         %80        batch_matmul_5                 lego_server               50.0%        1048832    410403.1000      318767104
+    elementwise    %8         fpowi_0                        PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %11        addf_reduction_1               PPU_server               100.0%          32768      4515.4000              -
+    elementwise    %12        divf_2                         PPU_server               100.0%            256        59.1100              -
+    elementwise    %13        addf_3                         PPU_server               100.0%            256        59.1100              -
+    elementwise    %14        rsqrt_4                        PPU_server               100.0%            768       127.3400              -
+    elementwise    %15        mulf_5                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %18        mulf_6                         PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %28        fpowi_7                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %31        addf_reduction_8               PPU_server               100.0%           8192      1359.4800              -
+    elementwise    %32        divf_9                         PPU_server                50.0%            128        14.8300              -
+    elementwise    %33        addf_10                        PPU_server                50.0%            128        14.8300              -
+    elementwise    %34        rsqrt_11                       PPU_server                50.0%            384        40.1900              -
+    elementwise    %35        mulf_12                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %38        mulf_13                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %42        mulf_14                        PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %44        negf_15                        PPU_server               100.0%          16384      3778.8900              -
+    elementwise    %45        mulf_16                        PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %46        addf_17                        PPU_server               100.0%          32768      7557.7200              -
+    elementwise    %47        mulf_18                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %49        negf_19                        PPU_server               100.0%           4096       944.7700              -
+    elementwise    %50        mulf_20                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %51        addf_21                        PPU_server               100.0%           8192      1889.4800              -
+    elementwise    %60        mulf_22                        PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %61        addf_23                        PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %68:2      maximumf_reduction_24          PPU_server                25.0%        1572864     52545.4600              -
+    elementwise    %69        subf_25                        PPU_server               100.0%         131072     30230.6900              -
+    elementwise    %70        exp_26                         PPU_server               100.0%         655360    134103.1000              -
+    elementwise    %73        addf_reduction_27              PPU_server               100.0%         131072     25976.6300              -
+    elementwise    %74        divf_28                        PPU_server               100.0%         131072     30230.6900              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         262144     60414.8200      268435457
+    datamove       %transposed_5 transpose_1                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_6 transpose_2                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_8 transpose_3                    PPU_datamove_server           -           8192      1888.0300        8388609
+    datamove       %transposed_9 transpose_4                    PPU_datamove_server           -          65536     15103.7500       67108865
+    datamove       %transposed_11 transpose_5                    PPU_datamove_server           -           8192      1888.0300        8388609
+    datamove       %transposed_18 transpose_6                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_26 transpose_7                    PPU_datamove_server           -          32768      7551.9100       33554433
+    datamove       %transposed_28 transpose_8                    PPU_datamove_server           -         262144     60414.8200      268435457
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=7648128 cycles  Energy=1547604.0000 uJ  FLOPs=345701646336  Thpt=45200.8200 GFLOPS  Eff=223.3787 GFLOPS/J  DRAM=3554672658 B  OK=44 Fail=0
+
   Workload: qwen3-8b-block0-ffn-decode-b8s1024
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -10057,6 +10851,44 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=3542434 cycles  Energy=313310.2000 uJ  FLOPs=2416902144  Thpt=682.2716 GFLOPS  Eff=7.7141 GFLOPS/J  DRAM=7250313222 B  OK=12 Fail=0
 
+  Workload: qwen3-8b-block0-ffn-decode-b8s256
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %7         batch_matmul_0                 lego_server                0.8%         393441    104244.1000      402882560
+    linear         %11        batch_matmul_1                 lego_server                0.8%         393441    104244.1000      402882560
+    linear         %18        batch_matmul_2                 lego_server                0.8%         394016    104403.7000      403472384
+    elementwise    %8         negf_0                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %8         exp_1                          PPU_server                75.0%           1280       196.5100              -
+    elementwise    %8         addf_2                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %8         divf_3                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %9         mulf_4                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %12        mulf_5                         PPU_server               100.0%            192        44.3500              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=3542434 cycles  Energy=313310.2000 uJ  FLOPs=2416902144  Thpt=682.2716 GFLOPS  Eff=7.7141 GFLOPS/J  DRAM=7250313222 B  OK=12 Fail=0
+
+  Workload: qwen3-8b-block0-ffn-decode-b8s4096
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %7         batch_matmul_0                 lego_server                0.8%         393441    104244.1000      402882560
+    linear         %11        batch_matmul_1                 lego_server                0.8%         393441    104244.1000      402882560
+    linear         %18        batch_matmul_2                 lego_server                0.8%         394016    104403.7000      403472384
+    elementwise    %8         negf_0                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %8         exp_1                          PPU_server                75.0%           1280       196.5100              -
+    elementwise    %8         addf_2                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %8         divf_3                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %9         mulf_4                         PPU_server               100.0%            192        44.3500              -
+    elementwise    %12        mulf_5                         PPU_server               100.0%            192        44.3500              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=3542434 cycles  Energy=313310.2000 uJ  FLOPs=2416902144  Thpt=682.2716 GFLOPS  Eff=7.7141 GFLOPS/J  DRAM=7250313222 B  OK=12 Fail=0
+
   Workload: qwen3-8b-block0-ffn-decode-b8s512
   ────────────────────────────────────────────────────────────────────────────────────────────────────
     Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
@@ -10075,6 +10907,63 @@
     datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=3542434 cycles  Energy=313310.2000 uJ  FLOPs=2416902144  Thpt=682.2716 GFLOPS  Eff=7.7141 GFLOPS/J  DRAM=7250313222 B  OK=12 Fail=0
+
+  Workload: qwen3-8b-block0-ffn-prefill-b8s1024
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               19.2%       16416768   3274272.0000     1711276032
+    linear         %9         batch_matmul_1                 lego_server               19.2%       16416768   3274272.0000     1711276032
+    linear         %16        batch_matmul_2                 lego_server               24.1%       13074432   3460747.0000     1241513984
+    elementwise    %6         negf_0                         PPU_server               100.0%         196608     45346.0000              -
+    elementwise    %6         exp_1                          PPU_server                75.0%        1310720    201154.5000              -
+    elementwise    %6         addf_2                         PPU_server               100.0%         196608     45346.0000              -
+    elementwise    %6         divf_3                         PPU_server               100.0%         196608     45346.0000              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%         196608     45346.0000              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%         196608     45346.0000              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=50561024 cycles  Energy=10437180.0000 uJ  FLOPs=2474907795456  Thpt=48948.9300 GFLOPS  Eff=237.1243 GFLOPS/J  DRAM=14159970310 B  OK=12 Fail=0
+
+  Workload: qwen3-8b-block0-ffn-prefill-b8s128
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               19.2%        2052096    544858.5000      427819008
+    linear         %9         batch_matmul_1                 lego_server               19.2%        2052096    544858.5000      427819008
+    linear         %16        batch_matmul_2                 lego_server               18.2%        2158593    553247.7000      432013312
+    elementwise    %6         negf_0                         PPU_server               100.0%          24576      5668.3100              -
+    elementwise    %6         exp_1                          PPU_server               100.0%         122880     25146.0900              -
+    elementwise    %6         addf_2                         PPU_server               100.0%          24576      5668.3100              -
+    elementwise    %6         divf_3                         PPU_server               100.0%          24576      5668.3100              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%          24576      5668.3100              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%          24576      5668.3100              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=8867841 cycles  Energy=1696452.0000 uJ  FLOPs=309363474432  Thpt=34886.0000 GFLOPS  Eff=182.3591 GFLOPS/J  DRAM=7407140870 B  OK=12 Fail=0
+
+  Workload: qwen3-8b-block0-ffn-prefill-b8s256
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               19.5%        4038656    937129.4000     1015021568
+    linear         %9         batch_matmul_1                 lego_server               19.5%        4038656    937129.4000     1015021568
+    linear         %16        batch_matmul_2                 lego_server               22.3%        3530752    936627.0000     1300234240
+    elementwise    %6         negf_0                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         exp_1                          PPU_server               100.0%         245760     50289.0500              -
+    elementwise    %6         addf_2                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %6         divf_3                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%          49152     11336.5500              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%          49152     11336.5500              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=14458880 cycles  Energy=2917858.0000 uJ  FLOPs=618726948864  Thpt=42792.1800 GFLOPS  Eff=212.0484 GFLOPS/J  DRAM=11492392966 B  OK=12 Fail=0
 
   Workload: qwen3-8b-block0-ffn-prefill-b8s4096
   ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -10095,17 +10984,36 @@
     ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     Summary: Latency=135659520 cycles  Energy=42652780.0000 uJ  FLOPs=9899631181824  Thpt=72974.1000 GFLOPS  Eff=232.0981 GFLOPS/J  DRAM=125627793414 B  OK=12 Fail=0
 
+  Workload: qwen3-8b-block0-ffn-prefill-b8s512
+  ────────────────────────────────────────────────────────────────────────────────────────────────────
+    Type           SSA        Op Name                        Arch                      Util%         Cycles     Energy(uJ)       DRAM_Acc
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    linear         %5         batch_matmul_0                 lego_server               25.2%        6242304   1588986.0000      889192448
+    linear         %9         batch_matmul_1                 lego_server               25.2%        6242304   1588986.0000      889192448
+    linear         %16        batch_matmul_2                 lego_server               18.7%        8421376   2368169.0000     4731174912
+    elementwise    %6         negf_0                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %6         exp_1                          PPU_server                75.0%         655360    100579.4000              -
+    elementwise    %6         addf_2                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %6         divf_3                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %7         mulf_4                         PPU_server               100.0%          98304     22673.0300              -
+    elementwise    %10        mulf_5                         PPU_server               100.0%          98304     22673.0300              -
+    datamove       %transposed transpose_0                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_1 transpose_1                    PPU_datamove_server           -         786432    181244.3000      805306369
+    datamove       %transposed_2 transpose_2                    PPU_datamove_server           -         786432    181244.3000      805306369
+    ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Summary: Latency=24412160 cycles  Energy=5760086.0000 uJ  FLOPs=1237453897728  Thpt=50690.0600 GFLOPS  Eff=214.8325 GFLOPS/J  DRAM=17850957830 B  OK=12 Fail=0
+
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  lego_server TOTAL: Latency=1206247338 cycles  Energy=222558568.4000 uJ  FLOPs=47055386025088  Thpt=39009.7325 GFLOPS  Eff=211.4292 GFLOPS/J  DRAM_Acc=594737082740 B  Workloads=32
+  lego_server TOTAL: Latency=4492676517 cycles  Energy=369946807.6500 uJ  FLOPs=66734760927040  Thpt=14854.1211 GFLOPS  Eff=180.3902 GFLOPS/J  DRAM_Acc=860543992528 B  Workloads=60
 
 ================================================================================
   GRAND TOTAL across all architectures:
-    Latency:           19188539720 cycles
-    Energy:            853576701.1700 uJ
-    FLOPs:             204936522950328
-    Throughput:         10680.1521 GFLOPS
-    Energy Efficiency:  240.0915 GFLOPS/J
-    DRAM Access:        1762672311678 B
-    Operators: succeeded=7719  failed=36
-    Workloads: 331
+    Latency:           22482423619 cycles
+    Energy:            1002966151.4200 uJ
+    FLOPs:             225234624801144
+    Throughput:         10018.2538 GFLOPS
+    Energy Efficiency:  224.5685 GFLOPS/J
+    DRAM Access:        2036028968672 B
+    Operators: succeeded=8424  failed=36
+    Workloads: 360
 ================================================================================
