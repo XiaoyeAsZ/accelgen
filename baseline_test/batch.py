@@ -172,6 +172,11 @@ def parse_log(log_path):
                 util_str = ""
                 if len(parts) >= 6:
                     util_str = parts[5].rstrip("%")
+                dram_acc = 0
+                try:
+                    dram_acc = int(float(parts[-1]))
+                except (ValueError, IndexError):
+                    dram_acc = 0
                 result["linear_ops"].append({
                     "ssa": parts[0],
                     "name": parts[1],
@@ -179,6 +184,7 @@ def parse_log(log_path):
                     "energy": float(parts[3]),
                     "arch": lin_arch,
                     "util": util_str,
+                    "dram_acc": dram_acc,
                 })
 
     # Parse individual elementwise ops
@@ -212,15 +218,45 @@ def parse_log(log_path):
     if dm_section:
         for line in dm_section.group(1).strip().split("\n"):
             parts = line.split()
-            if len(parts) >= 4 and parts[2] != "FAILED":
-                result["dm_ops"].append({
-                    "ssa": parts[0],
-                    "name": parts[1],
-                    "cycles": int(float(parts[2])),
-                    "energy": float(parts[3]),
-                    "arch": dm_arch,
-                    "util": "",
-                })
+            if len(parts) < 4:
+                continue
+            # Detect SSA+OpName merge: 7 parts = normal, 6 parts = merged
+            # Normal:  [SSA, OpName, Cycles, Energy, MemEnergy, MacEnergy, DRAM_Acc]
+            # Merged:  [SSA+OpName, Cycles, Energy, MemEnergy, MacEnergy, DRAM_Acc]
+            if len(parts) == 7:
+                ssa = parts[0]
+                name = parts[1]
+                cycles_str = parts[2]
+                energy_str = parts[3]
+            elif len(parts) == 6:
+                # SSA and OpName merged — split with regex
+                m_ssa = re.match(r'(%\S+?)(transpose_\d+)$', parts[0])
+                if m_ssa:
+                    ssa = m_ssa.group(1)
+                    name = m_ssa.group(2)
+                else:
+                    ssa = parts[0]
+                    name = "?"
+                cycles_str = parts[1]
+                energy_str = parts[2]
+            else:
+                continue
+            if cycles_str == "FAILED":
+                continue
+            dram_acc = 0
+            try:
+                dram_acc = int(float(parts[-1]))
+            except (ValueError, IndexError):
+                dram_acc = 0
+            result["dm_ops"].append({
+                "ssa": ssa,
+                "name": name,
+                "cycles": int(float(cycles_str)),
+                "energy": float(energy_str),
+                "arch": dm_arch,
+                "util": "",
+                "dram_acc": dram_acc,
+            })
 
     return result
 
@@ -352,8 +388,8 @@ def generate_summary():
                 if all_ops:
                     f.write(f"    {'Type':<14} {'SSA':<10} {'Op Name':<30} "
                             f"{'Arch':<22} {'Util%':>8} "
-                            f"{'Cycles':>14} {'Energy(uJ)':>14}\n")
-                    f.write(f"    {'─' * 116}\n")
+                            f"{'Cycles':>14} {'Energy(uJ)':>14} {'DRAM_Acc':>14}\n")
+                    f.write(f"    {'─' * 132}\n")
                     for op_type, op in all_ops:
                         util_disp = op.get('util', '')
                         if util_disp:
@@ -364,10 +400,15 @@ def generate_summary():
                         else:
                             util_disp = "-"
                         arch_disp = op.get('arch', '')
+                        dram_disp = op.get('dram_acc', '')
+                        if dram_disp != '' and dram_disp != 0:
+                            dram_disp = f"{dram_disp:>14}"
+                        else:
+                            dram_disp = f"{'-':>14}"
                         f.write(f"    {op_type:<14} {op['ssa']:<10} {op['name']:<30} "
                                 f"{arch_disp:<22} {util_disp:>8} "
-                                f"{op['cycles']:>14} {op['energy']:>14.4f}\n")
-                    f.write(f"    {'─' * 116}\n")
+                                f"{op['cycles']:>14} {op['energy']:>14.4f} {dram_disp}\n")
+                    f.write(f"    {'─' * 132}\n")
 
                 # ── Workload summary ──
                 f.write(f"    Summary: Latency={r['total_cycles']} cycles  "

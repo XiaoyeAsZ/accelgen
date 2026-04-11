@@ -923,3 +923,57 @@ No Layout specified, so using bandwidth based modeling
 [  7] Utilization = 0.50 | pJ/Compute =    7.588 | L6[WIO] C8 M8 G4 - L5[WIO] G2 C7 P128 - L4[] G1 M512X - L3[] G1 C256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 909313
 [  7] Utilization = 0.50 | pJ/Compute =    7.432 | L6[WIO] M8 G4 C8 - L5[WIO] G2 C7 P128 - L4[] G1 M512X - L3[] G1 C256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 909313
 [  7] Utilization = 0.50 | pJ/Compute =    7.262 | L6[WIO] G8 C8 M8 - L5[WIO] C7 P128 - L4[] G1 M512X - L3[] G1 C256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 909313
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.50 | pJ/Compute =    7.106 | Cycles = 909313
+  Cycles: 909313  Energy: 4.272809e+05 uJ  Computes: 60129542144  Utilization: 5.045000e+01%
+
+================================================================
+  ModelBaselineAccelerator — Timeloop Results Summary
+  MLIR file:    benchmark/mlir/llama3-8b-block0-ffn-prefill-b8s128.mlir
+  Linear arch:  gemmini_ws_server  |  Nonlinear arch: PPU_server  |  Datamove arch: PPU_datamove_server
+================================================================
+
+--- Linear Ops (gemmini_ws_server) ---
+SSA        Operator                       Cycles	Energy(uJ)	Computes	Util%	DRAM_Acc
+----------------------------------------------------------------------------------------------------
+%5         batch_matmul_0                 888832	4.257995e+05	60129542144	5.161000e+01%	488636416
+%9         batch_matmul_1                 888832	4.257995e+05	60129542144	5.161000e+01%	488636416
+%16        batch_matmul_2                 909313	4.272809e+05	60129542144	5.045000e+01%	488636416
+----------------------------------------------------------------------------------------------------
+  Linear total: Cycles=2686977  Energy=1.278880e+06 uJ  DRAM_Acc=1465909248
+
+--- Elementwise Ops (PPU_server) ---
+SSA        Operator                       Cycles	Energy(uJ)	Computes	Util%
+----------------------------------------------------------------------------------------------------
+%6         negf_0                         28672	6.613010e+03	14680064	1.000000e+02%
+%6         exp_1                          143360	2.189588e+04	73400320	1.000000e+02%
+%6         addf_2                         28672	6.613010e+03	14680064	1.000000e+02%
+%6         divf_3                         28672	6.613010e+03	14680064	1.000000e+02%
+%7         mulf_4                         28672	6.613010e+03	14680064	1.000000e+02%
+%10        mulf_5                         28672	6.613010e+03	14680064	1.000000e+02%
+----------------------------------------------------------------------------------------------------
+  Elementwise total: Cycles=286720  Energy=5.496093e+04 uJ
+
+--- Data Movement Ops (PPU_datamove_server) ---
+SSA        Operator                       Cycles	Energy(uJ)	MemEnergy(uJ)	MacEnergy(pJ)	DRAM_Acc
+------------------------------------------------------------------------------------------------------------------------
+%transposedtranspose_0                    917504	2.114517e+05	2.095052e+05	1.946534e+09	939524097
+%transposed_1transpose_1                    917504	2.114517e+05	2.095052e+05	1.946534e+09	939524097
+%transposed_2transpose_2                    917504	2.114517e+05	2.095052e+05	1.946534e+09	939524097
+------------------------------------------------------------------------------------------------------------------------
+  Datamove total: Cycles=2752512  MemEnergy=6.285155e+05 uJ  (TotalEnergy=6.343551e+05 uJ)  DRAM_Acc=4284481539
+
+================================================================
+  GRAND TOTAL (linear + elementwise + datamove):
+    Latency:            5726209 cycles (5.726209e+03 us, 5.726209e+00 ms)
+    Energy:             1.333841e+06 uJ
+    FLOPs:              360924053504 (linear_MACs=180388626432, elem_ops=146800640)
+    Throughput:         6.303019e+04 GFLOPS
+    Energy Efficiency:  2.705901e+02 GFLOPS/J
+    DRAM Access (dm):   4284481539
+  Operators: 12  (linear=3  elem=6  datamove=3)  Succeeded=12  Failed=0
+================================================================
+EXIT_CODE=0
