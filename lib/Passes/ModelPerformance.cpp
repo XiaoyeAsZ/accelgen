@@ -3,6 +3,7 @@
 #include "accelgen/Passes/AccelgenPasses.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -13,12 +14,11 @@
 #include <assert.h>
 #include <queue>
 #include <vector>
-#include "mlir/Dialect/Math/IR/Math.h"
 
 #include "accelgen/Utils/AffineMapUtils.h"
+#include "accelgen/Utils/ArchUtils.h"
 #include "accelgen/Utils/DebugUtils.h"
 #include "accelgen/Utils/OperationUtils.h"
-#include "accelgen/Utils/ArchUtils.h"
 
 namespace mlir::accelgen {
 #define GEN_PASS_DEF_MODELPERFORMANCE
@@ -27,11 +27,11 @@ namespace mlir::accelgen {
 namespace {
 
 class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
- public:
+public:
   using impl::ModelPerformanceBase<ModelPerformance>::ModelPerformanceBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext& ctx = getContext();
+    mlir::MLIRContext &ctx = getContext();
 
     ArchResource archCfg;
     archCfg.load(configPath);
@@ -59,15 +59,16 @@ class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
       totalFlops += flops;
       totalDramAcc += dramAcc;
 
-      auto sramEnergy = sramAcc * archCfg.sramEnergy;
-      auto dramEnergy = dramAcc * archCfg.dramEnergy;
+      auto sramEnergy = sramAcc * archCfg.sramEnergy * 8 * 1e-12;
+      auto dramEnergy = dramAcc * archCfg.dramEnergy * 8 * 1e-12;
       double_t peEnergy = 0;
       func.walk([&](linalg::GenericOp generic) {
         int64_t totalOps = 1;
         auto bound = generic.getStaticLoopRanges();
         assert(bound.size() == generic.getNumLoops());
-        for (auto b : bound) totalOps *= b;
-        for (auto& arith : generic.getRegion().front().getOperations()) {
+        for (auto b : bound)
+          totalOps *= b;
+        for (auto &arith : generic.getRegion().front().getOperations()) {
           if (mlir::isa<arith::ArithDialect>(arith.getDialect()) ||
               mlir::isa<math::MathDialect>(arith.getDialect())) {
             std::string resourceName = toString(&arith);
@@ -78,12 +79,18 @@ class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
               resourceName = resourceName + "_" + toString(result.getType());
 
             assert(archCfg.computeEnergy.contains(resourceName));
-            peEnergy += totalOps * archCfg.computeEnergy[resourceName];
+            peEnergy += totalOps * archCfg.computeEnergy[resourceName] * 1e-12;
           }
         }
       });
 
       totalEnergy += (sramEnergy + dramEnergy + peEnergy);
+
+      // ECHO("CLUSTER ", "\n")
+      // ECHO(func.getName(), "\n")
+      // ECHO(sramEnergy, "\n")
+      // ECHO(dramEnergy, "\n")
+      // ECHO(peEnergy, "\n")
     });
 
     auto throughput = totalFlops / totalLatency;
@@ -101,5 +108,5 @@ class ModelPerformance : public impl::ModelPerformanceBase<ModelPerformance> {
   }
 };
 
-}  // namespace
-}  // namespace mlir::accelgen
+} // namespace
+} // namespace mlir::accelgen

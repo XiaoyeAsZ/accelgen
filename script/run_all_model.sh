@@ -34,7 +34,7 @@ do
                             ./build/bin/accelgen-opt ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}.mlir \
                             -pass-pipeline="model-performance{config-path=/home/accelgen/config/$config.json}" \
                             -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}.mlir
-                        } 1>> ./test/performance.log 2>> ./test/runtime.log
+                        } 1>> ./test/performance.log 2>/dev/null
 
                     done
                 done

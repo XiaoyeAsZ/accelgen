@@ -90,6 +90,14 @@ static std::string toString(mlir::Operation *op) {
     return "divf";
   if (mlir::isa<mlir::math::ExpOp>(op))
     return "exp";
+  if (mlir::isa<mlir::math::RsqrtOp>(op))
+    return "rsqrt";
+  if (mlir::isa<mlir::math::SqrtOp>(op))
+    return "rsqrt";
+  if (mlir::isa<mlir::math::FPowIOp>(op))
+    return "fpowi";
+  if (mlir::isa<mlir::math::ErfOp>(op))
+    return "erf";
   // if (mlir::isa<mlir::arith::MulIOp>(op)) return "muli";
   // if (mlir::isa<mlir::arith::AddIOp>(op)) return "addi";
   op->dump();

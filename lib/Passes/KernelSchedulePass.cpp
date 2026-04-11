@@ -30,11 +30,11 @@ namespace mlir::accelgen {
 namespace {
 
 class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
- public:
+public:
   using impl::KernelScheduleBase<KernelSchedule>::KernelScheduleBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext& ctx = getContext();
+    mlir::MLIRContext &ctx = getContext();
     mlir::func::FuncOp func = getOperation();
     mlir::ModuleOp module = func->getParentOfType<ModuleOp>();
 
@@ -66,8 +66,8 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     // func.walk([&](mlir::linalg::GenericOp genericOp) {
     //   scheduledCluster.insertGenericOp(genericOp);
     // });
-    for (auto& block : func.getBlocks()) {
-      for (auto& op : block.getOperations())
+    for (auto &block : func.getBlocks()) {
+      for (auto &op : block.getOperations())
         if (mlir::dyn_cast<linalg::GenericOp>(op) ||
             mlir::dyn_cast<tensor::CollapseShapeOp>(op) ||
             mlir::dyn_cast<tensor::ExpandShapeOp>(op) ||
@@ -86,7 +86,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
     // clusterDAG.constructDAG();
     // clusterDAG.optimizeDAG();
 
-    scheduledCluster.schedule(&ctx, model, archCfg, 4);
+    scheduledCluster.schedule(&ctx, model, archCfg, 6);
 
     mlir::OpBuilder builder(module);
 
@@ -105,19 +105,23 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
           // llvm::errs() << operand << "\n";
           llvm::SmallVector<linalg::GenericOp> previousGenericOps;
           cluster->getPreviousGeneric(operand, previousGenericOps);
-          if (previousGenericOps.empty()) clusterInput.push_back(operand);
+          if (previousGenericOps.empty())
+            clusterInput.push_back(operand);
         }
-        for (auto constValue : constSet) clusterInput.push_back(constValue);
+        for (auto constValue : constSet)
+          clusterInput.push_back(constValue);
         for (auto operand : genericOp.getResults()) {
           llvm::SmallVector<linalg::GenericOp> latterGenericOps;
           cluster->getLatterGeneric(operand, latterGenericOps);
-          if (latterGenericOps.empty()) clusterOutput.push_back(operand);
+          if (latterGenericOps.empty())
+            clusterOutput.push_back(operand);
         }
       }
 
       auto opsWithTensorOp = cluster->constructClusterWithTensorOp();
       for (auto tensorOp : opsWithTensorOp) {
-        if (!mlir::isa<tensor::TensorDialect>(tensorOp->getDialect())) continue;
+        if (!mlir::isa<tensor::TensorDialect>(tensorOp->getDialect()))
+          continue;
         for (auto ins : tensorOp->getOperands()) {
           if (ins.getDefiningOp() == nullptr &&
               (!llvm::is_contained(clusterInput, ins)))
@@ -151,7 +155,7 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
 
       // clusterFuncOp.setPrivate();
 
-      mlir::Block* entry = clusterFuncOp.addEntryBlock();
+      mlir::Block *entry = clusterFuncOp.addEntryBlock();
       builder.setInsertionPointToStart(entry);
 
       IRMapping mapper;
@@ -176,14 +180,15 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
           getTopoOrder(cluster->constructClusterWithTensorOp());
 
       // ECHO("check clone cluster", "\n")
-      for (Operation* op : opClusterWithTensorOp) {
+      for (Operation *op : opClusterWithTensorOp) {
         ECHO("clone", "\n")
         op->dump();
         builder.clone(*op, mapper);
       }
 
       llvm::SmallVector<Value> retVals;
-      for (Value out : clusterOutput) retVals.push_back(mapper.lookup(out));
+      for (Value out : clusterOutput)
+        retVals.push_back(mapper.lookup(out));
 
       builder.create<func::ReturnOp>(clusterFuncOp.getLoc(), retVals);
     }
@@ -195,5 +200,5 @@ class KernelSchedule : public impl::KernelScheduleBase<KernelSchedule> {
   }
 };
 
-}  // namespace
-}  // namespace mlir::accelgen
+} // namespace
+} // namespace mlir::accelgen
