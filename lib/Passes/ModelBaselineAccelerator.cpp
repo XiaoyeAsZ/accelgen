@@ -409,7 +409,7 @@ class ModelBaselineAccelerator
       }
     }
 
-    std::string outputBase = "baseline_test/" + linearArchName +
+    std::string outputBase = "baseline_test0412/" + linearArchName +
                              "/" + modelName + "/" + layerName +
                              "/" + phaseName + "/" + configName;
 
@@ -772,7 +772,9 @@ class ModelBaselineAccelerator
               Q = totalElems;
             }
             // Override batch (first dim) based on architecture target
-            if (outShape.size() >= 2 && outShape[0] > 0) {
+            // Only for 3D+ tensors where dim[0] is actually a batch dimension.
+            // 2D tensors (e.g. weight transpose) have no batch dim — N stays 1.
+            if (outShape.size() >= 3 && outShape[0] > 0) {
               int64_t origBatch = outShape[0];
               int64_t newBatch = origBatch;
               if (dmArchName.find("edge") != std::string::npos)
@@ -1071,25 +1073,28 @@ class ModelBaselineAccelerator
     // ---- Elementwise ops ----
     llvm::errs() << "--- Elementwise Ops (" << nonlinearArchName << ") ---\n";
     llvm::errs() << "SSA        Operator                       "
-                 << "Cycles\tEnergy(uJ)\tComputes\tUtil%\n";
+                 << "Cycles\tEnergy(uJ)\tComputes\tUtil%\tDRAM_Acc\n";
     llvm::errs() << std::string(100, '-') << "\n";
-    int64_t elemCycles = 0; double elemEnergy = 0;
+    int64_t elemCycles = 0; double elemEnergy = 0; int64_t elemDramAcc = 0;
     for (auto* r : elemResults) {
       pad(llvm::errs(), r->ssaName, 11);
       pad(llvm::errs(), r->opName, 31);
       if (r->success) {
         llvm::errs() << r->cycles << "\t" << r->energyUJ << "\t"
-                     << r->computes << "\t" << r->utilization << "%\n";
+                     << r->computes << "\t" << r->utilization << "%\t"
+                     << r->dramAccesses << "\n";
         elemCycles += r->cycles; elemEnergy += r->energyUJ;
         totalCycles += r->cycles; totalEnergy += r->energyUJ;
-        elemComputes += r->computes; successCount++;
+        elemComputes += r->computes; elemDramAcc += r->dramAccesses;
+        successCount++;
       } else {
         llvm::errs() << "FAILED\n";
       }
     }
     llvm::errs() << std::string(100, '-') << "\n";
     llvm::errs() << "  Elementwise total: Cycles=" << elemCycles
-                 << "  Energy=" << elemEnergy << " uJ\n\n";
+                 << "  Energy=" << elemEnergy << " uJ"
+                 << "  DRAM_Acc=" << elemDramAcc << "\n\n";
 
     // ---- Data movement ops ----
     llvm::errs() << "--- Data Movement Ops (" << dmArchName << ") ---\n";
@@ -1097,7 +1102,7 @@ class ModelBaselineAccelerator
                  << "Cycles\tEnergy(uJ)\tMemEnergy(uJ)\tMacEnergy(pJ)\tDRAM_Acc\n";
     llvm::errs() << std::string(120, '-') << "\n";
     int64_t dmCycles = 0; double dmEnergy = 0; double dmMemEnergy = 0;
-    int64_t totalDramAcc = linDramAcc;  // start with linear DRAM access
+    int64_t totalDramAcc = linDramAcc + elemDramAcc;  // linear + elementwise DRAM access
     for (auto* r : datamoveResults) {
       pad(llvm::errs(), r->ssaName, 11);
       pad(llvm::errs(), r->opName, 31);
@@ -1109,8 +1114,6 @@ class ModelBaselineAccelerator
                      << r->dramAccesses << "\n";
         dmCycles += r->cycles; dmEnergy += r->energyUJ;
         dmMemEnergy += memEnergyUJ;
-        // Datamove energy NOT included in grand total;
-        // datamove is only for DRAM access statistics.
         totalDramAcc += r->dramAccesses;
         successCount++;
       } else {
@@ -1123,13 +1126,15 @@ class ModelBaselineAccelerator
                  << "  (TotalEnergy=" << dmEnergy << " uJ)"
                  << "  DRAM_Acc=" << totalDramAcc << "\n\n";
 
-    // Include datamove cycles in total latency
+    // Include datamove cycles and energy in grand total
+    // Use MemEnergy (excluding MAC compute energy) for datamove
     totalCycles += dmCycles;
+    totalEnergy += dmMemEnergy;
 
     // ---- Grand total ----
     // FLOPs: linear MACs × 2 + elementwise computes × 1
     // Latency: linear + elementwise + datamove cycles @ 1GHz (1ns per cycle)
-    // Energy: linear + elementwise only (datamove excluded)
+    // Energy: linear + elementwise + datamove
     int64_t totalFLOPs = 2 * linComputes + elemComputes;
     double latencyUs = totalCycles * 1e-3;   // cycles × 1ns = ns, /1000 = us
     double latencyMs = totalCycles * 1e-6;   // ns → ms
