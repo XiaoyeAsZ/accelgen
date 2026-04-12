@@ -1,0 +1,978 @@
+
+[ModelBaseline] Config:
+  MLIR file:           benchmark/mlir/llama3-8b-block0-ffn-prefill-b8s128.mlir
+  example_designs dir: /home/accelgen/example_designs
+  linear arch:         gemmini_os_server
+  nonlinear arch:      PPU_server
+  datamove arch:       PPU_datamove_server
+  problem_base:        /home/accelgen/example_designs/layer_shapes/problem_base.yaml
+  output base:         baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128
+
+
+[ModelBaseline] Found transpose_0 (datamove) elems=58720256
+=== Running timeloop for: transpose_0 (datamove) ===
+  Arch: PPU_datamove_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_0/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_0
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_0/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_0/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 6188
+  Factorization options along problem dimension Q = 26208
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 9081805824
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1135225728 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  4] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N8 - L1[W] Q2 - L0[O] Q2 P2  | Cycles = 14680064
+[  0] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] Q2 - L0[O] Q2 P2 N8  | Cycles = 14680064
+[  7] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N2 - L1[W] Q2 N4 - L0[O] Q2 P2  | Cycles = 14680064
+[  5] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N2 - L1[W] Q2 - L0[O] Q2 P2 N4  | Cycles = 14680064
+[  3] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] P128 Q56 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] Q2 N4 - L0[O] Q2 P2 N2  | Cycles = 14680064
+[  1] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] N8 Q2 - L0[O] Q2 P2  | Cycles = 14680064
+[  6] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N2 - L1[W] N2 Q2 - L0[O] Q2 P2 N2  | Cycles = 14680064
+[  2] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] Q2 N2 - L0[O] Q2 P2 N4  | Cycles = 14680064
+[  2] Utilization = 0.50 | pJ/Compute =  450.126 | L5[WIO] Q112 N2 P8 - L4[IO] Q16 - L3[] G1 P128X N2X - L2[I] Q2 - L1[W] P4 - L0[O] Q4 N2  | Cycles = 1835008
+[  0] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 - L4[IO] N4 Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 N2 - L0[O] P2  | Cycles = 917504
+[  5] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 N2 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 N2 - L0[O] P2 N2  | Cycles = 917504
+[  6] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] N2 Q512 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] N4 P2 - L0[O] P2  | Cycles = 917504
+[  3] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] N8 Q512 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 - L0[O] P2  | Cycles = 917504
+[  7] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 N2 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] N2 P4 - L1[W] P2 - L0[O] P2 N2  | Cycles = 917504
+[  1] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 - L4[IO] N4 Q14 - L3[] G1 Q2X P256X - L2[I] N2 P4 - L1[W] P2 - L0[O] P2  | Cycles = 917504
+[  4] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 N2 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 - L0[O] P2 N4  | Cycles = 917504
+[  2] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] P32 Q128 - L4[IO] P2 Q7 - L3[] G1 Q4X P32X N4X - L2[I] Q4 - L1[W] N2 - L0[O] P2  | Cycles = 917504
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.125 | Cycles = 917504
+  Cycles: 917504  Energy: 2.114517e+05 uJ  Computes: 469762048  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found batch_matmul_0: batch=8 M=128 K=4096 N=14336
+=== Running timeloop for: batch_matmul_0 (linear) ===
+  Arch: gemmini_os_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_0/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_0
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_0/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_0/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+WARNING: Constraint P=512 exceeds problem dimension P=128, ignoring.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 13
+  Factorization options along problem dimension M = 8
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 1
+  Factorization options along problem dimension P = 36
+  Factorization options along problem dimension Q = 1
+  Factorization options along problem dimension G = 4
+Mapspace Dimension [IndexFactorization] Size: 14976
+Mapspace Dimension [LoopPermutation] Size: 576
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1872 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  6] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C128 - L5[WIO] C32 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  3] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C16 - L5[WIO] C256 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  0] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C1024 - L5[WIO] C4 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  5] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C32 - L5[WIO] C128 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  6] Utilization = 0.06 | pJ/Compute =   26.505 | L6[WIO] P4 C128 M8 - L5[WIO] G8 M7 C32 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7567616
+[  4] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C256 - L5[WIO] C16 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  3] Utilization = 0.06 | pJ/Compute =   14.335 | L6[WIO] P4 C16 M8 - L5[WIO] G8 M7 C256 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7366912
+[  7] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C64 - L5[WIO] C64 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  2] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C512 - L5[WIO] C8 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  5] Utilization = 0.06 | pJ/Compute =   16.074 | L6[WIO] P4 C32 M8 - L5[WIO] G8 M7 C128 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7395584
+[  0] Utilization = 0.01 | pJ/Compute =  123.862 | L6[WIO] P4 C1024 M8 - L5[WIO] G8 M7 C4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 31184896
+[  1] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C8 - L5[WIO] C512 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  4] Utilization = 0.05 | pJ/Compute =   40.413 | L6[WIO] P4 C256 M8 - L5[WIO] G8 M7 C16 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 9164800
+[  1] Utilization = 0.06 | pJ/Compute =   13.466 | L6[WIO] P4 C8 M8 - L5[WIO] G8 M7 C512 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7352576
+[  7] Utilization = 0.06 | pJ/Compute =   19.551 | L6[WIO] P4 C64 M8 - L5[WIO] G8 M7 C64 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7452928
+[  2] Utilization = 0.03 | pJ/Compute =   68.229 | L6[WIO] P4 C512 M8 - L5[WIO] G8 M7 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 16504832
+[  5] Utilization = 0.06 | pJ/Compute =   11.696 | L6[WIO] C32 M8 P4 - L5[WIO] M7 G8 C128 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7395584
+[  3] Utilization = 0.06 | pJ/Compute =    9.958 | L6[WIO] C16 M8 P4 - L5[WIO] M7 G8 C256 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7366912
+[  0] Utilization = 0.02 | pJ/Compute =  119.484 | L6[WIO] C1024 M8 P4 - L5[WIO] M7 G8 C4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 29837312
+[  1] Utilization = 0.06 | pJ/Compute =    9.089 | L6[WIO] C8 M8 P4 - L5[WIO] M7 G8 C512 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7352576
+[  6] Utilization = 0.06 | pJ/Compute =   22.127 | L6[WIO] C128 M8 P4 - L5[WIO] M7 G8 C32 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7567616
+[  4] Utilization = 0.06 | pJ/Compute =   36.035 | L6[WIO] C256 M8 P4 - L5[WIO] M7 G8 C16 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7817216
+[  2] Utilization = 0.03 | pJ/Compute =   63.851 | L6[WIO] C512 M8 P4 - L5[WIO] M7 G8 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15157248
+[  7] Utilization = 0.06 | pJ/Compute =   15.173 | L6[WIO] C64 M8 P4 - L5[WIO] M7 G8 C64 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7452928
+[  6] Utilization = 0.25 | pJ/Compute =    8.456 | L6[WIO] M7 C16 G4 - L5[WIO] G2 M8 C256 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1841728
+[  0] Utilization = 0.03 | pJ/Compute =   63.931 | L6[WIO] M14 C512 G2 - L5[WIO] G4 P4 M4 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15181824
+[  6] Utilization = 0.25 | pJ/Compute =    8.376 | L6[WIO] C16 G4 M7 - L5[WIO] M8 G2 C256 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1841728
+[  2] Utilization = 0.25 | pJ/Compute =    7.152 | L6[WIO] M7 C4 G4 - L5[WIO] G2 M8 C1024 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1836352
+[  0] Utilization = 0.03 | pJ/Compute =   63.758 | L6[WIO] G2 C512 M14 - L5[WIO] M4 G4 P4 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15128576
+[  4] Utilization = 0.25 | pJ/Compute =    7.586 | L6[WIO] M7 C8 G4 - L5[WIO] G2 M8 C512 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1838144
+[  2] Utilization = 0.25 | pJ/Compute =    7.072 | L6[WIO] C4 G4 M7 - L5[WIO] M8 G2 C1024 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1836352
+[  4] Utilization = 0.25 | pJ/Compute =    7.507 | L6[WIO] C8 G4 M7 - L5[WIO] M8 G2 C512 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1838144
+[  6] Utilization = 0.25 | pJ/Compute =    7.288 | L6[WIO] M7 G4 C16 - L5[WIO] M8 G2 C256 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1841728
+[  2] Utilization = 0.25 | pJ/Compute =    6.918 | L6[WIO] M7 G4 C4 - L5[WIO] M8 G2 C1024 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1836352
+[  7] Utilization = 0.11 | pJ/Compute =   14.690 | L6[WIO] M7 G4 C256 - L5[WIO] M8 G2 C16 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 4343808
+[  4] Utilization = 0.25 | pJ/Compute =    7.042 | L6[WIO] M7 G4 C8 - L5[WIO] M8 G2 C512 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1838144
+[  0] Utilization = 0.05 | pJ/Compute =   24.165 | L6[WIO] M14 G2 C512 - L5[WIO] M4 G4 P4 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 9390080
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.25 | pJ/Compute =    6.918 | Cycles = 1836352
+  Cycles: 1836352  Energy: 4.159957e+05 uJ  Computes: 60129542144  Utilization: 2.498000e+01%
+
+[ModelBaseline] Found negf_0 (arith.negf, C=1)
+  shape=[8x128x14336] → N=8 C=1 P=128 Q=14336
+=== Running timeloop for: negf_0 (elementwise) ===
+  Arch: PPU_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/negf_0/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/negf_0
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/negf_0/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/negf_0/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 84
+  Factorization options along problem dimension P = 1716
+  Factorization options along problem dimension Q = 86632
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 12487483008
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1560935376 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  0] Utilization = 0.06 | pJ/Compute =  450.487 | L6[WIO] Q32 N8 P4 - L5[IO] Q14 - L4[] G1 P8X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] P2 Q4 - L0[O] G1  | Cycles = 458752
+[  3] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N4X Q7X P2X - L3[] G1 Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  7] Utilization = 0.22 | pJ/Compute =  450.479 | L6[WIO] Q4 N2 - L5[IO] N2 Q16 P8 - L4[] G1 Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 131072
+[  2] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N2X Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  6] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  4] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] P4 Q7 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 N2 - L0[O] P4  | Cycles = 114688
+[  1] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] P4 Q7 - L5[IO] N2 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 28672
+[  5] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 114688
+[  0] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N2 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  3] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 N2 - L0[O] G1  | Cycles = 57344
+[  4] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] N2 P2 - L1[W] Q7 - L0[O] G1  | Cycles = 57344
+[  2] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P2 Q128 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] N2  | Cycles = 57344
+[  6] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N4X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] G1  | Cycles = 28672
+[  7] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P4 Q7 - L5[IO] N4 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  5] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q4 P8 N4 - L5[IO] P2 Q56 - L4[] G1 Q16X P2X - L3[] G1 N2X Q4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 57344
+[  2] Utilization = 0.88 | pJ/Compute =  450.476 | L6[WIO] Q64 - L5[IO] Q32 N4 - L4[] G1 Q7X P8X - L3[] G1 N2X P4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 32768
+[  2] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] N4 P2 Q7 - L5[IO] Q32 - L4[] G1 N2X Q2X P16X - L3[] G1 Q2X P4X - L2[I] G1 - L1[W] Q16 - L0[O] G1  | Cycles = 28672
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.476 | Cycles = 28672
+  Cycles: 28672  Energy: 6.613010e+03 uJ  Computes: 14680064  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found exp_1 (math.exp, C=5)
+  shape=[8x128x14336] → N=8 C=5 P=128 Q=14336
+=== Running timeloop for: exp_1 (elementwise) ===
+  Arch: PPU_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/exp_1/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/exp_1
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/exp_1/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/exp_1/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 5
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 84
+  Factorization options along problem dimension P = 1716
+  Factorization options along problem dimension Q = 86632
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 62437415040
+Mapspace Dimension [LoopPermutation] Size: 331776
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 7804676880 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  6] Utilization = 0.12 | pJ/Compute =  399.664 | L6[WIO] P8 Q8 - L5[IO] C5 Q28 P4 - L4[] G1 N4X Q2X - L3[] G1 Q2X P4X - L2[I] Q16 - L1[W] G1 - L0[O] N2  | Cycles = 1146880
+[  7] Utilization = 0.12 | pJ/Compute =  654.662 | L6[WIO] P8 C5 Q8 - L5[IO] Q28 P4 - L4[] G1 N4X Q2X - L3[] G1 Q2X P4X - L2[I] Q16 - L1[W] G1 - L0[O] N2  | Cycles = 1146880
+[  3] Utilization = 0.25 | pJ/Compute =  399.661 | L6[WIO] Q8 C5 - L5[IO] Q28 N8 P2 - L4[] G1 Q16X P2X - L3[] G1 Q4X - L2[I] P4 - L1[W] P4 - L0[O] P2  | Cycles = 573440
+[  7] Utilization = 0.12 | pJ/Compute =  399.664 | L6[WIO] P8 Q8 C5 - L5[IO] P4 Q28 - L4[] G1 N4X Q2X - L3[] G1 Q2X P4X - L2[I] Q16 - L1[W] G1 - L0[O] N2  | Cycles = 1146880
+[  1] Utilization = 0.05 | pJ/Compute =  299.515 | L6[WIO] Q512 P64 - L5[IO] N2 - L4[] G1 Q14X P2X - L3[] G1 - L2[I] N2 C5 - L1[W] G1 - L0[O] Q2 N2  | Cycles = 2621440
+[  4] Utilization = 0.03 | pJ/Compute =  399.718 | L6[WIO] P8 Q128 N4 - L5[IO] C5 Q14 - L4[] G1 Q2X P4X - L3[] G1 N2X - L2[I] G1 - L1[W] Q4 P4 - L0[O] G1  | Cycles = 4587520
+[  2] Utilization = 0.05 | pJ/Compute =  400.268 | L6[WIO] Q512 P64 - L5[IO] N2 C5 - L4[] G1 Q14X P2X - L3[] G1 - L2[I] N2 - L1[W] G1 - L0[O] Q2 N2  | Cycles = 2621440
+[  5] Utilization = 0.03 | pJ/Compute =  654.680 | L6[WIO] N4 P8 C5 Q128 - L5[IO] Q14 - L4[] G1 Q2X P4X - L3[] G1 N2X - L2[I] G1 - L1[W] Q4 P4 - L0[O] G1  | Cycles = 4587520
+[  0] Utilization = 0.02 | pJ/Compute =  654.705 | L6[WIO] Q128 C5 N4 P8 - L5[IO] Q14 - L4[] G1 Q2X P4X - L3[] G1 - L2[I] N2 - L1[W] Q4 P4 - L0[O] G1  | Cycles = 9175040
+[  5] Utilization = 0.03 | pJ/Compute =  399.718 | L6[WIO] Q128 N4 P8 C5 - L5[IO] Q14 - L4[] G1 Q2X P4X - L3[] G1 N2X - L2[I] G1 - L1[W] Q4 P4 - L0[O] G1  | Cycles = 4587520
+[  1] Utilization = 0.06 | pJ/Compute =  654.668 | L6[WIO] C5 Q2 N2 - L5[IO] Q14 N4 P64 - L4[] G1 Q32X - L3[] G1 - L2[I] Q8 - L1[W] G1 - L0[O] Q2 P2  | Cycles = 2293760
+[  0] Utilization = 0.02 | pJ/Compute =  399.742 | L6[WIO] N4 P8 Q128 C5 - L5[IO] Q14 - L4[] G1 Q2X P4X - L3[] G1 - L2[I] N2 - L1[W] Q4 P4 - L0[O] G1  | Cycles = 9175040
+[  1] Utilization = 0.06 | pJ/Compute =  399.670 | L6[WIO] N2 Q2 C5 - L5[IO] N4 Q14 P64 - L4[] G1 Q32X - L3[] G1 - L2[I] Q8 - L1[W] G1 - L0[O] Q2 P2  | Cycles = 2293760
+[  2] Utilization = 0.50 | pJ/Compute =  298.308 | L6[WIO] Q7 N4 - L5[IO] P32 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2 C5  | Cycles = 286720
+[  4] Utilization = 0.05 | pJ/Compute =  298.321 | L6[WIO] Q512 P64 - L5[IO] N2 - L4[] G1 Q14X P2X - L3[] G1 - L2[I] N2 - L1[W] N2 - L0[O] Q2 C5  | Cycles = 2621440
+[  4] Utilization = 0.11 | pJ/Compute =  654.663 | L6[WIO] C5 Q64 - L5[IO] N2 P16 Q2 - L4[] G1 Q7X - L3[] G1 Q4X P2X - L2[I] N2 P4 - L1[W] N2 - L0[O] Q4  | Cycles = 1310720
+[  4] Utilization = 0.11 | pJ/Compute =  399.665 | L6[WIO] Q64 C5 - L5[IO] P16 Q2 N2 - L4[] G1 Q7X - L3[] G1 Q4X P2X - L2[I] P4 N2 - L1[W] N2 - L0[O] Q4  | Cycles = 1310720
+[  5] Utilization = 0.05 | pJ/Compute =  298.321 | L6[WIO] P64 Q512 - L5[IO] N2 - L4[] G1 Q14X P2X - L3[] G1 - L2[I] N2 - L1[W] N2 C5 - L0[O] Q2  | Cycles = 2621440
+[  0] Utilization = 0.05 | pJ/Compute =  298.321 | L6[WIO] Q512 P64 - L5[IO] N2 - L4[] G1 Q14X P2X - L3[] G1 - L2[I] N2 - L1[W] C5 - L0[O] Q2 N2  | Cycles = 2621440
+[  7] Utilization = 0.25 | pJ/Compute =  298.310 | L6[WIO] N4 Q7 - L5[IO] P32 Q16 N2 - L4[] G1 Q8X P4X - L3[] G1 Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2 C5  | Cycles = 573440
+[  1] Utilization = 0.50 | pJ/Compute =  654.657 | L6[WIO] C5 Q7 N4 - L5[IO] P32 Q16 - L4[] G1 Q8X P4X - L3[] G1 N2X Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  1] Utilization = 0.50 | pJ/Compute =  399.659 | L6[WIO] N4 Q7 C5 - L5[IO] Q16 P32 - L4[] G1 Q8X P4X - L3[] G1 N2X Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  6] Utilization = 0.50 | pJ/Compute =  399.659 | L6[WIO] N4 Q7 C5 - L5[IO] Q16 P32 - L4[] G1 N2X Q8X P4X - L3[] G1 Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  0] Utilization = 0.50 | pJ/Compute =  399.665 | L6[WIO] Q7 N4 - L5[IO] Q16 C5 P32 - L4[] G1 Q8X P4X - L3[] G1 N2X Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  5] Utilization = 0.50 | pJ/Compute =  399.659 | L6[WIO] Q7 N4 - L5[IO] C5 Q16 P32 - L4[] G1 N2X Q8X P4X - L3[] G1 Q4X - L2[I] Q2 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  4] Utilization = 0.50 | pJ/Compute =  399.836 | L6[WIO] Q7 N4 - L5[IO] P32 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q4X - L2[I] C5 Q2 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  4] Utilization = 0.50 | pJ/Compute =  298.662 | L6[WIO] Q7 N4 - L5[IO] P32 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q4X - L2[I] Q2 C5 - L1[W] G1 - L0[O] Q2  | Cycles = 286720
+[  7] Utilization = 0.50 | pJ/Compute =  654.657 | L6[WIO] C5 Q7 P16 - L5[IO] N8 Q2 - L4[] G1 Q32X - L3[] G1 Q2X P4X - L2[I] Q2 - L1[W] P2 - L0[O] Q8  | Cycles = 286720
+[  7] Utilization = 0.50 | pJ/Compute =  399.661 | L6[WIO] Q7 P16 C5 - L5[IO] N8 Q2 - L4[] G1 Q32X - L3[] G1 Q2X P4X - L2[I] Q2 - L1[W] P2 - L0[O] Q8  | Cycles = 286720
+[  3] Utilization = 0.50 | pJ/Compute =  298.308 | L6[WIO] Q7 N4 - L5[IO] P32 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q4X - L2[I] Q2 - L1[W] C5 - L0[O] Q2  | Cycles = 286720
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] Utilization = 1.00 | pJ/Compute =  298.308 | L6[WIO] N2 Q14 P16 - L5[IO] Q16 P2 - L4[] G1 Q16X P4X - L3[] G1 N4X Q2X - L2[I] Q2 - L1[W] C5 - L0[O] G1  | Cycles = 143360
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  298.308 | Cycles = 143360
+  Cycles: 143360  Energy: 2.189588e+04 uJ  Computes: 73400320  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found addf_2 (arith.addf, C=1)
+  shape=[8x128x14336] → N=8 C=1 P=128 Q=14336
+=== Running timeloop for: addf_2 (elementwise) ===
+  Arch: PPU_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/addf_2/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/addf_2
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/addf_2/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/addf_2/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 84
+  Factorization options along problem dimension P = 1716
+  Factorization options along problem dimension Q = 86632
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 12487483008
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1560935376 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  2] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N2X Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  0] Utilization = 0.06 | pJ/Compute =  450.487 | L6[WIO] Q32 N8 P4 - L5[IO] Q14 - L4[] G1 P8X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] P2 Q4 - L0[O] G1  | Cycles = 458752
+[  7] Utilization = 0.22 | pJ/Compute =  450.479 | L6[WIO] Q4 N2 - L5[IO] N2 Q16 P8 - L4[] G1 Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 131072
+[  3] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N4X Q7X P2X - L3[] G1 Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  6] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  1] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] P4 Q7 - L5[IO] N2 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 28672
+[  5] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 114688
+[  4] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] P4 Q7 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 N2 - L0[O] P4  | Cycles = 114688
+[  2] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P2 Q128 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] N2  | Cycles = 57344
+[  3] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 N2 - L0[O] G1  | Cycles = 57344
+[  6] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N4X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] G1  | Cycles = 28672
+[  0] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N2 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  4] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] N2 P2 - L1[W] Q7 - L0[O] G1  | Cycles = 57344
+[  5] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q4 P8 N4 - L5[IO] P2 Q56 - L4[] G1 Q16X P2X - L3[] G1 N2X Q4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 57344
+[  7] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P4 Q7 - L5[IO] N4 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  2] Utilization = 0.88 | pJ/Compute =  450.476 | L6[WIO] Q64 - L5[IO] Q32 N4 - L4[] G1 Q7X P8X - L3[] G1 N2X P4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 32768
+[  2] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] N4 P2 Q7 - L5[IO] Q32 - L4[] G1 N2X Q2X P16X - L3[] G1 Q2X P4X - L2[I] G1 - L1[W] Q16 - L0[O] G1  | Cycles = 28672
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.476 | Cycles = 28672
+  Cycles: 28672  Energy: 6.613010e+03 uJ  Computes: 14680064  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found divf_3 (arith.divf, C=1)
+  shape=[8x128x14336] → N=8 C=1 P=128 Q=14336
+=== Running timeloop for: divf_3 (elementwise) ===
+  Arch: PPU_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/divf_3/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/divf_3
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/divf_3/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/divf_3/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 84
+  Factorization options along problem dimension P = 1716
+  Factorization options along problem dimension Q = 86632
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 12487483008
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1560935376 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  0] Utilization = 0.06 | pJ/Compute =  450.487 | L6[WIO] Q32 N8 P4 - L5[IO] Q14 - L4[] G1 P8X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] P2 Q4 - L0[O] G1  | Cycles = 458752
+[  3] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N4X Q7X P2X - L3[] G1 Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  7] Utilization = 0.22 | pJ/Compute =  450.479 | L6[WIO] Q4 N2 - L5[IO] N2 Q16 P8 - L4[] G1 Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 131072
+[  2] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N2X Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  5] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 114688
+[  1] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] P4 Q7 - L5[IO] N2 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 28672
+[  6] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  4] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] P4 Q7 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 N2 - L0[O] P4  | Cycles = 114688
+[  0] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N2 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  2] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P2 Q128 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] N2  | Cycles = 57344
+[  4] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] N2 P2 - L1[W] Q7 - L0[O] G1  | Cycles = 57344
+[  3] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 N2 - L0[O] G1  | Cycles = 57344
+[  7] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P4 Q7 - L5[IO] N4 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  6] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N4X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] G1  | Cycles = 28672
+[  5] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q4 P8 N4 - L5[IO] P2 Q56 - L4[] G1 Q16X P2X - L3[] G1 N2X Q4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 57344
+[  2] Utilization = 0.88 | pJ/Compute =  450.476 | L6[WIO] Q64 - L5[IO] Q32 N4 - L4[] G1 Q7X P8X - L3[] G1 N2X P4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 32768
+[  2] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] N4 P2 Q7 - L5[IO] Q32 - L4[] G1 N2X Q2X P16X - L3[] G1 Q2X P4X - L2[I] G1 - L1[W] Q16 - L0[O] G1  | Cycles = 28672
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.476 | Cycles = 28672
+  Cycles: 28672  Energy: 6.613010e+03 uJ  Computes: 14680064  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found mulf_4 (arith.mulf, C=1)
+  shape=[8x128x14336] → N=8 C=1 P=128 Q=14336
+=== Running timeloop for: mulf_4 (elementwise) ===
+  Arch: PPU_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_4/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_4
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_4/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_4/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 84
+  Factorization options along problem dimension P = 1716
+  Factorization options along problem dimension Q = 86632
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 12487483008
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1560935376 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  2] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N2X Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  0] Utilization = 0.06 | pJ/Compute =  450.487 | L6[WIO] Q32 N8 P4 - L5[IO] Q14 - L4[] G1 P8X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] P2 Q4 - L0[O] G1  | Cycles = 458752
+[  7] Utilization = 0.22 | pJ/Compute =  450.479 | L6[WIO] Q4 N2 - L5[IO] N2 Q16 P8 - L4[] G1 Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 131072
+[  3] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N4X Q7X P2X - L3[] G1 Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  6] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  5] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 114688
+[  4] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] P4 Q7 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 N2 - L0[O] P4  | Cycles = 114688
+[  1] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] P4 Q7 - L5[IO] N2 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 28672
+[  2] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P2 Q128 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] N2  | Cycles = 57344
+[  3] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 N2 - L0[O] G1  | Cycles = 57344
+[  4] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] N2 P2 - L1[W] Q7 - L0[O] G1  | Cycles = 57344
+[  0] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N2 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  5] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q4 P8 N4 - L5[IO] P2 Q56 - L4[] G1 Q16X P2X - L3[] G1 N2X Q4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 57344
+[  6] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N4X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] G1  | Cycles = 28672
+[  7] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P4 Q7 - L5[IO] N4 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  2] Utilization = 0.88 | pJ/Compute =  450.476 | L6[WIO] Q64 - L5[IO] Q32 N4 - L4[] G1 Q7X P8X - L3[] G1 N2X P4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 32768
+[  2] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] N4 P2 Q7 - L5[IO] Q32 - L4[] G1 N2X Q2X P16X - L3[] G1 Q2X P4X - L2[I] G1 - L1[W] Q16 - L0[O] G1  | Cycles = 28672
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.476 | Cycles = 28672
+  Cycles: 28672  Energy: 6.613010e+03 uJ  Computes: 14680064  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found transpose_1 (datamove) elems=58720256
+=== Running timeloop for: transpose_1 (datamove) ===
+  Arch: PPU_datamove_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_1/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_1
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_1/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_1/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 6188
+  Factorization options along problem dimension Q = 26208
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 9081805824
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1135225728 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  6] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N2 - L1[W] N2 Q2 - L0[O] Q2 P2 N2  | Cycles = 14680064
+[  7] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N2 - L1[W] Q2 N4 - L0[O] Q2 P2  | Cycles = 14680064
+[  1] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] N8 Q2 - L0[O] Q2 P2  | Cycles = 14680064
+[  4] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N8 - L1[W] Q2 - L0[O] Q2 P2  | Cycles = 14680064
+[  2] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] Q2 N2 - L0[O] Q2 P2 N4  | Cycles = 14680064
+[  5] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] N2 - L1[W] Q2 - L0[O] Q2 P2 N4  | Cycles = 14680064
+[  0] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] Q56 P128 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] Q2 - L0[O] Q2 P2 N8  | Cycles = 14680064
+[  3] Utilization = 0.06 | pJ/Compute =  450.136 | L5[WIO] P128 Q56 - L4[IO] Q32 - L3[] G1 Q2X P16X - L2[I] G1 - L1[W] Q2 N4 - L0[O] Q2 P2 N2  | Cycles = 14680064
+[  2] Utilization = 0.50 | pJ/Compute =  450.126 | L5[WIO] Q112 N2 P8 - L4[IO] Q16 - L3[] G1 P128X N2X - L2[I] Q2 - L1[W] P4 - L0[O] Q4 N2  | Cycles = 1835008
+[  6] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] N2 Q512 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] N4 P2 - L0[O] P2  | Cycles = 917504
+[  1] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 - L4[IO] N4 Q14 - L3[] G1 Q2X P256X - L2[I] N2 P4 - L1[W] P2 - L0[O] P2  | Cycles = 917504
+[  7] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 N2 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] N2 P4 - L1[W] P2 - L0[O] P2 N2  | Cycles = 917504
+[  0] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 - L4[IO] N4 Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 N2 - L0[O] P2  | Cycles = 917504
+[  5] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 N2 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 N2 - L0[O] P2 N2  | Cycles = 917504
+[  4] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q512 N2 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 - L0[O] P2 N4  | Cycles = 917504
+[  3] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] N8 Q512 - L4[IO] Q14 - L3[] G1 Q2X P256X - L2[I] P4 - L1[W] P2 - L0[O] P2  | Cycles = 917504
+[  2] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] P32 Q128 - L4[IO] P2 Q7 - L3[] G1 Q4X P32X N4X - L2[I] Q4 - L1[W] N2 - L0[O] P2  | Cycles = 917504
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.125 | Cycles = 917504
+  Cycles: 917504  Energy: 2.114517e+05 uJ  Computes: 469762048  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found batch_matmul_1: batch=8 M=128 K=4096 N=14336
+=== Running timeloop for: batch_matmul_1 (linear) ===
+  Arch: gemmini_os_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_1/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_1
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_1/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_1/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+WARNING: Constraint P=512 exceeds problem dimension P=128, ignoring.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 13
+  Factorization options along problem dimension M = 8
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 1
+  Factorization options along problem dimension P = 36
+  Factorization options along problem dimension Q = 1
+  Factorization options along problem dimension G = 4
+Mapspace Dimension [IndexFactorization] Size: 14976
+Mapspace Dimension [LoopPermutation] Size: 576
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1872 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  6] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C128 - L5[WIO] C32 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  4] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C256 - L5[WIO] C16 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  1] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C8 - L5[WIO] C512 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  5] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C32 - L5[WIO] C128 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  0] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C1024 - L5[WIO] C4 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  3] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C16 - L5[WIO] C256 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  2] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C512 - L5[WIO] C8 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  7] Utilization = 0.01 | pJ/Compute =  138.834 | L6[WIO] P4 M8 C64 - L5[WIO] C64 G8 M7 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60588033
+[  1] Utilization = 0.06 | pJ/Compute =   13.466 | L6[WIO] P4 C8 M8 - L5[WIO] G8 M7 C512 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7352576
+[  5] Utilization = 0.06 | pJ/Compute =   16.074 | L6[WIO] P4 C32 M8 - L5[WIO] G8 M7 C128 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7395584
+[  0] Utilization = 0.01 | pJ/Compute =  123.862 | L6[WIO] P4 C1024 M8 - L5[WIO] G8 M7 C4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 31184896
+[  3] Utilization = 0.06 | pJ/Compute =   14.335 | L6[WIO] P4 C16 M8 - L5[WIO] G8 M7 C256 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7366912
+[  4] Utilization = 0.05 | pJ/Compute =   40.413 | L6[WIO] P4 C256 M8 - L5[WIO] G8 M7 C16 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 9164800
+[  6] Utilization = 0.06 | pJ/Compute =   26.505 | L6[WIO] P4 C128 M8 - L5[WIO] G8 M7 C32 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7567616
+[  7] Utilization = 0.06 | pJ/Compute =   19.551 | L6[WIO] P4 C64 M8 - L5[WIO] G8 M7 C64 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7452928
+[  2] Utilization = 0.03 | pJ/Compute =   68.229 | L6[WIO] P4 C512 M8 - L5[WIO] G8 M7 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 16504832
+[  1] Utilization = 0.06 | pJ/Compute =    9.089 | L6[WIO] C8 M8 P4 - L5[WIO] M7 G8 C512 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7352576
+[  5] Utilization = 0.06 | pJ/Compute =   11.696 | L6[WIO] C32 M8 P4 - L5[WIO] M7 G8 C128 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7395584
+[  4] Utilization = 0.06 | pJ/Compute =   36.035 | L6[WIO] C256 M8 P4 - L5[WIO] M7 G8 C16 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7817216
+[  3] Utilization = 0.06 | pJ/Compute =    9.958 | L6[WIO] C16 M8 P4 - L5[WIO] M7 G8 C256 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7366912
+[  0] Utilization = 0.02 | pJ/Compute =  119.484 | L6[WIO] C1024 M8 P4 - L5[WIO] M7 G8 C4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 29837312
+[  6] Utilization = 0.06 | pJ/Compute =   22.127 | L6[WIO] C128 M8 P4 - L5[WIO] M7 G8 C32 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7567616
+[  7] Utilization = 0.06 | pJ/Compute =   15.173 | L6[WIO] C64 M8 P4 - L5[WIO] M7 G8 C64 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7452928
+[  2] Utilization = 0.03 | pJ/Compute =   63.851 | L6[WIO] C512 M8 P4 - L5[WIO] M7 G8 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15157248
+[  0] Utilization = 0.03 | pJ/Compute =   63.931 | L6[WIO] M14 C512 G2 - L5[WIO] G4 P4 M4 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15181824
+[  4] Utilization = 0.25 | pJ/Compute =    7.586 | L6[WIO] M7 C8 G4 - L5[WIO] G2 M8 C512 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1838144
+[  6] Utilization = 0.25 | pJ/Compute =    8.456 | L6[WIO] M7 C16 G4 - L5[WIO] G2 M8 C256 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1841728
+[  2] Utilization = 0.25 | pJ/Compute =    7.152 | L6[WIO] M7 C4 G4 - L5[WIO] G2 M8 C1024 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1836352
+[  0] Utilization = 0.03 | pJ/Compute =   63.758 | L6[WIO] G2 C512 M14 - L5[WIO] M4 G4 P4 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15128576
+[  4] Utilization = 0.25 | pJ/Compute =    7.507 | L6[WIO] C8 G4 M7 - L5[WIO] M8 G2 C512 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1838144
+[  6] Utilization = 0.25 | pJ/Compute =    8.376 | L6[WIO] C16 G4 M7 - L5[WIO] M8 G2 C256 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1841728
+[  2] Utilization = 0.25 | pJ/Compute =    7.072 | L6[WIO] C4 G4 M7 - L5[WIO] M8 G2 C1024 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1836352
+[  4] Utilization = 0.25 | pJ/Compute =    7.042 | L6[WIO] M7 G4 C8 - L5[WIO] M8 G2 C512 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1838144
+[  7] Utilization = 0.11 | pJ/Compute =   14.690 | L6[WIO] M7 G4 C256 - L5[WIO] M8 G2 C16 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 4343808
+[  6] Utilization = 0.25 | pJ/Compute =    7.288 | L6[WIO] M7 G4 C16 - L5[WIO] M8 G2 C256 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1841728
+[  2] Utilization = 0.25 | pJ/Compute =    6.918 | L6[WIO] M7 G4 C4 - L5[WIO] M8 G2 C1024 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1836352
+[  0] Utilization = 0.05 | pJ/Compute =   24.165 | L6[WIO] M14 G2 C512 - L5[WIO] M4 G4 P4 C8 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 9390080
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.25 | pJ/Compute =    6.918 | Cycles = 1836352
+  Cycles: 1836352  Energy: 4.159957e+05 uJ  Computes: 60129542144  Utilization: 2.498000e+01%
+
+[ModelBaseline] Found mulf_5 (arith.mulf, C=1)
+  shape=[8x128x14336] → N=8 C=1 P=128 Q=14336
+=== Running timeloop for: mulf_5 (elementwise) ===
+  Arch: PPU_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_5/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_5
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_5/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/mulf_5/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 84
+  Factorization options along problem dimension P = 1716
+  Factorization options along problem dimension Q = 86632
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 12487483008
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1560935376 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  0] Utilization = 0.06 | pJ/Compute =  450.487 | L6[WIO] Q32 N8 P4 - L5[IO] Q14 - L4[] G1 P8X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] P2 Q4 - L0[O] G1  | Cycles = 458752
+[  2] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N2X Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  4] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] P4 Q7 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 N2 - L0[O] P4  | Cycles = 114688
+[  7] Utilization = 0.22 | pJ/Compute =  450.479 | L6[WIO] Q4 N2 - L5[IO] N2 Q16 P8 - L4[] G1 Q7X P2X - L3[] G1 N2X Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 131072
+[  3] Utilization = 0.44 | pJ/Compute =  450.477 | L6[WIO] N2 Q4 - L5[IO] P8 Q16 - L4[] G1 N4X Q7X P2X - L3[] G1 Q2X P2X - L2[I] G1 - L1[W] P2 - L0[O] Q16 P2  | Cycles = 65536
+[  1] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] P4 Q7 - L5[IO] N2 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 28672
+[  6] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 N2X Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  4] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] N2 P2 - L1[W] Q7 - L0[O] G1  | Cycles = 57344
+[  2] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P2 Q128 - L5[IO] Q4 N2 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] N2  | Cycles = 57344
+[  5] Utilization = 0.25 | pJ/Compute =  450.478 | L6[WIO] Q7 P4 - L5[IO] Q16 N4 - L4[] G1 Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 114688
+[  0] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q7 P4 - L5[IO] Q16 N2 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 N2 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  3] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N2X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 N2 - L0[O] G1  | Cycles = 57344
+[  6] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] Q128 P2 - L5[IO] N2 Q4 - L4[] G1 N4X Q4X P4X - L3[] G1 P8X - L2[I] P2 - L1[W] Q7 - L0[O] G1  | Cycles = 28672
+[  7] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] P4 Q7 - L5[IO] N4 Q16 - L4[] G1 N2X Q8X P4X - L3[] G1 Q2X P2X - L2[I] Q4 - L1[W] Q2 - L0[O] P4  | Cycles = 57344
+[  5] Utilization = 0.50 | pJ/Compute =  450.477 | L6[WIO] Q4 P8 N4 - L5[IO] P2 Q56 - L4[] G1 Q16X P2X - L3[] G1 N2X Q4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 57344
+[  2] Utilization = 0.88 | pJ/Compute =  450.476 | L6[WIO] Q64 - L5[IO] Q32 N4 - L4[] G1 Q7X P8X - L3[] G1 N2X P4X - L2[I] G1 - L1[W] P2 - L0[O] P2  | Cycles = 32768
+[  2] Utilization = 1.00 | pJ/Compute =  450.476 | L6[WIO] N4 P2 Q7 - L5[IO] Q32 - L4[] G1 N2X Q2X P16X - L3[] G1 Q2X P4X - L2[I] G1 - L1[W] Q16 - L0[O] G1  | Cycles = 28672
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.476 | Cycles = 28672
+  Cycles: 28672  Energy: 6.613010e+03 uJ  Computes: 14680064  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found transpose_2 (datamove) elems=58720256
+=== Running timeloop for: transpose_2 (datamove) ===
+  Arch: PPU_datamove_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_2/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_2
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_2/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/transpose_2/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 1
+  Factorization options along problem dimension M = 1
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 56
+  Factorization options along problem dimension P = 26208
+  Factorization options along problem dimension Q = 6188
+  Factorization options along problem dimension G = 1
+Mapspace Dimension [IndexFactorization] Size: 9081805824
+Mapspace Dimension [LoopPermutation] Size: 1296
+Mapspace Dimension [Spatial] Size: 9
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 1135225728 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  6] Utilization = 0.03 | pJ/Compute =  450.149 | L5[WIO] P224 Q8 - L4[IO] N2 Q32 P4 - L3[] G1 Q4X N4X - L2[I] P4 Q2 - L1[W] Q2 P4 - L0[O] G1  | Cycles = 29360128
+[  2] Utilization = 0.44 | pJ/Compute =  450.126 | L5[WIO] P32 Q16 - L4[IO] P16 Q16 - L3[] G1 Q4X P7X N8X - L2[I] Q2 P2 - L1[W] P2 - L0[O] Q2  | Cycles = 2097152
+[  3] Utilization = 0.25 | pJ/Compute =  450.127 | L5[WIO] N4 Q8 P4 - L4[IO] P28 Q32 - L3[] G1 P128X - L2[I] Q8 - L1[W] G1 - L0[O] Q2 N2  | Cycles = 3670016
+[  5] Utilization = 0.25 | pJ/Compute =  450.127 | L5[WIO] Q8 P4 N4 - L4[IO] P28 Q32 - L3[] G1 P128X - L2[I] N2 Q8 - L1[W] G1 - L0[O] Q2  | Cycles = 3670016
+[  4] Utilization = 0.25 | pJ/Compute =  450.127 | L5[WIO] P4 Q8 N4 - L4[IO] P28 Q32 - L3[] G1 P128X - L2[I] Q8 - L1[W] N2 - L0[O] Q2  | Cycles = 3670016
+[  7] Utilization = 0.25 | pJ/Compute =  450.127 | L5[WIO] P4 N4 Q8 - L4[IO] N2 Q32 P28 - L3[] G1 P128X - L2[I] Q8 - L1[W] G1 - L0[O] Q2  | Cycles = 3670016
+[  0] Utilization = 0.50 | pJ/Compute =  450.126 | L5[WIO] Q8 P14 - L4[IO] Q32 N4 P2 - L3[] G1 Q8X P32X - L2[I] G1 - L1[W] Q2 P4 N2 - L0[O] P4  | Cycles = 1835008
+[  1] Utilization = 0.50 | pJ/Compute =  450.126 | L5[WIO] Q8 P14 - L4[IO] Q32 N4 P2 - L3[] G1 Q8X P32X - L2[I] N2 - L1[W] P4 Q2 - L0[O] P4  | Cycles = 1835008
+[  6] Utilization = 0.50 | pJ/Compute =  450.126 | L5[WIO] P4 N4 Q8 - L4[IO] Q32 P28 - L3[] G1 P128X N2X - L2[I] Q8 - L1[W] G1 - L0[O] Q2  | Cycles = 1835008
+[  2] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] Q8 P14 - L4[IO] Q32 P2 N4 - L3[] G1 Q8X P32X N2X - L2[I] G1 - L1[W] P4 Q2 - L0[O] P4  | Cycles = 917504
+[  3] Utilization = 0.50 | pJ/Compute =  450.126 | L5[WIO] Q8 N8 P14 - L4[IO] Q32 P2 - L3[] G1 Q8X P32X - L2[I] G1 - L1[W] P4 Q2 - L0[O] P4  | Cycles = 1835008
+[  4] Utilization = 0.44 | pJ/Compute =  450.126 | L5[WIO] N2 Q256 - L4[IO] P64 - L3[] G1 Q2X P56X N2X - L2[I] Q4 P2 N2 - L1[W] Q2 - L0[O] P2  | Cycles = 2097152
+[  7] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] P4 Q64 - L4[IO] P14 N4 - L3[] G1 Q16X P32X - L2[I] G1 - L1[W] P2 Q2 - L0[O] Q2 P4 N2  | Cycles = 917504
+[  5] Utilization = 0.88 | pJ/Compute =  450.125 | L5[WIO] Q256 N2 - L4[IO] P64 - L3[] G1 Q2X P56X N4X - L2[I] Q4 P2 - L1[W] Q2 - L0[O] P2  | Cycles = 1048576
+[  4] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] N2 P7 Q8 - L4[IO] Q512 - L3[] G1 P256X N2X - L2[I] N2 P8 - L1[W] G1 - L0[O] G1  | Cycles = 917504
+[  1] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] P896 Q2 - L4[IO] Q16 - L3[] G1 Q16X P8X N4X - L2[I] Q4 - L1[W] Q2 - L0[O] P2 N2  | Cycles = 917504
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] Utilization = 1.00 | pJ/Compute =  450.125 | L5[WIO] P7 N2 Q8 - L4[IO] Q512 - L3[] G1 P256X N2X - L2[I] P8 - L1[W] N2 - L0[O] G1  | Cycles = 917504
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 1.00 | pJ/Compute =  450.125 | Cycles = 917504
+  Cycles: 917504  Energy: 2.114517e+05 uJ  Computes: 469762048  Utilization: 1.000000e+02%
+
+[ModelBaseline] Found batch_matmul_2: batch=8 M=128 K=14336 N=4096
+=== Running timeloop for: batch_matmul_2 (linear) ===
+  Arch: gemmini_os_server
+  Problem: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_2/problem.yaml
+  Output: baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_2
+input file: /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_2/parsed-processed-input.yaml
+  _______                __                
+ /_  __(_)___ ___  ___  / /___  ____  ____ 
+  / / / / __ `__ \/ _ \/ / __ \/ __ \/ __ \
+ / / / / / / / / /  __/ / /_/ / /_/ / /_/ /
+/_/ /_/_/ /_/ /_/\___/_/\____/\____/ .___/ 
+                                  /_/      
+
+Problem configuration complete.
+execute:/usr/local/bin/accelergy /home/accelgen/baseline_test/gemmini_os_server/llama3-8b/ffn/prefill/b8s128/batch_matmul_2/parsed-processed-input.yaml --oprefix timeloop-mapper. -o ./ > timeloop-mapper.accelergy.log 2>&1
+Generate Accelergy ERT (energy reference table) to replace internal energy model.
+Generate Accelergy ART (area reference table) to replace internal area model.
+Architecture configuration complete.
+Sparse optimization configuration complete.
+Using threads = 8
+Mapper configuration complete.
+WARNING: Constraint P=512 exceeds problem dimension P=128, ignoring.
+Initializing Index Factorization subspace.
+  Factorization options along problem dimension C = 24
+  Factorization options along problem dimension M = 5
+  Factorization options along problem dimension R = 1
+  Factorization options along problem dimension S = 1
+  Factorization options along problem dimension N = 1
+  Factorization options along problem dimension P = 36
+  Factorization options along problem dimension Q = 1
+  Factorization options along problem dimension G = 4
+Mapspace Dimension [IndexFactorization] Size: 17280
+Mapspace Dimension [LoopPermutation] Size: 576
+Mapspace Dimension [Spatial] Size: 81
+Mapspace Dimension [DatatypeBypass] Size: 1
+Mapspace split! Per-split Mapping Dimension [IndexFactorization] Size: 2160 Residue: 0
+Mapspace construction complete.
+Search configuration complete.
+Start Parsering Layout
+No Layout specified, so using bandwidth based modeling
+[  1] Utilization = 0.01 | pJ/Compute =  132.792 | L6[WIO] C14336 - L5[WIO] G8 M16 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 59193344
+[  3] Utilization = 0.02 | pJ/Compute =   69.897 | L6[WIO] C7168 - L5[WIO] G8 M16 C2 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 30044160
+[  7] Utilization = 0.05 | pJ/Compute =   24.783 | L6[WIO] C2048 - L5[WIO] G8 M16 C7 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 9072641
+[  5] Utilization = 0.03 | pJ/Compute =   38.317 | L6[WIO] C3584 - L5[WIO] G8 M16 C4 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 15364097
+[  2] Utilization = 0.01 | pJ/Compute =  138.933 | L6[WIO] P4 M4 C56 - L5[WIO] C256 G8 M4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60612608
+[  2] Utilization = 0.06 | pJ/Compute =   14.413 | L6[WIO] P4 C56 M4 - L5[WIO] G8 M4 C256 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7368192
+[  4] Utilization = 0.01 | pJ/Compute =  138.933 | L6[WIO] P4 M4 C64 - L5[WIO] C224 G8 M4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60612608
+[  0] Utilization = 0.01 | pJ/Compute =  138.933 | L6[WIO] P4 M4 C32 - L5[WIO] C448 G8 M4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60612608
+[  6] Utilization = 0.01 | pJ/Compute =  138.933 | L6[WIO] P4 M4 C112 - L5[WIO] C128 G8 M4 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 60612608
+[  1] Utilization = 0.06 | pJ/Compute =   26.582 | L6[WIO] P4 C448 M4 - L5[WIO] G8 M4 C32 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7568896
+[  7] Utilization = 0.06 | pJ/Compute =   12.317 | L6[WIO] C128 M4 P4 - L5[WIO] M4 G8 C112 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7405057
+[  4] Utilization = 0.06 | pJ/Compute =   14.661 | L6[WIO] P4 C64 M4 - L5[WIO] G8 M4 C224 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7372288
+[  6] Utilization = 0.06 | pJ/Compute =   16.151 | L6[WIO] P4 C112 M4 - L5[WIO] G8 M4 C128 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7396864
+[  0] Utilization = 0.06 | pJ/Compute =   13.668 | L6[WIO] P4 C32 M4 - L5[WIO] G8 M4 C448 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7355905
+[  5] Utilization = 0.06 | pJ/Compute =   15.297 | L6[WIO] C224 M4 P4 - L5[WIO] M4 G8 C64 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7454208
+[  3] Utilization = 0.06 | pJ/Compute =   16.291 | L6[WIO] C256 M4 P4 - L5[WIO] M4 G8 C56 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7470593
+[  2] Utilization = 0.06 | pJ/Compute =   10.082 | L6[WIO] C56 M4 P4 - L5[WIO] M4 G8 C256 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7368192
+[  4] Utilization = 0.06 | pJ/Compute =   10.330 | L6[WIO] C64 M4 P4 - L5[WIO] M4 G8 C224 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7372288
+[  1] Utilization = 0.06 | pJ/Compute =   22.251 | L6[WIO] C448 M4 P4 - L5[WIO] M4 G8 C32 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7568896
+[  0] Utilization = 0.06 | pJ/Compute =    9.337 | L6[WIO] C32 M4 P4 - L5[WIO] M4 G8 C448 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7355905
+[  6] Utilization = 0.06 | pJ/Compute =   11.821 | L6[WIO] C112 M4 P4 - L5[WIO] M4 G8 C128 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7396864
+[  0] Utilization = 0.06 | pJ/Compute =    8.778 | L6[WIO] M8 C8 G2 - L5[WIO] G4 P4 M2 C1792 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7343616
+[  4] Utilization = 0.06 | pJ/Compute =    9.027 | L6[WIO] M8 C16 G2 - L5[WIO] G4 P4 M2 C896 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7347713
+[  6] Utilization = 0.25 | pJ/Compute =    7.072 | L6[WIO] M4 C7 G4 - L5[WIO] G2 M4 C2048 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1835776
+[  2] Utilization = 0.06 | pJ/Compute =    8.964 | L6[WIO] M8 C14 G2 - L5[WIO] G4 P4 M2 C1024 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7346688
+[  0] Utilization = 0.06 | pJ/Compute =    8.452 | L6[WIO] G2 C8 M8 - L5[WIO] M2 G4 P4 C1792 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7343616
+[  4] Utilization = 0.06 | pJ/Compute =    8.701 | L6[WIO] G2 C16 M8 - L5[WIO] M2 G4 P4 C896 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7347713
+[  2] Utilization = 0.06 | pJ/Compute =    8.638 | L6[WIO] G2 C14 M8 - L5[WIO] M2 G4 P4 C1024 - L4[] G1 P32X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 7346688
+[  6] Utilization = 0.25 | pJ/Compute =    6.932 | L6[WIO] C7 G4 M4 - L5[WIO] M4 G2 C2048 - L4[] G1 P128X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 1835776
+[  5] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  3] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  7] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  1] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] Utilization = 0.12 | pJ/Compute =    8.205 | L6[WIO] G2 C32 M8 - L5[WIO] P2 M2 G4 C448 - L4[] G1 P64X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 3677953
+[  4] Utilization = 0.12 | pJ/Compute =    9.524 | L6[WIO] C64 M8 G2 - L5[WIO] M2 P2 G4 C224 - L4[] G1 P64X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 3686144
+[  2] Utilization = 0.12 | pJ/Compute =    9.276 | L6[WIO] C56 M8 G2 - L5[WIO] M2 P2 G4 C256 - L4[] G1 P64X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 3684096
+[  2] Utilization = 0.12 | pJ/Compute =    8.950 | L6[WIO] G2 C56 M8 - L5[WIO] M2 P2 G4 C256 - L4[] G1 P64X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 3684096
+[  4] Utilization = 0.12 | pJ/Compute =    9.198 | L6[WIO] G2 C64 M8 - L5[WIO] M2 P2 G4 C224 - L4[] G1 P64X - L3[] G1 M256Y - L2[I] G1 - L1[W] G1 - L0[O] G1  | Cycles = 3686144
+[  6] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  0] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  2] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+[  4] STATEMENT: 100 suboptimal mappings found since the last upgrade, terminating search.
+
+
+Summary stats for best mapping found by mapper:
+  Utilization = 0.25 | pJ/Compute =    6.932 | Cycles = 1835776
+  Cycles: 1835776  Energy: 4.168332e+05 uJ  Computes: 60129542144  Utilization: 2.499000e+01%
+
+================================================================
+  ModelBaselineAccelerator — Timeloop Results Summary
+  MLIR file:    benchmark/mlir/llama3-8b-block0-ffn-prefill-b8s128.mlir
+  Linear arch:  gemmini_os_server  |  Nonlinear arch: PPU_server  |  Datamove arch: PPU_datamove_server
+================================================================
+
+--- Linear Ops (gemmini_os_server) ---
+SSA        Operator                       Cycles	Energy(uJ)	Computes	Util%	DRAM_Acc
+----------------------------------------------------------------------------------------------------
+%5         batch_matmul_0                 1836352	4.159957e+05	60129542144	2.498000e+01%	513802240
+%9         batch_matmul_1                 1836352	4.159957e+05	60129542144	2.498000e+01%	513802240
+%16        batch_matmul_2                 1835776	4.168332e+05	60129542144	2.499000e+01%	538968064
+----------------------------------------------------------------------------------------------------
+  Linear total: Cycles=5508480  Energy=1.248825e+06 uJ  DRAM_Acc=1566572544
+
+--- Elementwise Ops (PPU_server) ---
+SSA        Operator                       Cycles	Energy(uJ)	Computes	Util%
+----------------------------------------------------------------------------------------------------
+%6         negf_0                         28672	6.613010e+03	14680064	1.000000e+02%
+%6         exp_1                          143360	2.189588e+04	73400320	1.000000e+02%
+%6         addf_2                         28672	6.613010e+03	14680064	1.000000e+02%
+%6         divf_3                         28672	6.613010e+03	14680064	1.000000e+02%
+%7         mulf_4                         28672	6.613010e+03	14680064	1.000000e+02%
+%10        mulf_5                         28672	6.613010e+03	14680064	1.000000e+02%
+----------------------------------------------------------------------------------------------------
+  Elementwise total: Cycles=286720  Energy=5.496093e+04 uJ
+
+--- Data Movement Ops (PPU_datamove_server) ---
+SSA        Operator                       Cycles	Energy(uJ)	MemEnergy(uJ)	MacEnergy(pJ)	DRAM_Acc
+------------------------------------------------------------------------------------------------------------------------
+%transposedtranspose_0                    917504	2.114517e+05	2.095052e+05	1.946534e+09	939524097
+%transposed_1transpose_1                    917504	2.114517e+05	2.095052e+05	1.946534e+09	939524097
+%transposed_2transpose_2                    917504	2.114517e+05	2.095052e+05	1.946534e+09	939524097
+------------------------------------------------------------------------------------------------------------------------
+  Datamove total: Cycles=2752512  MemEnergy=6.285155e+05 uJ  (TotalEnergy=6.343551e+05 uJ)  DRAM_Acc=4385144835
+
+================================================================
+  GRAND TOTAL (linear + elementwise + datamove):
+    Latency:            8547712 cycles (8.547712e+03 us, 8.547712e+00 ms)
+    Energy:             1.303786e+06 uJ
+    FLOPs:              360924053504 (linear_MACs=180388626432, elem_ops=146800640)
+    Throughput:         4.222464e+04 GFLOPS
+    Energy Efficiency:  2.768278e+02 GFLOPS/J
+    DRAM Access (dm):   4385144835
+  Operators: 12  (linear=3  elem=6  datamove=3)  Succeeded=12  Failed=0
+================================================================
+EXIT_CODE=0

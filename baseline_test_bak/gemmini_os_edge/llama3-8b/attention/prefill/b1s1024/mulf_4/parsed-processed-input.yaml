@@ -1,0 +1,976 @@
+dumped_by_timeloop_front_end: true
+architecture:
+    version: '0.4'
+    subtree:
+      - name: System_top_level
+        attributes:
+            version: '0.4'
+            technology: "45nm"
+            global_cycle_seconds: 1e-9
+            datawidth: 16
+            has_power_gating: false
+            power_gated_at: null
+        local:
+          - name: DRAM[1..1]
+            class: DRAM
+            attributes:
+                type: "LPDDR4"
+                width: 1024
+                datawidth: 16
+                has_power_gating: false
+                n_banks: 2
+                cluster_size: 1
+                reduction_supported: true
+                multiple_buffering: 1
+                min_utilization: 0
+                allow_overbooking: false
+                meshX: 1
+                meshY: 1
+                technology: "45nm"
+                power_gated_at: null
+            required_actions:
+              - read
+              - leak
+              - update
+              - write
+            enabled: true
+          - name: GlobalBuffer[1..1]
+            class: smartbuffer_SRAM
+            attributes:
+                depth: 65536
+                width: 512
+                datawidth: 16
+                n_banks: 256
+                nports: 2
+                has_power_gating: false
+                cluster_size: 1
+                reduction_supported: true
+                multiple_buffering: 1
+                min_utilization: 0
+                allow_overbooking: false
+                meshX: 1
+                meshY: 1
+                technology: "45nm"
+                power_gated_at: null
+            required_actions:
+              - read
+              - leak
+              - update
+              - write
+            enabled: true
+          - name: inter_PPU_spatial[1..1]
+            class: dummy_storage
+            attributes:
+                width: 1
+                depth: 1
+                datawidth: 1
+                technology: -1
+                has_power_gating: false
+                n_banks: 2
+                cluster_size: 1
+                reduction_supported: true
+                multiple_buffering: 1
+                min_utilization: 0
+                allow_overbooking: false
+                meshX: 1
+                meshY: 1
+                power_gated_at: null
+            enabled: true
+          - name: PPU_InputReg[1..64]
+            class: storage
+            subclass: smartbuffer_RF
+            attributes:
+                depth: 16
+                width: 64
+                datawidth: 16
+                has_power_gating: false
+                n_banks: 2
+                cluster_size: 1
+                reduction_supported: true
+                multiple_buffering: 1
+                min_utilization: 0
+                allow_overbooking: false
+                meshX: 64
+                meshY: 1
+                technology: "45nm"
+                power_gated_at: null
+            required_actions:
+              - read
+              - leak
+              - update
+              - write
+            enabled: true
+          - name: PPU_CoeffReg[1..64]
+            class: storage
+            subclass: smartbuffer_RF
+            attributes:
+                depth: 16
+                width: 64
+                datawidth: 16
+                has_power_gating: false
+                n_banks: 2
+                cluster_size: 1
+                reduction_supported: true
+                multiple_buffering: 1
+                min_utilization: 0
+                allow_overbooking: false
+                meshX: 64
+                meshY: 1
+                technology: "45nm"
+                power_gated_at: null
+            required_actions:
+              - read
+              - leak
+              - update
+              - write
+            enabled: true
+          - name: PPU_OutputReg[1..64]
+            class: storage
+            subclass: smartbuffer_RF
+            attributes:
+                depth: 16
+                width: 64
+                datawidth: 32
+                has_power_gating: false
+                n_banks: 2
+                cluster_size: 1
+                reduction_supported: true
+                multiple_buffering: 1
+                min_utilization: 0
+                allow_overbooking: false
+                meshX: 64
+                meshY: 1
+                technology: "45nm"
+                power_gated_at: null
+            required_actions:
+              - read
+              - leak
+              - update
+              - write
+            enabled: true
+          - name: ppu_compute[1..64]
+            class: intmac
+            subclass: vector_unit
+            attributes:
+                datawidth: 16
+                n_poly_terms: 4
+                has_power_gating: false
+                meshX: 64
+                meshY: 1
+                technology: "45nm"
+                power_gated_at: null
+            required_actions:
+              - compute
+            enabled: true
+architecture_constraints:
+    targets:
+      - type: temporal
+        permutation: GSRMC
+        target: DRAM
+      - keep:
+          - Inputs
+          - Outputs
+        bypass:
+          - Weights
+        type: bypass
+        target: GlobalBuffer
+      - type: temporal
+        permutation: GSRMC
+        target: GlobalBuffer
+      - type: spatial
+        factors: C=1,M=1,R=1,S=1
+        permutation: GPQNMCRS
+        target: inter_PPU_spatial
+      - factors: C=1,M=1,R=1,S=1,N=1,P=1,Q=1,G=1
+        permutation: CMRSNPQG
+        type: temporal
+        target: inter_PPU_spatial
+      - bypass:
+          - Weights
+          - Inputs
+          - Outputs
+        type: bypass
+        target: inter_PPU_spatial
+      - keep:
+          - Inputs
+        bypass:
+          - Weights
+          - Outputs
+        type: bypass
+        target: PPU_InputReg
+      - type: temporal
+        permutation: GSRMC
+        target: PPU_InputReg
+      - keep:
+          - Weights
+        bypass:
+          - Inputs
+          - Outputs
+        type: bypass
+        target: PPU_CoeffReg
+      - type: temporal
+        permutation: GSRMC
+        target: PPU_CoeffReg
+      - keep:
+          - Outputs
+        bypass:
+          - Inputs
+          - Weights
+        type: bypass
+        target: PPU_OutputReg
+      - type: temporal
+        permutation: GSRMC
+        target: PPU_OutputReg
+problem:
+    instance:
+        N: 1024
+        C: 1
+        M: 1
+        R: 1
+        S: 1
+        P: 8
+        Q: 128
+        G: 1
+        H: 1
+        W: 1
+        Hdilation: 1
+        Hstride: 1
+        Wdilation: 1
+        Wstride: 1
+        densities: {}
+    version: '0.4'
+    shape:
+        coefficients:
+          - name: Wstride
+            default: 1
+          - name: Hstride
+            default: 1
+          - name: Wdilation
+            default: 1
+          - name: Hdilation
+            default: 1
+        data_spaces:
+          - name: Weights
+            projection:
+              -   -   - C
+              -   -   - M
+              -   -   - R
+              -   -   - S
+              -   -   - G
+            read_write: false
+          - name: Inputs
+            projection:
+              -   -   - N
+              -   -   - C
+              -   -   - R
+                      - Wdilation
+                  -   - P
+                      - Wstride
+              -   -   - S
+                      - Hdilation
+                  -   - Q
+                      - Hstride
+              -   -   - G
+            read_write: false
+          - name: Outputs
+            projection:
+              -   -   - N
+              -   -   - M
+              -   -   - Q
+              -   -   - P
+              -   -   - G
+            read_write: true
+        dimensions:
+          - C
+          - M
+          - R
+          - S
+          - N
+          - P
+          - Q
+          - G
+        name: ''
+compound_components:
+    version: '0.4'
+    classes:
+      - name: zero_mac
+        attributes:
+            technology: "must_specify"
+            datawidth: "must_specify"
+            global_cycle_seconds: "must_specify"
+        subcomponents:
+          - name: adder
+            class: aladdin_adder
+            attributes:
+                width: 1
+                global_cycle_seconds: "global_cycle_seconds"
+          - name: multiplier
+            class: aladdin_multiplier
+            attributes:
+                width_a: 1
+                width_b: 1
+                global_cycle_seconds: "global_cycle_seconds"
+        actions:
+          - name: compute
+            subcomponents:
+              - name: adder
+                actions:
+                  - name: read
+                    energy_scale: 0
+              - name: multiplier
+                actions:
+                  - name: read
+                    energy_scale: 0
+          - name: leak
+            subcomponents:
+              - name: adder
+                actions:
+                  - name: leak
+                    energy_scale: 0
+              - name: multiplier
+                actions:
+                  - name: leak
+                    energy_scale: 0
+      - name: noc
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            depth: "must_specify"
+            global_cycle_seconds: "must_specify"
+            n_routers: 16
+            n_router_ports: 5
+            vc_count: 4
+            n_local_links: 48
+            n_global_links: 0
+            avg_hops_local: 2.5
+            avg_hops_global: 0
+            router_traversals_per_access: avg_hops_local + avg_hops_global + 1
+            local_link_traversals_per_access: avg_hops_local
+            global_link_traversals_per_access: avg_hops_global
+            local_link_length: 1000
+            global_link_length: 2000
+            input_buffer_depth: max(1, ceil(depth / n_routers))
+            output_buffer_depth: 2
+        subcomponents:
+          - name: routers[0..1]
+            class: noc_router
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                width: width
+                n_router_ports: n_router_ports
+                vc_count: vc_count
+                input_buffer_depth: input_buffer_depth
+                output_buffer_depth: output_buffer_depth
+          - name: local_links[0..1]
+            class: wire
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                width: width
+                length: local_link_length
+          - name: global_links[0..1]
+            class: wire
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                width: width
+                length: global_link_length
+        actions:
+          - name: write
+            subcomponents:
+              - name: routers[0..1]
+                actions:
+                  - name: write
+                    energy_scale: 1 / 2
+              - name: routers[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: router_traversals_per_access / 2
+              - name: local_links[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: local_link_traversals_per_access / 2
+              - name: global_links[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: global_link_traversals_per_access / 2
+          - name: read
+            subcomponents:
+              - name: routers[0..1]
+                actions:
+                  - name: read
+                    energy_scale: 1 / 2
+              - name: routers[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: router_traversals_per_access / 2
+              - name: local_links[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: local_link_traversals_per_access / 2
+              - name: global_links[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: global_link_traversals_per_access / 2
+          - name: update
+            subcomponents:
+              - name: routers[0..1]
+                actions:
+                  - name: write
+                    energy_scale: 1 / 2
+              - name: routers[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: router_traversals_per_access / 2
+              - name: local_links[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: local_link_traversals_per_access / 2
+              - name: global_links[0..1]
+                actions:
+                  - name: transfer
+                    energy_scale: global_link_traversals_per_access / 2
+          - name: leak
+            subcomponents:
+              - name: routers[0..1]
+                actions:
+                  - name: leak
+                    energy_scale: n_routers / 2
+      - name: regfile_metadata
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            depth: "must_specify"
+            metadata_storage_width: "must_specify"
+            metadata_storage_depth: "must_specify"
+            metadata_counter_width: 0
+        subcomponents:
+          - name: storage
+            class: smartbuffer_RF
+            attributes:
+                width: width
+                depth: depth
+          - name: metadata_storage
+            class: smartbuffer_RF
+            attributes:
+                technology: technology
+                width: metadata_storage_width
+                depth: metadata_storage_depth
+          - name: metadata_counters[0..1]
+            class: intadder
+            attributes:
+                technology: technology
+                width: metadata_counter_width
+        actions:
+          - name: read
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: read
+          - name: write
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+          - name: update
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+          - name: metadata_read
+            subcomponents:
+              - name: metadata_storage
+                actions:
+                  - name: read
+          - name: metadata_write
+            subcomponents:
+              - name: metadata_storage
+                actions:
+                  - name: write
+          - name: metadata_update
+            subcomponents:
+              - name: metadata_storage
+                actions:
+                  - name: write
+          - name: leak
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: leak
+                    arguments:
+                        global_cycle_seconds: global_cycle_seconds
+              - name: metadata_storage
+                actions:
+                  - name: leak
+                    arguments:
+                        global_cycle_seconds: global_cycle_seconds
+          - name: decompression_count
+            subcomponents:
+              - name: metadata_counters[1]
+                actions:
+                  - name: add
+          - name: compression_count
+            subcomponents:
+              - name: metadata_counters[0]
+                actions:
+                  - name: add
+      - name: smartbuffer_RF
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            depth: "must_specify"
+            memory_width: max(32, width)
+            memory_depth: max(64, depth)
+            widthscale: width / memory_width
+            depthscale: depth / memory_depth
+            real_depth: depth
+            area_scale: widthscale * depthscale
+            dynamic_energy_scale: widthscale * (depthscale ** (1.56 / 2))
+            static_energy_scale: area_scale
+            n_rdwr_ports: 1
+            global_cycle_seconds: "must_specify"
+        subcomponents:
+          - name: storage
+            class: regfile
+            area_scale: area_scale
+            attributes:
+                width: memory_width
+                depth: memory_depth
+                n_rdwr_ports: n_rdwr_ports
+                global_cycle_seconds: global_cycle_seconds
+          - name: address_generators[0..1]
+            class: intadder
+            attributes:
+                n_bits: max(1, ceil(log2(real_depth))) if real_depth >= 1 else 1
+                precision: max(1, ceil(log2(real_depth))) if real_depth >= 1 
+                    else 1
+                width: max(1, ceil(log2(real_depth))) if real_depth >= 1 else 1
+                global_cycle_seconds: global_cycle_seconds
+        actions:
+          - name: write
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+                    energy_scale: dynamic_energy_scale
+              - name: address_generators[0]
+                actions:
+                  - name: add
+          - name: read
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: read
+                    energy_scale: dynamic_energy_scale
+              - name: address_generators[1]
+                actions:
+                  - name: add
+          - name: leak
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: leak
+                    energy_scale: static_energy_scale
+              - name: address_generators[0..1]
+                actions:
+                  - name: leak
+          - name: update
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+                    energy_scale: dynamic_energy_scale
+              - name: address_generators[0]
+                actions:
+                  - name: add
+      - name: vector_unit
+        attributes:
+            technology: "must_specify"
+            datawidth: 8
+            global_cycle_seconds: "must_specify"
+            n_poly_terms: 4
+        subcomponents:
+          - name: multiplier
+            class: aladdin_multiplier
+            attributes:
+                width_a: datawidth
+                width_b: datawidth
+                global_cycle_seconds: global_cycle_seconds
+          - name: adder
+            class: aladdin_adder
+            attributes:
+                width: datawidth * 2
+                global_cycle_seconds: global_cycle_seconds
+          - name: comparator
+            class: aladdin_comparator
+            attributes:
+                width: datawidth
+                global_cycle_seconds: global_cycle_seconds
+        actions:
+          - name: compute
+            subcomponents:
+              - name: multiplier
+                actions:
+                  - name: read
+              - name: adder
+                actions:
+                  - name: read
+              - name: comparator
+                actions:
+                  - name: read
+                    energy_scale: 1.0/n_poly_terms
+          - name: leak
+            subcomponents:
+              - name: multiplier
+                actions:
+                  - name: leak
+              - name: adder
+                actions:
+                  - name: leak
+              - name: comparator
+                actions:
+                  - name: leak
+      - name: regfile
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            depth: "must_specify"
+        subcomponents:
+          - name: storage[1..width*depth]
+            class: aladdin_register
+            attributes:
+                global_cycle_seconds: global_cycle_seconds
+          - name: comparator[1..depth]
+            class: aladdin_comparator
+            attributes:
+                n_bits: max(1, ceil(log2(depth)))
+                global_cycle_seconds: global_cycle_seconds
+        actions:
+          - name: write
+            subcomponents:
+              - name: storage[1..width]
+                actions:
+                  - name: write
+              - name: comparator[1..depth]
+                actions:
+                  - name: compare
+          - name: read
+            subcomponents:
+              - name: storage[1..width]
+                actions:
+                  - name: read
+              - name: comparator[1..depth]
+                actions:
+                  - name: compare
+          - name: leak
+            subcomponents:
+              - name: storage[1..width*depth]
+                actions:
+                  - name: leak
+                    arguments:
+                        global_cycle_seconds: global_cycle_seconds
+              - name: comparator[1..depth]
+                actions:
+                  - name: leak
+                    arguments:
+                        global_cycle_seconds: global_cycle_seconds
+          - name: update
+            subcomponents:
+              - name: storage[1..width]
+                actions:
+                  - name: write
+              - name: comparator[1..depth]
+                actions:
+                  - name: compare
+      - name: smartbuffer_SRAM
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            depth: "must_specify"
+            n_rw_ports: 1
+            global_cycle_seconds: "must_specify"
+        subcomponents:
+          - name: storage
+            class: SRAM
+            attributes:
+                width: width
+                depth: depth
+                n_rw_ports: n_rw_ports
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+          - name: address_generators[0..1]
+            class: intadder
+            attributes:
+                n_bits: max(1, ceil(log2(depth))) if depth >= 1 else 1
+                precision: max(1, ceil(log2(depth))) if depth >= 1 else 1
+                width: max(1, ceil(log2(depth))) if depth >= 1 else 1
+                global_cycle_seconds: global_cycle_seconds
+        actions:
+          - name: write
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+              - name: address_generators[0]
+                actions:
+                  - name: add
+          - name: read
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: read
+              - name: address_generators[1]
+                actions:
+                  - name: add
+          - name: leak
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: leak
+              - name: address_generators[0..1]
+                actions:
+                  - name: leak
+          - name: update
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+              - name: address_generators[0]
+                actions:
+                  - name: add
+      - name: intmac
+        attributes:
+            technology: "must_specify"
+            multiplier_width: "must_specify"
+            adder_width: "must_specify"
+            global_cycle_seconds: "must_specify"
+        subcomponents:
+          - name: intadder
+            class: aladdin_adder
+            attributes:
+                width: adder_width
+          - name: intmultiplier
+            class: aladdin_multiplier
+            attributes:
+                width_a: multiplier_width
+                width_b: multiplier_width
+        actions:
+          - name: compute
+            subcomponents:
+              - name: intadder
+                actions:
+                  - name: read
+              - name: intmultiplier
+                actions:
+                  - name: read
+          - name: leak
+            subcomponents:
+              - name: intadder
+                actions:
+                  - name: leak
+              - name: intmultiplier
+                actions:
+                  - name: leak
+      - name: smartbuffer_metadata
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            depth: "must_specify"
+            metadata_storage_width: "must_specify"
+            metadata_storage_depth: "must_specify"
+            n_rdwr_ports: 1
+            metadata_counter_width: 0
+        subcomponents:
+          - name: storage
+            class: smartbuffer_SRAM
+            attributes:
+                technology: technology
+                width: width
+                depth: depth
+                n_rdwr_ports: n_rdwr_ports
+          - name: metadata_storage
+            class: smartbuffer_SRAM
+            attributes:
+                technology: technology
+                width: metadata_storage_width
+                depth: metadata_storage_depth
+                n_rdwr_ports: n_rdwr_ports
+          - name: metadata_counters[0..1]
+            class: intadder
+            attributes:
+                technology: technology
+                width: metadata_counter_width
+        actions:
+          - name: read
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: read
+          - name: write
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+          - name: update
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: write
+          - name: metadata_read
+            subcomponents:
+              - name: metadata_storage
+                actions:
+                  - name: read
+          - name: metadata_write
+            subcomponents:
+              - name: metadata_storage
+                actions:
+                  - name: write
+          - name: metadata_update
+            subcomponents:
+              - name: metadata_storage
+                actions:
+                  - name: write
+          - name: leak
+            subcomponents:
+              - name: storage
+                actions:
+                  - name: leak
+                    arguments:
+                        global_cycle_seconds: global_cycle_seconds
+              - name: metadata_storage
+                actions:
+                  - name: leak
+                    arguments:
+                        global_cycle_seconds: global_cycle_seconds
+          - name: decompression_count
+            subcomponents:
+              - name: metadata_counters[1]
+                actions:
+                  - name: add
+          - name: compression_count
+            subcomponents:
+              - name: metadata_counters[0]
+                actions:
+                  - name: add
+      - name: noc_router
+        attributes:
+            technology: "must_specify"
+            width: "must_specify"
+            global_cycle_seconds: "must_specify"
+            n_router_ports: 5
+            vc_count: 4
+            input_buffer_depth: 8
+            output_buffer_depth: 2
+            arbiter_width: max(1, ceil(log2(n_router_ports)))
+        subcomponents:
+          - name: input_buffer
+            class: smartbuffer_RF
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                width: width
+                depth: input_buffer_depth * vc_count
+          - name: output_buffer
+            class: smartbuffer_RF
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                width: width
+                depth: output_buffer_depth * vc_count
+          - name: crossbar
+            class: crossbar
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                n_inputs: n_router_ports
+                n_outputs: n_router_ports
+                width: width
+          - name: arbiter
+            class: aladdin_comparator
+            attributes:
+                technology: technology
+                global_cycle_seconds: global_cycle_seconds
+                width: arbiter_width
+        actions:
+          - name: write
+            subcomponents:
+              - name: input_buffer
+                actions:
+                  - name: write
+          - name: read
+            subcomponents:
+              - name: output_buffer
+                actions:
+                  - name: read
+          - name: transfer
+            subcomponents:
+              - name: input_buffer
+                actions:
+                  - name: read
+              - name: arbiter
+                actions:
+                  - name: compare
+              - name: crossbar
+                actions:
+                  - name: access
+              - name: output_buffer
+                actions:
+                  - name: write
+          - name: update
+            subcomponents:
+              - name: input_buffer
+                actions:
+                  - name: write
+          - name: leak
+            subcomponents:
+              - name: input_buffer
+                actions:
+                  - name: leak
+              - name: output_buffer
+                actions:
+                  - name: leak
+              - name: crossbar
+                actions:
+                  - name: leak
+              - name: arbiter
+                actions:
+                  - name: leak
+mapping: []
+mapper:
+    optimization_metrics:
+      - delay
+      - energy
+    version: '0.4'
+    live_status: false
+    num_threads: 8
+    timeout: 15000
+    victory_condition: 100
+    algorithm: random_pruned
+    max_permutations_per_if_visit: 16
+    out_prefix: timeloop-mapper
+    optimization_metric: []
+    search_size: null
+    sync_interval: null
+    log_interval: 1
+    log_oave_mappings: false
+    log_all_mappings: false
+    log_mappings_yaml: false
+    log_mappings_verbose: false
+    log_stats: false
+    log_suboptimal: false
+    diagnostics: false
+    penalize_consecutive_bypass_fails: false
+    emit_whoop_nest: false
+    max_temporal_loops_in_a_mapping: -1
+    filter_revisits: false
+mapspace:
+    version: '0.4'
+    template: uber
+globals:
+    version: '0.4'
+    environment_variables:
+        TIMELOOP_HIDE_INCONSEQUENTIAL_STATS: 1
+    expression_custom_functions: []
+    accelergy_plug_ins: []
