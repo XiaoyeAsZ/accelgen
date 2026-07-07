@@ -15,6 +15,9 @@ if __name__ == "__main__":
     if args.model == "llama3-8b":
         config_path = Path(__file__).resolve().parent / "model/llama3_8b"
         from model.llama3_8b import build_model
+    elif args.model == "llama3-70b":
+        config_path = Path(__file__).resolve().parent / "model/llama3_70b"
+        from model.llama3_70b import build_model
     elif args.model == "qwen3-8b":
         config_path = Path(__file__).resolve().parent / "model/qwen3_8b"
         from model.qwen3_8b import build_model
@@ -25,7 +28,13 @@ if __name__ == "__main__":
         raise NotImplementedError()
 
     model, dummy_input = build_model(
-        args.batch, args.length, args.action, args.block, args.layer, device="cpu"
+        args.batch,
+        args.length,
+        args.action,
+        args.block,
+        args.layer,
+        device="cpu",
+        local_path=config_path,
     )
     dump_to_mlir(
         f"./mlir/{args.model}-block{args.block}-{args.layer}-{args.action}-b{args.batch}s{args.length}.mlir",

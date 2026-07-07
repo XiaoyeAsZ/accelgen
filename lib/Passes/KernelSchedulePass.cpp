@@ -86,7 +86,7 @@ public:
     // clusterDAG.constructDAG();
     // clusterDAG.optimizeDAG();
 
-    scheduledCluster.schedule(&ctx, model, archCfg, 6);
+    scheduledCluster.schedule(&ctx, model, archCfg, maxOperation);
 
     mlir::OpBuilder builder(module);
 

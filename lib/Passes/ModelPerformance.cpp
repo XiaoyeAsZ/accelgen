@@ -86,11 +86,11 @@ public:
 
       totalEnergy += (sramEnergy + dramEnergy + peEnergy);
 
-      // ECHO("CLUSTER ", "\n")
-      // ECHO(func.getName(), "\n")
-      // ECHO(sramEnergy, "\n")
-      // ECHO(dramEnergy, "\n")
-      // ECHO(peEnergy, "\n")
+      ECHO("CLUSTER ", "\n")
+      ECHO(func.getName(), "\n")
+      ECHO(sramEnergy, "\n")
+      ECHO(dramEnergy, "\n")
+      ECHO(peEnergy, "\n")
     });
 
     auto throughput = totalFlops / totalLatency;

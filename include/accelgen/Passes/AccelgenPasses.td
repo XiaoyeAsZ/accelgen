@@ -6,7 +6,8 @@ def KernelSchedule: Pass<"kernel-schedule", "::mlir::func::FuncOp"> {
   let description = [{
   }];
   let options = [
-    Option<"configPath", "config-path", "std::string", "", "">
+    Option<"configPath", "config-path", "std::string", "", "">,
+    Option<"maxOperation", "max-operation", "int64_t","", "6">
   ];
 }
 

@@ -32,9 +32,9 @@
 // #include "accelgen/Passes/FuseGenericPass.h"
 // #include "accelgen/Passes/KernelSchedulePass.h"
 // #include "accelgen/Passes/MarkGenericPass.h"
-#include "accelgen/Passes/AccelgenPasses.h"
 #include "accelgen/Dialect/Dap/DapDialect.h"
 #include "accelgen/Dialect/Dap/DapOps.h"
+#include "accelgen/Passes/AccelgenPasses.h"
 
 // int main(int argc, char** argv) {
 //   mlir::DialectRegistry registry;
@@ -48,22 +48,25 @@
 //       mlir::MlirOptMain(argc, argv, "Custom MLIR Optimizer\n", registry));
 // }
 
-static llvm::cl::opt<std::string> inputFilename(
-    llvm::cl::Positional, llvm::cl::desc("<input mlir file>"),
-    llvm::cl::Required);
+static llvm::cl::opt<std::string>
+    inputFilename(llvm::cl::Positional, llvm::cl::desc("<input mlir file>"),
+                  llvm::cl::Required);
 
-static llvm::cl::opt<std::string> outputFilename(
-    "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
-    llvm::cl::init("-"));
+static llvm::cl::opt<std::string>
+    outputFilename("o", llvm::cl::desc("Output filename"),
+                   llvm::cl::value_desc("filename"), llvm::cl::init("-"));
 
-static llvm::cl::opt<std::string> passPipeline(
-    "pass-pipeline", llvm::cl::desc("MLIR pass pipeline"), llvm::cl::init(""));
+static llvm::cl::opt<std::string>
+    passPipeline("pass-pipeline", llvm::cl::desc("MLIR pass pipeline"),
+                 llvm::cl::init(""));
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   mlir::registerPassManagerCLOptions();
   mlir::registerDefaultTimingManagerCLOptions();
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "AccelGen compiler\n");
+
+  // llvm::outs() << inputFilename;
 
   auto fileOrErr = llvm::MemoryBuffer::getFile(inputFilename);
   if (!fileOrErr) {

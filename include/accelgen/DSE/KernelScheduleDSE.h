@@ -349,13 +349,19 @@ public:
   double_t eval() {
     if (!isValid)
       return 0;
-    auto throughput = std::max(flops, 1.0) / (cycles + 1e-9);
-    auto externalDensity = std::max(flops, 1.0) / (externalAccess + 1e-9);
-    auto sramDensity = std::max(flops, 1.0) / (sramAccess + 1e-9);
-    return ratioMetric["throughput"] * throughput +
-           ratioMetric["externalDensity"] * externalDensity +
-           ratioMetric["sramDensity"] * sramDensity;
+    // auto throughput = std::max(flops, 1.0) / (cycles + 1e-9);
+    // auto externalDensity = std::max(flops, 1.0) / (externalAccess + 1e-9);
+    // auto sramDensity = std::max(flops, 1.0) / (sramAccess + 1e-9);
+    // return ratioMetric["throughput"] * throughput +
+    //        ratioMetric["externalDensity"] * externalDensity +
+    //        ratioMetric["sramDensity"] * sramDensity;
+    return 1.0 / (cycles *
+                  (cycles * 2.28 * 1e-12 + externalAccess * 8 * 16.0 * 1e-12 +
+                   sramAccess * 8 * 1.81 * 1e-12));
   }
+
+  int64_t timeOurs = 0;
+  int64_t timeNaive = 0;
 
   double_t externalDensity() { return flops / (externalAccess + 1e-9); }
   double_t sramDensity() { return flops / (sramAccess + 1e-9); }

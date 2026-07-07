@@ -7,7 +7,8 @@ layers=("attention" "ffn")
 lengths=(128 256 512 1024 4096)
 configs=("edge" "server")
 
-: > ./test/performance.log
+
+: > ./test/performance_6.log
 : > ./test/runtime.log
 
 for model in "${models[@]}"
@@ -34,8 +35,7 @@ do
                             ./build/bin/accelgen-opt ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}.mlir \
                             -pass-pipeline="model-performance{config-path=/home/accelgen/config/$config.json}" \
                             -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}.mlir
-                        } 1>> ./test/performance.log 2>/dev/null
-
+                        } 1>> ./test/performance_6.log 2>/dev/null
                     done
                 done
             done
