@@ -409,9 +409,12 @@ class ModelBaselineAccelerator
       }
     }
 
-    std::string outputBase = "baseline_test0412/" + linearArchName +
-                             "/" + modelName + "/" + layerName +
-                             "/" + phaseName + "/" + configName;
+    std::string outputRoot = timeloopOutputRoot.empty()
+                                 ? "baseline_test0412"
+                                 : timeloopOutputRoot.getValue();
+    std::string outputBase = outputRoot + "/" + linearArchName + "/" +
+                             modelName + "/" + layerName + "/" +
+                             phaseName + "/" + configName;
 
     // problem_base.yaml provides the YAML anchor *problem_base
     std::string problemBasePath =

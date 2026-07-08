@@ -82,6 +82,8 @@ def ModelBaselineAccelerator: Pass<"model-baseline-accelerator", "::mlir::Module
     Option<"datamoveArchName", "datamove-arch-name", "std::string","", "">,
     Option<"configPath", "config-path", "std::string","", "">,
     Option<"mlirFile", "mlir-file", "std::string","", "">,
+    Option<"timeloopOutputRoot", "timeloop-output-root", "std::string",
+           "\"baseline_test0412\"", "Root directory for generated Timeloop runtime outputs">,
     Option<"skipLinear", "skip-linear", "bool", "false",
            "Skip linear (batch_matmul) ops">,
     Option<"skipNonlinear", "skip-nonlinear", "bool", "false",
