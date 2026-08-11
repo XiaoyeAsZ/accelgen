@@ -88,21 +88,67 @@ def build_model(
         model.eval()
         if action == "prefill":
             dummy_input = (
-                torch.randn((batch, length, config.hidden_size), dtype=torch.bfloat16),
-                (
-                    torch.randn(1, length, config.head_dim, dtype=torch.bfloat16),
-                    torch.randn(1, length, config.head_dim, dtype=torch.bfloat16),
+                torch.randn(
+                    (batch, length, config.hidden_size),
+                    dtype=torch.bfloat16,
+                    device=device,
                 ),
-                torch.randn(1, config.num_attention_heads, 1, 1, dtype=torch.bfloat16),
+                (
+                    torch.randn(
+                        1,
+                        length,
+                        config.head_dim,
+                        dtype=torch.bfloat16,
+                        device=device,
+                    ),
+                    torch.randn(
+                        1,
+                        length,
+                        config.head_dim,
+                        dtype=torch.bfloat16,
+                        device=device,
+                    ),
+                ),
+                torch.randn(
+                    1,
+                    config.num_attention_heads,
+                    1,
+                    1,
+                    dtype=torch.bfloat16,
+                    device=device,
+                ),
             )
         elif action == "decode":
             dummy_input = (
-                torch.randn((batch, 1, config.hidden_size), dtype=torch.bfloat16),
-                (
-                    torch.randn(1, 1, config.head_dim, dtype=torch.bfloat16),
-                    torch.randn(1, 1, config.head_dim, dtype=torch.bfloat16),
+                torch.randn(
+                    (batch, 1, config.hidden_size),
+                    dtype=torch.bfloat16,
+                    device=device,
                 ),
-                torch.randn(1, config.num_attention_heads, 1, 1, dtype=torch.bfloat16),
+                (
+                    torch.randn(
+                        1,
+                        1,
+                        config.head_dim,
+                        dtype=torch.bfloat16,
+                        device=device,
+                    ),
+                    torch.randn(
+                        1,
+                        1,
+                        config.head_dim,
+                        dtype=torch.bfloat16,
+                        device=device,
+                    ),
+                ),
+                torch.randn(
+                    1,
+                    config.num_attention_heads,
+                    1,
+                    1,
+                    dtype=torch.bfloat16,
+                    device=device,
+                ),
                 (
                     torch.randn(
                         (
@@ -112,6 +158,7 @@ def build_model(
                             config.head_dim,
                         ),
                         dtype=torch.bfloat16,
+                        device=device,
                     ),
                     torch.randn(
                         (
@@ -121,6 +168,7 @@ def build_model(
                             config.head_dim,
                         ),
                         dtype=torch.bfloat16,
+                        device=device,
                     ),
                 ),
             )
@@ -132,11 +180,19 @@ def build_model(
         model.eval()
         if action == "prefill":
             dummy_input = (
-                torch.randn((batch, length, config.hidden_size), dtype=torch.bfloat16),
+                torch.randn(
+                    (batch, length, config.hidden_size),
+                    dtype=torch.bfloat16,
+                    device=device,
+                ),
             )
         elif action == "decode":
             dummy_input = (
-                torch.randn((batch, 1, config.hidden_size), dtype=torch.bfloat16),
+                torch.randn(
+                    (batch, 1, config.hidden_size),
+                    dtype=torch.bfloat16,
+                    device=device,
+                ),
             )
         else:
             raise NotImplementedError()

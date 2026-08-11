@@ -138,8 +138,11 @@ class CollapseExpandPattern
       int64_t indexDim = 0;
       llvm::SmallVector<ReassociationIndices> reassMap;
 
+      if (inputShape.size() == outputShape.size()) {
+        return mlir::failure();
+      }
       // Expand
-      if (inputShape.size() < outputShape.size()) {
+      else if (inputShape.size() < outputShape.size()) {
         while (srcP < inputShape.size() && destP < outputShape.size()) {
           ReassociationIndices idx;
           if (inputShape[srcP] == outputShape[destP]) {

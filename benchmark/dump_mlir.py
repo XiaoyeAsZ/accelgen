@@ -21,6 +21,9 @@ if __name__ == "__main__":
     elif args.model == "qwen3-8b":
         config_path = Path(__file__).resolve().parent / "model/qwen3_8b"
         from model.qwen3_8b import build_model
+    elif args.model == "qwen3-moe":
+        config_path = Path(__file__).resolve().parent / "model/qwen3_moe/qwen3_moe.json"
+        from model.qwen3_moe import build_model
     elif args.model == "gemma-7b":
         config_path = Path(__file__).resolve().parent / "model/gemma_7b"
         from model.gemma_7b import build_model

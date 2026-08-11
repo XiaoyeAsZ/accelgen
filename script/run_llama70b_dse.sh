@@ -1,10 +1,10 @@
 #!/bin/bash
 
-models=("llama3-70b")
-actions=("prefill" "decode")
+models=("qwen3-moe")
+actions=("prefill")
 blocks=(0)
-layers=("attention" "ffn")
-lengths=(4096)
+layers=("ffn")
+lengths=(128)
 configs=("server")
 
 : > ./test/performance.log
@@ -35,7 +35,7 @@ do
                             -pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/$config.json max-operation=6}), \
                                             model-performance{config-path=/home/accelgen/config/$config.json}" \
                             -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir
-                        } 1>> ./test/performance.log 2>/dev/null
+                        } 1>> ./test/moe.log 2>./test/moe.log
 
                     done
                 done
