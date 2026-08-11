@@ -16,18 +16,18 @@ if __name__ == "__main__":
 
     if args.model == "llama3-8b":
         config_path = Path(__file__).resolve().parent.parent / "model/llama3_8b"
-        from model.llama3_8b import build_model
+        from benchmark.model.llama3_8b import build_model
     elif args.model == "qwen3-8b":
         config_path = Path(__file__).resolve().parent.parent / "model/qwen3_8b"
-        from model.qwen3_8b import build_model
+        from benchmark.model.qwen3_8b import build_model
     elif args.model == "qwen3-moe":
         config_path = (
             Path(__file__).resolve().parent.parent / "model/qwen3_moe/config.json"
         )
-        from model.qwen3_moe import build_model
+        from benchmark.model.qwen3_moe import build_model
     elif args.model == "gemma-7b":
         config_path = Path(__file__).resolve().parent.parent / "model/gemma_7b"
-        from model.gemma_7b import build_model
+        from benchmark.model.gemma_7b import build_model
     else:
         raise NotImplementedError()
 
