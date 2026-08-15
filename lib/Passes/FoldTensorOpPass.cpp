@@ -96,6 +96,43 @@ class ExpandArgumentPattern
   }
 };
 
+class ExtractArgumentPattern
+    : public mlir::OpRewritePattern<tensor::ExtractSliceOp> {
+  using mlir::OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      tensor::ExtractSliceOp extractOp,
+      mlir::PatternRewriter& rewriter) const override {
+    mlir::MLIRContext* ctx = rewriter.getContext();
+
+    if (extractOp.getSource().getDefiningOp() != nullptr)
+      return mlir::failure();
+
+    mlir::Value input = extractOp.getSource();
+    auto blockArg = mlir::dyn_cast<BlockArgument>(input);
+    if (!blockArg) return mlir::failure();
+    if (!input.hasOneUse()) return mlir::failure();
+
+    auto func = extractOp->getParentOfType<func::FuncOp>();
+    if (!func) return mlir::failure();
+
+    auto outType =
+        mlir::dyn_cast<RankedTensorType>(extractOp.getResult().getType());
+
+    rewriter.modifyOpInPlace(func, [&]() {
+      blockArg.setType(outType);
+      SmallVector<Type> newArgTypes(func.getArgumentTypes());
+      newArgTypes[blockArg.getArgNumber()] = outType;
+      func.setType(
+          rewriter.getFunctionType(newArgTypes, func.getResultTypes()));
+    });
+
+    rewriter.replaceOp(extractOp, blockArg);
+
+    return mlir::success();
+  }
+};
+
 class CollapseExpandPattern
     : public mlir::OpRewritePattern<tensor::ExpandShapeOp> {
   using mlir::OpRewritePattern<tensor::ExpandShapeOp>::OpRewritePattern;
@@ -210,6 +247,7 @@ class FoldTensorOpPass : public impl::FoldTensorOpPassBase<FoldTensorOpPass> {
 
     patterns.add<CollapseExpandPattern>(&ctx);
     patterns.add<CollapseArgumentPattern>(&ctx);
+    patterns.add<ExtractArgumentPattern>(&ctx);
     patterns.add<ExpandArgumentPattern>(&ctx);
     if (mlir::failed(applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {

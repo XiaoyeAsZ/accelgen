@@ -1,4 +1,5 @@
 import torch
+from transformers.activations import ACT2FN
 from torch.nn import functional as F
 from transformers import AutoConfig, AutoModel
 from transformers.models.qwen3 import Qwen3Model
@@ -129,86 +130,78 @@ class SimpleQwen3MoeSparseMoeBlock(Qwen3MoeSparseMoeBlock):
 class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
     """Static top-k routing with one packed MLP per expert group."""
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.pack_expert_weights()
-
-    def pack_expert_weights(self):
-        """Pack each fixed top-k expert group into batched projection weights."""
-        if hasattr(self, "group_gate_up_proj_weight"):
-            return
+    def __init__(self, config, device=None, dtype=None, num_packed_groups=None):
+        torch.nn.Module.__init__(self)
+        self.num_experts = config.num_experts
+        self.top_k = config.num_experts_per_tok
+        self.norm_topk_prob = config.norm_topk_prob
         if self.num_experts % self.top_k:
             raise ValueError("static routing requires complete expert groups")
 
         self.num_expert_groups = self.num_experts // self.top_k
-        self.moe_intermediate_size = self.experts[0].intermediate_size
-        self.act_fn = self.experts[0].act_fn
-        gate_up_weights = []
-        down_weights = []
+        if num_packed_groups is None:
+            num_packed_groups = self.num_expert_groups
+        if not 0 < num_packed_groups <= self.num_expert_groups:
+            raise ValueError("invalid number of packed expert groups")
+        self.num_packed_groups = num_packed_groups
+        self.moe_intermediate_size = config.moe_intermediate_size
+        self.act_fn = ACT2FN[config.hidden_act]
+        self.gate = torch.nn.Linear(
+            config.hidden_size,
+            self.num_experts,
+            bias=False,
+            device=device,
+            dtype=dtype,
+        )
+        self.group_gate_up_proj_weight = torch.nn.Parameter(
+            torch.empty(
+                self.num_packed_groups,
+                config.hidden_size,
+                self.top_k * 2 * self.moe_intermediate_size,
+                device=device,
+                dtype=dtype,
+            ),
+            requires_grad=False,
+        )
+        self.group_down_proj_weight = torch.nn.Parameter(
+            torch.empty(
+                self.num_packed_groups,
+                self.top_k * self.moe_intermediate_size,
+                config.hidden_size,
+                device=device,
+                dtype=dtype,
+            ),
+            requires_grad=False,
+        )
+        self.group_selection_mask = torch.nn.Parameter(
+            torch.eye(
+                self.num_expert_groups,
+                device=device,
+                dtype=dtype,
+            ),
+            requires_grad=False,
+        )
 
         with torch.no_grad():
-            for group_id in range(self.num_expert_groups):
-                expert_begin = group_id * self.top_k
-                group_experts = self.experts[
-                    expert_begin : expert_begin + self.top_k
-                ]
-                gate_up_weights.append(
-                    torch.cat(
-                        [
-                            torch.cat(
-                                (
-                                    expert.gate_proj.weight.transpose(0, 1),
-                                    expert.up_proj.weight.transpose(0, 1),
-                                ),
-                                dim=1,
-                            )
-                            for expert in group_experts
-                        ],
-                        dim=1,
-                    )
-                )
-                down_weights.append(
-                    torch.cat(
-                        [
-                            expert.down_proj.weight.transpose(0, 1)
-                            for expert in group_experts
-                        ],
-                        dim=0,
-                    )
-                )
-
-            self.group_gate_up_proj_weight = torch.nn.Parameter(
-                torch.stack(gate_up_weights).detach(), requires_grad=False
-            )
-            self.group_down_proj_weight = torch.nn.Parameter(
-                torch.stack(down_weights).detach(), requires_grad=False
-            )
-            self.group_selection_mask = torch.nn.Parameter(
-                torch.eye(
-                    self.num_expert_groups,
-                    dtype=gate_up_weights[0].dtype,
-                    device=gate_up_weights[0].device,
-                ),
-                requires_grad=False,
-            )
-
-        # The packed parameters replace the individual expert ModuleList.
-        del self.experts
+            gate_up_bound = config.hidden_size**-0.5
+            down_bound = self.moe_intermediate_size**-0.5
+            self.group_gate_up_proj_weight.uniform_(-gate_up_bound, gate_up_bound)
+            self.group_down_proj_weight.uniform_(-down_bound, down_bound)
 
     def forward(self, hidden_states: torch.Tensor):
         batch_size, sequence_length, hidden_dim = hidden_states.shape
         tokens = hidden_states.reshape(-1, hidden_dim)
         token_count = batch_size * sequence_length
         active_groups = min(self.num_expert_groups, token_count)
+        if active_groups > self.num_packed_groups:
+            raise ValueError("input requires more expert groups than were packed")
         if token_count % active_groups:
             raise ValueError(
                 "static grouped routing requires token count to divide active groups"
             )
 
         tokens_per_group = token_count // active_groups
-        grouped_tokens = tokens.reshape(
-            active_groups, tokens_per_group, hidden_dim
-        )
+        grouped_tokens = tokens.reshape(active_groups, tokens_per_group, hidden_dim)
         router_logits = self.gate(tokens)
         grouped_router_logits = router_logits.reshape(
             active_groups,
@@ -220,22 +213,11 @@ class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
             :active_groups, :active_groups
         ].reshape(active_groups, 1, active_groups, 1)
 
-        if self.norm_topk_prob:
-            group_logits = (
-                grouped_router_logits[:, :, :active_groups, :] * selection_mask
-            ).sum(dim=2)
-            routing_weights = F.softmax(group_logits, dim=-1, dtype=torch.float)
-        else:
-            router_weights = F.softmax(router_logits, dim=-1, dtype=torch.float)
-            grouped_router_weights = router_weights.reshape(
-                active_groups,
-                tokens_per_group,
-                self.num_expert_groups,
-                self.top_k,
-            )
-            routing_weights = (
-                grouped_router_weights[:, :, :active_groups, :] * selection_mask
-            ).sum(dim=2)
+        group_logits = (
+            grouped_router_logits[:, :, :active_groups, :] * selection_mask
+        ).sum(dim=2)
+        routing_weights = F.softmax(group_logits, dim=-1, dtype=torch.float)
+
         routing_weights = routing_weights.to(tokens.dtype)
 
         projected = torch.bmm(
@@ -285,10 +267,10 @@ def build_model(
     else:
         model_path = "Qwen/Qwen3-30B-A3B-Thinking-2507"
     config = AutoConfig.from_pretrained(model_path, attn_implementation="eager")
-    model_block = Qwen3MoeDecoderLayer(config, layer_idx=block)
-    model_block = model_block.to(device=device, dtype=torch.bfloat16)
     if layer == "attention":
-        model = model_block.self_attn
+        model = Qwen3MoeAttention(config, layer_idx=block).to(
+            device=device, dtype=torch.bfloat16
+        )
         model.__class__ = SimpleQwen3MoeAttention
         model.eval()
         if action == "prefill":
@@ -362,9 +344,16 @@ def build_model(
         else:
             raise NotImplementedError()
     elif layer == "ffn":
-        model = model_block.mlp
-        model.__class__ = StaticGroupedQwen3MoeBlock
-        model.pack_expert_weights()
+        token_count = batch * (length if action == "prefill" else 1)
+        model = StaticGroupedQwen3MoeBlock(
+            config,
+            device=device,
+            dtype=torch.bfloat16,
+            num_packed_groups=min(
+                config.num_experts // config.num_experts_per_tok,
+                token_count,
+            ),
+        )
         model.eval()
         if action == "prefill":
             dummy_input = (

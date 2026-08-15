@@ -1,11 +1,11 @@
 #!/bin/bash
 
-models=("llama3-8b" "qwen3-8b" "gemma-7b")
+models=("qwen3-moe")
 actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
 batches=(1 8)
-lengths=(128 256 512 1024 4096)
+lengths=(128 256 512 1024 2048)
 
 for model in "${models[@]}"
 do

@@ -773,46 +773,114 @@ DimensionRelationNetwork GenericOpCluster::extractDimRelation() {
             }
           })
           .Case<tensor::ExtractSliceOp>([&](tensor::ExtractSliceOp extract) {
-            auto producer =
-                extract.getSource().getDefiningOp<linalg::GenericOp>();
-            assert(producer);
+            auto producer = extract.getSource().getDefiningOp();
 
-            if (isMember(producer)) {
-              auto srcShape =
-                  mlir::dyn_cast<RankedTensorType>(extract.getSourceType())
-                      .getShape();
-              auto sliceShape =
-                  mlir::dyn_cast<RankedTensorType>(extract.getType())
-                      .getShape();
-              size_t firstExtractDim;
-              for (size_t di = 0; di < srcShape.size(); di++) {
-                if (srcShape[di] != sliceShape[di]) {
-                  firstExtractDim = di;
-                  break;
+            if (auto producerGeneric =
+                    mlir::dyn_cast<linalg::GenericOp>(producer);
+                producerGeneric) {
+              if (isMember(producerGeneric)) {
+                auto srcShape =
+                    mlir::dyn_cast<RankedTensorType>(extract.getSourceType())
+                        .getShape();
+                auto sliceShape =
+                    mlir::dyn_cast<RankedTensorType>(extract.getType())
+                        .getShape();
+                size_t firstExtractDim;
+                for (size_t di = 0; di < srcShape.size(); di++) {
+                  if (srcShape[di] != sliceShape[di]) {
+                    firstExtractDim = di;
+                    break;
+                  }
+                }
+                assert(producerGeneric.getResults().size() == 1);
+                auto producerAccessDims = getAffineMapAccessDims(
+                    producerGeneric.getIndexingMapsArray().back());
+
+                std::vector<int64_t> equalDims;
+                std::vector<int64_t> constDims;
+                for (size_t di = 0; di < srcShape.size(); di++) {
+                  if (di < firstExtractDim) {
+                    network.addEqualRelation(
+                        Dimension(producerGeneric, producerAccessDims[di]),
+                        Dimension(op, accessDims[di]));
+                  } else {
+                    network.setConstDimension(
+                        Dimension(producerGeneric, producerAccessDims[di]),
+                        parameter[producerGeneric]["loop_bound"]
+                                 [producerAccessDims[di]]);
+                    network.setConstDimension(
+                        Dimension(op, accessDims[di]),
+                        parameter[op]["loop_bound"][accessDims[di]]);
+                  }
                 }
               }
-              assert(producer.getResults().size() == 1);
-              auto producerAccessDims = getAffineMapAccessDims(
-                  producer.getIndexingMapsArray().back());
+            } else if (auto producerExpand =
+                           mlir::dyn_cast<tensor::ExpandShapeOp>(producer);
+                       producerExpand) {
+              auto producerGeneric =
+                  producerExpand.getSrc().getDefiningOp<linalg::GenericOp>();
+              assert(producerGeneric);
 
-              std::vector<int64_t> equalDims;
-              std::vector<int64_t> constDims;
-              for (size_t di = 0; di < srcShape.size(); di++) {
-                if (di < firstExtractDim) {
-                  network.addEqualRelation(
-                      Dimension(producer, producerAccessDims[di]),
-                      Dimension(op, accessDims[di]));
-                } else {
-                  network.setConstDimension(
-                      Dimension(producer, producerAccessDims[di]),
-                      parameter[producer]["loop_bound"]
-                               [producerAccessDims[di]]);
-                  network.setConstDimension(
-                      Dimension(op, accessDims[di]),
-                      parameter[op]["loop_bound"][accessDims[di]]);
+              if (isMember(producerGeneric)) {
+                assert(producerGeneric.getResults().size() == 1);
+                auto producerAccessDims = getAffineMapAccessDims(
+                    producerGeneric.getIndexingMapsArray().back());
+
+                auto consumerAccDims = getAffineMapAccessDims(
+                    genericOp.getIndexingMapsArray()[indexOperand]);
+
+                uint64_t idxProducerDim = 0, idxConsumerDim = 0;
+
+                while (idxProducerDim < producerAccessDims.size() &&
+                       idxConsumerDim < consumerAccDims.size()) {
+                  auto expandDims = getAffineMapAccessDims(
+                      producerExpand.getReassociationMaps()[idxProducerDim]);
+                  auto extractInputSize =
+                      extract.getSourceType().getShape()[idxConsumerDim];
+                  auto extractOutputSize =
+                      extract.getResultType().getShape()[idxConsumerDim];
+                  if (expandDims.size() == 1 &&
+                      extractInputSize == extractOutputSize)  // equal relation
+                  {
+                    network.addEqualRelation(
+                        Dimension{producerGeneric,
+                                  producerAccessDims[idxProducerDim]},
+                        Dimension{op, accessDims[idxConsumerDim]});
+                    idxProducerDim++;
+                    idxConsumerDim++;
+                  } else {
+                    assert(expandDims.size() > 1);
+                    bool hasExtractDim = false;
+                    for (auto [idxExpandDim, itemExpandDim] :
+                         llvm::enumerate(expandDims)) {
+                      if (extract.getResultType()
+                              .getShape()[idxConsumerDim + idxExpandDim] <
+                          extract.getSourceType()
+                              .getShape()[idxConsumerDim + idxExpandDim])
+                        hasExtractDim = true;
+                    }
+                    assert(hasExtractDim);
+                    network.setConstDimension(
+                        Dimension(producerGeneric,
+                                  producerAccessDims[idxProducerDim]),
+                        parameter[producerGeneric]["loop_bound"]
+                                 [producerAccessDims[idxProducerDim]]);
+                    for (auto [idxExpandDim, itemExpandDim] :
+                         llvm::enumerate(expandDims)) {
+                      network.setConstDimension(
+                          Dimension(op,
+                                    accessDims[idxConsumerDim + idxExpandDim]),
+                          parameter[op]["loop_bound"]
+                                   [accessDims[idxConsumerDim + idxExpandDim]]);
+                    }
+                    idxProducerDim++;
+                    idxConsumerDim += expandDims.size();
+                  }
                 }
               }
-            }
+
+            } else
+              assert(0);
           })
           .Case<tensor::ConcatOp>([&](tensor::ConcatOp concat) {
             auto concatDim = concat.getDim();
@@ -1204,23 +1272,55 @@ bool GenericOpCluster::checkOpOrder(mlir::Operation* op) {
       }
     } else if (auto producer =
                    operand.getDefiningOp<tensor::ExtractSliceOp>()) {
-      auto producerGeneric =
-          producer.getSource().getDefiningOp<linalg::GenericOp>();
-      assert(producerGeneric);
-      if (isMember(producerGeneric)) {
-        // Check : continous access
-        auto inputDims =
-            getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
-        if (!checkReuseDistance(order, inputDims, mask)) {
-          return false;
+      if (auto producerGeneric =
+              producer.getSource().getDefiningOp<linalg::GenericOp>();
+          producerGeneric) {
+        if (isMember(producerGeneric)) {
+          // Check : continous access
+          auto inputDims =
+              getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
+          if (!checkReuseDistance(order, inputDims, mask)) {
+            return false;
+          }
+          // Check : the same access order
+          std::vector<int64_t> operandDimsOrder =
+              getDimsInOrder(generic, operand);
+          std::vector<int64_t> producerOperandDimsOrder =
+              getDimsInOrder(producerGeneric, producer.getSource());
+          if (operandDimsOrder != producerOperandDimsOrder) return false;
         }
-        // Check : the same access order
-        std::vector<int64_t> operandDimsOrder =
-            getDimsInOrder(generic, operand);
-        std::vector<int64_t> producerOperandDimsOrder =
-            getDimsInOrder(producerGeneric, producer.getSource());
-        if (operandDimsOrder != producerOperandDimsOrder) return false;
-      }
+      } else if (auto producerExpand =
+                     producer.getSource()
+                         .getDefiningOp<tensor::ExpandShapeOp>();
+                 producerExpand) {
+        auto producerGeneric =
+            producerExpand.getSrc().getDefiningOp<linalg::GenericOp>();
+        assert(producerGeneric);
+
+        if (isMember(producerGeneric)) {
+          // Check : continous access
+          auto inputDims =
+              getAffineMapAccessDims(generic.getIndexingMapsArray()[index]);
+          if (!checkReuseDistance(order, inputDims, mask)) {
+            return false;
+          }
+          // Check : the same access order
+          std::vector<int64_t> operandDimsOrder =
+              getDimsInOrder(generic, operand);
+          std::vector<int64_t> producerOperandDimsOrder =
+              getDimsInOrder(producerGeneric, producerExpand.getSrc());
+          std::vector<int64_t> producerOperandDimsOrderExpand;
+          for (auto d : producerOperandDimsOrder) {
+            for (auto dd : getAffineMapAccessDims(
+                     producerExpand.getReassociationMaps()[d])) {
+              producerOperandDimsOrderExpand.push_back(dd);
+            }
+          }
+          if (producerOperandDimsOrderExpand != operandDimsOrder) return false;
+        }
+      } else
+        assert(0);
+
     } else if (auto producer = operand.getDefiningOp() == nullptr) {
       continue;
     } else

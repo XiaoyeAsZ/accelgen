@@ -168,11 +168,12 @@ def DataNodeOp : Dap_Op<"data_node", []> {
   }];
 
   let arguments = (ins
-    I32:$din,
-    I32:$dout
+    I32Attr:$depth
   );
 
   let results = (outs
+    AnyType:$src,
+    AnyType:$result
   );
 
 }

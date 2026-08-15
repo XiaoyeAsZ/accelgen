@@ -2,7 +2,13 @@
 #define ARCH_UTILS_H
 
 #include <cstddef>
+#include <string>
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 namespace accelgen {
@@ -45,6 +51,57 @@ class ResourcePool {
   size_t _currect;
   llvm::ArrayRef<mlir::Operation*> _resourcesRef;
 };
+
+inline std::string getPeResourceName(mlir::Operation* op) {
+  llvm::StringRef operationName =
+      llvm::TypeSwitch<mlir::Operation*, llvm::StringRef>(op)
+          .Case<mlir::arith::MulFOp>(
+              [](auto) -> llvm::StringRef { return "mulf"; })
+          .Case<mlir::arith::AddFOp>(
+              [](auto) -> llvm::StringRef { return "addf"; })
+          .Case<mlir::arith::SubFOp>(
+              [](auto) -> llvm::StringRef { return "subf"; })
+          .Case<mlir::arith::DivFOp>(
+              [](auto) -> llvm::StringRef { return "divf"; })
+          .Case<mlir::arith::MaximumFOp>(
+              [](auto) -> llvm::StringRef { return "maximumf"; })
+          .Case<mlir::arith::NegFOp>(
+              [](auto) -> llvm::StringRef { return "negf"; })
+          .Case<mlir::arith::TruncFOp>(
+              [](auto) -> llvm::StringRef { return "truncf"; })
+          .Case<mlir::arith::ExtFOp>(
+              [](auto) -> llvm::StringRef { return "extf"; })
+          .Default([op](mlir::Operation*) -> llvm::StringRef {
+            llvm::report_fatal_error(llvm::Twine("unsupported PE operation: ") +
+                                     op->getName().getStringRef());
+          });
+  std::string resource = operationName.str();
+
+  auto appendType = [&resource](mlir::Type type) {
+    llvm::StringRef typeName =
+        llvm::TypeSwitch<mlir::Type, llvm::StringRef>(type)
+            .Case<mlir::BFloat16Type>(
+                [](auto) -> llvm::StringRef { return "bf16"; })
+            .Case<mlir::Float32Type>(
+                [](auto) -> llvm::StringRef { return "fp32"; })
+            .Case<mlir::Float64Type>(
+                [](auto) -> llvm::StringRef { return "fp64"; })
+            .Default([type](mlir::Type) -> llvm::StringRef {
+              std::string message;
+              llvm::raw_string_ostream os(message);
+              os << "unsupported PE type: " << type;
+              llvm::report_fatal_error(llvm::StringRef(os.str()));
+            });
+
+    resource.push_back('_');
+    resource.append(typeName.data(), typeName.size());
+  };
+
+  for (mlir::Value operand : op->getOperands()) appendType(operand.getType());
+  for (mlir::Value result : op->getResults()) appendType(result.getType());
+
+  return resource;
+}
 
 }  // namespace accelgen
 }  // namespace mlir

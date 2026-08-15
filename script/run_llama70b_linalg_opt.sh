@@ -2,11 +2,11 @@
 
 
 models=("qwen3-moe")
-actions=("prefill")
+actions=("decode")
 blocks=(0)
 layers=("ffn")
-lengths=(128)
-configs=("server")
+lengths=(128 256 512 1024 2048)
+configs=("server" "edge")
 
 : > ./test/performance.log
 : > ./test/runtime.log
