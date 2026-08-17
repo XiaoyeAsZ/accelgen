@@ -30,7 +30,7 @@ do
                     for length in "${lengths[@]}"
                     do
                         /home/accelgen/build/bin/accelgen-opt "/home/accelgen/benchmark/mlir/${model}-block${block}-${layer}-${action}-b${batch}s${length}.mlir" \
-                        -pass-pipeline="linalg-generalize-named-ops,mark-generic,eliminate-dead-op,fuse-generic,fold-tensor-op" \
+                        -pass-pipeline="resolve-mixed-precision,linalg-generalize-named-ops,mark-generic,eliminate-dead-op,fuse-generic,fold-tensor-op" \
                         -o "/home/accelgen/eval/generic/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic.mlir"
                     done
                 done

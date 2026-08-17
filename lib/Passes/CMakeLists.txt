@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRAccelgen
         EliminateDeadOpPass.cpp
         FoldTensorOpPass.cpp
         ModelPerformance.cpp
+        ResolveMixedPrecision.cpp
 
 
         ADDITIONAL_HEADER_DIRS

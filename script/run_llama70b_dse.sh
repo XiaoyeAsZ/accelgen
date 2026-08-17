@@ -1,7 +1,7 @@
 #!/bin/bash
 
 models=("qwen3-moe")
-actions=("decode")
+actions=("prefill")
 blocks=(0)
 layers=("ffn")
 lengths=(128)
@@ -35,7 +35,7 @@ do
                             -pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/$config.json max-operation=6}), \
                                             model-performance{config-path=/home/accelgen/config/$config.json}" \
                             -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir
-                        } 1>> ./test/moe.log 2>./test/moe.log
+                        } 1>> ./test/moe_perf.log 2>./test/moe.log
 
                     done
                 done

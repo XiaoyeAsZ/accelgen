@@ -52,7 +52,10 @@ void ArchConfig::load(llvm::StringRef cfgPath) {
 Parameter::Parameter(int64_t bound)
     : _bound(bound), _valid(false), _const(false) {}
 Parameter::Parameter(const Parameter& src)
-    : _const(src._const), _value(src._value), _bound(src._bound) {}
+    : _valid(src._valid),
+      _const(src._const),
+      _value(src._value),
+      _bound(src._bound) {}
 void Parameter::addRelation(Relation* rel) { _relations.push_back(rel); }
 
 bool Parameter::set(int64_t value) {
@@ -197,8 +200,7 @@ bool DimensionRelationNetwork::addCollapseRelation(
 bool DimensionRelationNetwork::setConstDimension(const Dimension& dim,
                                                  int64_t value) {
   if (dimMapping.find(dim) == dimMapping.end()) return false;
-  dimMapping[dim]->set(value);
-  return true;
+  return dimMapping[dim]->setConst(value);
 }
 
 bool DimensionRelationNetwork::forward() {
@@ -2927,20 +2929,27 @@ void PruningSolver::inferUnrollFactor(GenericOpCluster& cluster,
     assert(dimsUnroll.size() == 2);
 
     // Calculate factor for 2 dimensions
-    int64_t lowUnrollFactor = tiling[dimsUnroll[0]];
-    int64_t highUnrollFactor = tiling[dimsUnroll[1]];
+    // int64_t lowUnrollFactor = tiling[dimsUnroll[0]];
+    // int64_t highUnrollFactor = tiling[dimsUnroll[1]];
 
-    if (!(highUnrollFactor > 0 &&
-          (highUnrollFactor & (highUnrollFactor - 1)) == 0)) {
-      ECHO(lowUnrollFactor, "\n")
-      ECHO(highUnrollFactor, "\n")
-      ECHO_LIST(tiling, ",")
-    }
+    // if (!(highUnrollFactor > 0 &&
+    //       (highUnrollFactor & (highUnrollFactor - 1)) == 0)) {
+    //   ECHO(lowUnrollFactor, "\n")
+    //   ECHO(highUnrollFactor, "\n")
+    //   ECHO_LIST(tiling, ",")
+    // }
 
-    assert(lowUnrollFactor > 0 &&
-           (lowUnrollFactor & (lowUnrollFactor - 1)) == 0);
-    assert(highUnrollFactor > 0 &&
-           (highUnrollFactor & (highUnrollFactor - 1)) == 0);
+    // assert(lowUnrollFactor > 0 &&
+    //        (lowUnrollFactor & (lowUnrollFactor - 1)) == 0);
+    // assert(highUnrollFactor > 0 &&
+    //        (highUnrollFactor & (highUnrollFactor - 1)) == 0);
+
+    auto lowTile = tiling[dimsUnroll[0]];
+    auto highTile = tiling[dimsUnroll[1]];
+    assert(lowTile > 0 && highTile > 0);
+
+    int64_t lowUnrollFactor = llvm::bit_floor(static_cast<uint64_t>(lowTile));
+    int64_t highUnrollFactor = llvm::bit_floor(static_cast<uint64_t>(highTile));
 
     while (lowUnrollFactor * highUnrollFactor > unrollFactor[index]) {
       if (lowUnrollFactor > highUnrollFactor)

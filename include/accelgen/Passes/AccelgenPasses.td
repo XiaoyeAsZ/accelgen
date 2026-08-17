@@ -106,3 +106,9 @@ def ModelPerformance: Pass<"model-performance", "::mlir::ModuleOp"> {
     Option<"configPath", "config-path", "std::string", "", "">
   ];
 }
+
+def ResolveMixedPrecisionPass: Pass<"resolve-mixed-precision", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+}

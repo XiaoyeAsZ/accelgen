@@ -190,7 +190,7 @@ class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
 
     def forward(self, hidden_states: torch.Tensor):
         batch_size, sequence_length, hidden_dim = hidden_states.shape
-        tokens = hidden_states.reshape(-1, hidden_dim)
+        # tokens = hidden_states.reshape(-1, hidden_dim)
         token_count = batch_size * sequence_length
         active_groups = min(self.num_expert_groups, token_count)
         if active_groups > self.num_packed_groups:
@@ -201,8 +201,10 @@ class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
             )
 
         tokens_per_group = token_count // active_groups
-        grouped_tokens = tokens.reshape(active_groups, tokens_per_group, hidden_dim)
-        router_logits = self.gate(tokens)
+        grouped_tokens = hidden_states.reshape(
+            active_groups, tokens_per_group, hidden_dim
+        )
+        router_logits = self.gate(hidden_states)
         grouped_router_logits = router_logits.reshape(
             active_groups,
             tokens_per_group,
@@ -218,7 +220,7 @@ class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
         ).sum(dim=2)
         routing_weights = F.softmax(group_logits, dim=-1, dtype=torch.float)
 
-        routing_weights = routing_weights.to(tokens.dtype)
+        routing_weights = routing_weights.to(hidden_states.dtype)
 
         projected = torch.bmm(
             grouped_tokens,

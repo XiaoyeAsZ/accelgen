@@ -27,11 +27,11 @@ namespace mlir::accelgen {
 namespace {
 
 class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
-public:
+ public:
   using impl::ConvertToDapBase<ConvertToDap>::ConvertToDapBase;
 
   void runOnOperation() final {
-    mlir::MLIRContext *ctx = &getContext();
+    mlir::MLIRContext* ctx = &getContext();
     auto module = getOperation();
     std::vector<mlir::func::FuncOp> funcs;
     module.walk([&](mlir::func::FuncOp funcOp) { funcs.push_back(funcOp); });
@@ -52,7 +52,7 @@ public:
     builder.setInsertionPointToStart(entryBlock);
 
     // SRAM pool
-    llvm::SmallVector<mlir::Operation *> sramVec(archCfg.nSramBank);
+    llvm::SmallVector<mlir::Operation*> sramVec(archCfg.nSramBank);
     // Buid SRAM pool with single bank SRAM
     for (auto [indexSram, itemSram] : llvm::enumerate(sramVec)) {
       itemSram = builder.create<dap::SramOp>(
@@ -60,9 +60,9 @@ public:
     }
 
     // Compute PE pool
-    llvm::StringMap<llvm::SmallVector<mlir::Operation *>> computeVec;
-    for (auto &[name, num] : archCfg.computeResource) {
-      computeVec[name] = llvm::SmallVector<mlir::Operation *>(num);
+    llvm::StringMap<llvm::SmallVector<mlir::Operation*>> computeVec;
+    for (auto& [name, num] : archCfg.computeResource) {
+      computeVec[name] = llvm::SmallVector<mlir::Operation*>(num);
       llvm::SmallVector<llvm::StringRef> tokens;
       name.split(tokens, "_");
       assert(tokens.size() > 2);
@@ -76,7 +76,7 @@ public:
         types.push_back(type);
       }
       auto builderFn =
-          llvm::StringSwitch<std::function<mlir::Operation *()>>(tokens[0])
+          llvm::StringSwitch<std::function<mlir::Operation*()>>(tokens[0])
               .Case("mulf",
                     [&]() {
                       return builder.create<dap::MulfOp>(
@@ -133,18 +133,18 @@ public:
 
     llvm::SmallVector<linalg::GenericOp> genericOps;
     llvm::DenseMap<
-        mlir::Operation *,
-        llvm::DenseMap<mlir::Value, llvm::ArrayRef<mlir::Operation *>>>
+        mlir::Operation*,
+        llvm::DenseMap<mlir::Value, llvm::ArrayRef<mlir::Operation*>>>
         valueSramMap;
-    llvm::DenseMap<mlir::Operation *,
-                   llvm::StringMap<llvm::ArrayRef<mlir::Operation *>>>
+    llvm::DenseMap<mlir::Operation*,
+                   llvm::StringMap<llvm::ArrayRef<mlir::Operation*>>>
         valueComputeResourceMap;
 
     for (auto [indexFuncOp, itemFuncOp] : llvm::enumerate(funcs)) {
       // Build resource pool
       ResourcePool sramPool(sramVec);
       llvm::StringMap<ResourcePool> computePool;
-      for (auto &[compName, compVec] : computeVec) {
+      for (auto& [compName, compVec] : computeVec) {
         computePool[compName] = ResourcePool(compVec);
       }
 
@@ -157,26 +157,25 @@ public:
           // TODO : allocate banks
           assert(concatOp.getResult().getNumUses() == 1);
           int64_t nBank;
-          llvm::ArrayRef<mlir::Operation *> sramOps;
-          for (auto &use : concatOp->getUses()) {
+          llvm::ArrayRef<mlir::Operation*> sramOps;
+          for (auto& use : concatOp->getUses()) {
             auto genericOp = mlir::dyn_cast<linalg::GenericOp>(use.getOwner());
             assert(genericOp);
 
             auto tiling = getTilingOfOperand(genericOp, &use);
             int64_t tileSize = 1;
-            for (auto t : tiling)
-              tileSize *= t;
+            for (auto t : tiling) tileSize *= t;
 
-            nBank = std::max(1UL, tileSize /
-                                      (archCfg.sramDepth * archCfg.sramWidth /
-                                       getElementTypeOrSelf(use.get().getType())
-                                           .getIntOrFloatBitWidth()));
+            nBank = std::max(
+                1UL, tileSize / (archCfg.sramDepth * archCfg.sramWidth /
+                                 getElementTypeOrSelf(use.get().getType())
+                                     .getIntOrFloatBitWidth()));
 
             sramOps = sramPool.get(nBank);
             valueSramMap[genericOp][use.get()] = sramOps;
           }
 
-          for (auto &opOperand : concatOp->getOpOperands()) {
+          for (auto& opOperand : concatOp->getOpOperands()) {
             auto prevOpOperand = graph.getPreviousOpOperand(opOperand);
             auto prevGeneric = prevOpOperand->get().getDefiningOp();
             assert(!valueSramMap.contains(prevGeneric));
@@ -194,7 +193,7 @@ public:
         // mapping, no -> create sram (block arguments)
         for (auto [indexIns, itemIns] :
              llvm::enumerate(genericOp.getInputs())) {
-          auto &opOperand = genericOp->getOpOperand(indexIns);
+          auto& opOperand = genericOp->getOpOperand(indexIns);
           auto prevOpOperand = graph.getPreviousOpOperand(opOperand);
           // Sram has been created by concat op
           if (valueSramMap.contains(genericOp) &&
@@ -213,8 +212,7 @@ public:
           } else {
             auto tiling = getTilingOfOperand(genericOp, &opOperand);
             int64_t tileSize = 1;
-            for (auto t : tiling)
-              tileSize *= t;
+            for (auto t : tiling) tileSize *= t;
             int64_t nBank = std::max(
                 1UL, tileSize / (archCfg.sramDepth * archCfg.sramWidth /
                                  getElementTypeOrSelf(opOperand.get().getType())
@@ -227,17 +225,16 @@ public:
         // For results, build sram for each use, except for those have been
         // mapped to a sram
         assert(genericOp.getResults().size() == 1);
-        for (auto &use : genericOp->getUses()) {
+        for (auto& use : genericOp->getUses()) {
           // Sram has been created by concat op
           if (valueSramMap.contains(use.getOwner()) &&
               valueSramMap[use.getOwner()][use.get()].size() != 0) {
             continue;
           } else {
-            auto &opOperand = genericOp->getOpOperands().back();
+            auto& opOperand = genericOp->getOpOperands().back();
             auto tiling = getTilingOfOperand(genericOp, &opOperand);
             int64_t tileSize = 1;
-            for (auto t : tiling)
-              tileSize *= t;
+            for (auto t : tiling) tileSize *= t;
 
             int64_t nBank = std::max(
                 1UL, tileSize / (archCfg.sramDepth * archCfg.sramWidth /
@@ -250,7 +247,7 @@ public:
         }
 
         // Allocate compute resources
-        genericOp.walk([&](mlir::Operation *op) {
+        genericOp.walk([&](mlir::Operation* op) {
           if (mlir::isa<mlir::arith::ArithDialect>(op->getDialect()) ||
               mlir::isa<mlir::math::MathDialect>(op->getDialect())) {
             llvm::StringRef resourceName = getPeResourceName(op);
@@ -263,20 +260,18 @@ public:
     }
 
     // Build routing primitives for each generic op
-    for (auto &genericOp : genericOps) {
+    for (auto& genericOp : genericOps) {
       auto unrollFactorAttr =
           mlir::dyn_cast<ArrayAttr>(genericOp->getAttr("unroll_factor"));
       llvm::SmallVector<uint64_t> arraySize;
       uint64_t totalUntrollSize = 1;
       for (auto attr : unrollFactorAttr) {
         auto u = mlir::dyn_cast<IntegerAttr>(attr).getValue().getZExtValue();
-        if (u > 1)
-          arraySize.push_back(u);
+        if (u > 1) arraySize.push_back(u);
         totalUntrollSize *= u;
       }
       assert(arraySize.size() == 1 || arraySize.size() == 2);
-      while (arraySize.size() < 2)
-        arraySize.push_back(1);
+      while (arraySize.size() < 2) arraySize.push_back(1);
 
       // Build datanodes array for each operand
       llvm::SmallVector<llvm::SmallVector<dap::DataNodeOp>> dataNodeVecs;
@@ -297,6 +292,20 @@ public:
         llvm::SmallVector<uint64_t> operandSize;
         auto dims = getAffineMapAccessDims(
             genericOp.getIndexingMapsArray()[idxOperand]);
+        auto sramVec = valueSramMap[genericOp][itemOperand];
+        uint64_t nElementSram = sramVec.size() * archCfg.sramWidth /
+                                itemOperand.getType().getIntOrFloatBitWidth();
+        if (nElementSram > dataNodeVecs[idxOperand].size())
+          assert(0);
+        else if (nElementSram == dataNodeVecs[idxOperand].size()) {
+          for (unsigned i = 0; i < nElementSram; i++) {
+            builder.create<dap::DataPathOp>(
+                UnknownLoc::get(ctx),
+                mlir::dyn_cast<dap::SramOp>(sramVec[i]).getDout(),
+                dataNodeVecs[idxOperand][i].getSrc());
+          }
+        } else {
+        }
       }
     }
 
@@ -427,6 +436,6 @@ public:
     // }
   }
 
-}; // namespace
-} // namespace
-} // namespace mlir::accelgen
+};  // namespace
+}  // namespace
+}  // namespace mlir::accelgen
