@@ -3,9 +3,9 @@
 models=("qwen3-moe")
 actions=("prefill" "decode")
 blocks=(0)
-layers=("ffn")
+layers=("attention" "ffn")
 batches=(1 8)
-lengths=(128 256 512 1024 2048)
+lengths=(128 256 512 1024 4096)
 
 for model in "${models[@]}"
 do

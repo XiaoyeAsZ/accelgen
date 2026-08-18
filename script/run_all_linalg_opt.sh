@@ -1,11 +1,11 @@
 #!/bin/bash
 
 
-models=("llama3-8b" "qwen3-8b" "gemma-7b" "qwen3-moe")
+models=("qwen3-moe")
 actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
-lengths=(128 256 512 1024 2048)
+lengths=(128 256 512 1024 4096)
 configs=("edge" "server")
 
 : > ./test/performance.log

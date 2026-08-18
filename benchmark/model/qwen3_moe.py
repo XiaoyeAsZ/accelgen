@@ -146,12 +146,23 @@ class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
         self.num_packed_groups = num_packed_groups
         self.moe_intermediate_size = config.moe_intermediate_size
         self.act_fn = ACT2FN[config.hidden_act]
-        self.gate = torch.nn.Linear(
-            config.hidden_size,
-            self.num_experts,
-            bias=False,
-            device=device,
-            dtype=dtype,
+        # self.gate = torch.nn.Linear(
+        #     self.num_expert_groups,
+        #     config.hidden_size,
+        #     self.top_k,
+        #     bias=False,
+        #     device=device,
+        #     dtype=dtype,
+        # )
+        self.gate = torch.nn.Parameter(
+            torch.empty(
+                self.num_packed_groups,
+                config.hidden_size,
+                self.top_k,
+                device=device,
+                dtype=dtype,
+            ),
+            requires_grad=False,
         )
         self.group_gate_up_proj_weight = torch.nn.Parameter(
             torch.empty(
@@ -204,23 +215,29 @@ class StaticGroupedQwen3MoeBlock(Qwen3MoeSparseMoeBlock):
         grouped_tokens = hidden_states.reshape(
             active_groups, tokens_per_group, hidden_dim
         )
-        router_logits = self.gate(hidden_states)
-        grouped_router_logits = router_logits.reshape(
-            active_groups,
-            tokens_per_group,
-            self.num_expert_groups,
-            self.top_k,
-        )
-        selection_mask = self.group_selection_mask[
-            :active_groups, :active_groups
-        ].reshape(active_groups, 1, active_groups, 1)
 
-        group_logits = (
-            grouped_router_logits[:, :, :active_groups, :] * selection_mask
-        ).sum(dim=2)
-        routing_weights = F.softmax(group_logits, dim=-1, dtype=torch.float)
+        # router_logits = self.gate(hidden_states)
 
-        routing_weights = routing_weights.to(hidden_states.dtype)
+        router_logits = torch.bmm(
+            grouped_tokens, self.gate
+        )  # (active_groups, tokens_per_group, topk)
+
+        # grouped_router_logits = router_logits.reshape(
+        #     active_groups,
+        #     tokens_per_group,
+        #     self.num_expert_groups,
+        #     self.top_k,
+        # )
+        # selection_mask = self.group_selection_mask[
+        #     :active_groups, :active_groups
+        # ].reshape(active_groups, 1, active_groups, 1)
+
+        # group_logits = (
+        #     grouped_router_logits[:, :, :active_groups, :] * selection_mask
+        # ).sum(dim=2)
+
+        routing_weights = F.softmax(router_logits, dim=-1, dtype=torch.float)
+        routing_weights = routing_weights.to(grouped_tokens.dtype)
 
         projected = torch.bmm(
             grouped_tokens,

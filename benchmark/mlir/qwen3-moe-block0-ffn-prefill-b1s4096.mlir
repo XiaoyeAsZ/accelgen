@@ -4,12 +4,12 @@
 #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, 0)>
 module {
-  func.func @main(%arg0: tensor<8x512x4096xbf16>, %arg1: tensor<16x4096x8xbf16>, %arg2: tensor<16x4096x24576xbf16>, %arg3: tensor<16x12288x4096xbf16>, %arg4: tensor<16x16xbf16>) -> (tensor<8x512x4096xbf16>, tensor<16x256x8xbf16>) {
+  func.func @main(%arg0: tensor<1x4096x4096xbf16>, %arg1: tensor<16x4096x8xbf16>, %arg2: tensor<16x4096x24576xbf16>, %arg3: tensor<16x12288x4096xbf16>, %arg4: tensor<16x16xbf16>) -> (tensor<1x4096x4096xbf16>, tensor<16x256x8xbf16>) {
     %c0_i64 = arith.constant 0 : i64
     %cst = arith.constant 0.000000e+00 : f32
     %cst_0 = arith.constant 0xFF800000 : f32
     %cst_1 = arith.constant 1.000000e+00 : bf16
-    %collapsed = tensor.collapse_shape %arg0 [[0, 1], [2]] : tensor<8x512x4096xbf16> into tensor<4096x4096xbf16>
+    %collapsed = tensor.collapse_shape %arg0 [[0, 1], [2]] : tensor<1x4096x4096xbf16> into tensor<4096x4096xbf16>
     %expanded = tensor.expand_shape %collapsed [[0, 1], [2]] output_shape [16, 256, 4096] : tensor<4096x4096xbf16> into tensor<16x256x4096xbf16>
     %0 = tensor.empty() : tensor<16x256x8xf32>
     %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x256x8xf32>) -> tensor<16x256x8xf32>
@@ -114,7 +114,7 @@ module {
       linalg.yield %33 : bf16
     } -> tensor<16x256x4096xbf16>
     %collapsed_7 = tensor.collapse_shape %32 [[0, 1], [2]] : tensor<16x256x4096xbf16> into tensor<4096x4096xbf16>
-    %expanded_8 = tensor.expand_shape %collapsed_7 [[0, 1], [2]] output_shape [8, 512, 4096] : tensor<4096x4096xbf16> into tensor<8x512x4096xbf16>
-    return %expanded_8, %4 : tensor<8x512x4096xbf16>, tensor<16x256x8xbf16>
+    %expanded_8 = tensor.expand_shape %collapsed_7 [[0, 1], [2]] output_shape [1, 4096, 4096] : tensor<4096x4096xbf16> into tensor<1x4096x4096xbf16>
+    return %expanded_8, %4 : tensor<1x4096x4096xbf16>, tensor<16x256x8xbf16>
   }
 }

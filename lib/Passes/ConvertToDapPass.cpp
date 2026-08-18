@@ -263,10 +263,12 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
     for (auto& genericOp : genericOps) {
       auto unrollFactorAttr =
           mlir::dyn_cast<ArrayAttr>(genericOp->getAttr("unroll_factor"));
+      llvm::SmallVector<uint64_t> unrollFactor;
       llvm::SmallVector<uint64_t> arraySize;
       uint64_t totalUntrollSize = 1;
       for (auto attr : unrollFactorAttr) {
         auto u = mlir::dyn_cast<IntegerAttr>(attr).getValue().getZExtValue();
+        unrollFactor.push_back(u);
         if (u > 1) arraySize.push_back(u);
         totalUntrollSize *= u;
       }
@@ -292,12 +294,22 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
         llvm::SmallVector<uint64_t> operandSize;
         auto dims = getAffineMapAccessDims(
             genericOp.getIndexingMapsArray()[idxOperand]);
+        uint64_t operandTotalFactor = 1;
+        for (auto d : dims) {
+          auto u = unrollFactor[d];
+          if (u > 1) operandSize.push_back(u);
+          operandTotalFactor *= u;
+        }
+        assert(operandSize.size() == 1 || operandSize.size() == 2);
+        while (operandSize.size() < 2) operandSize.push_back(1);
+
         auto sramVec = valueSramMap[genericOp][itemOperand];
         uint64_t nElementSram = sramVec.size() * archCfg.sramWidth /
                                 itemOperand.getType().getIntOrFloatBitWidth();
-        if (nElementSram > dataNodeVecs[idxOperand].size())
+
+        if (nElementSram > operandTotalFactor)
           assert(0);
-        else if (nElementSram == dataNodeVecs[idxOperand].size()) {
+        else if (nElementSram == operandTotalFactor) {
           for (unsigned i = 0; i < nElementSram; i++) {
             builder.create<dap::DataPathOp>(
                 UnknownLoc::get(ctx),

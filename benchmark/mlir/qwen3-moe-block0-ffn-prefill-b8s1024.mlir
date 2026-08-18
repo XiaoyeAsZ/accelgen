@@ -1,142 +1,120 @@
-#map = affine_map<(d0, d1, d2) -> (d1, d2)>
-#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-#map3 = affine_map<(d0, d1, d2, d3) -> (d0, 0, d2, 0)>
-#map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-#map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
-#map6 = affine_map<(d0, d1, d2) -> (d0, d1, 0)>
-#map7 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, 0)>
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1, 0)>
+#map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+#map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, 0)>
 module {
-  func.func @main(%arg0: tensor<8x1024x4096xbf16>, %arg1: tensor<16x4096x24576xbf16>, %arg2: tensor<16x12288x4096xbf16>, %arg3: tensor<16x16xbf16>, %arg4: tensor<128x4096xbf16>) -> (tensor<8x1024x4096xbf16>, tensor<8x1024x128xbf16>) {
+  func.func @main(%arg0: tensor<8x1024x4096xbf16>, %arg1: tensor<16x4096x8xbf16>, %arg2: tensor<16x4096x24576xbf16>, %arg3: tensor<16x12288x4096xbf16>, %arg4: tensor<16x16xbf16>) -> (tensor<8x1024x4096xbf16>, tensor<16x512x8xbf16>) {
     %c0_i64 = arith.constant 0 : i64
-    %cst = arith.constant 0.000000e+00 : bf16
+    %cst = arith.constant 0.000000e+00 : f32
     %cst_0 = arith.constant 0xFF800000 : f32
-    %cst_1 = arith.constant 0.000000e+00 : f32
-    %cst_2 = arith.constant 1.000000e+00 : bf16
+    %cst_1 = arith.constant 1.000000e+00 : bf16
     %collapsed = tensor.collapse_shape %arg0 [[0, 1], [2]] : tensor<8x1024x4096xbf16> into tensor<8192x4096xbf16>
     %expanded = tensor.expand_shape %collapsed [[0, 1], [2]] output_shape [16, 512, 4096] : tensor<8192x4096xbf16> into tensor<16x512x4096xbf16>
-    %0 = tensor.empty() : tensor<4096x128xbf16>
-    %transposed = linalg.transpose ins(%arg4 : tensor<128x4096xbf16>) outs(%0 : tensor<4096x128xbf16>) permutation = [1, 0] 
-    %1 = tensor.empty() : tensor<8x4096x128xbf16>
-    %2 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%transposed : tensor<4096x128xbf16>) outs(%1 : tensor<8x4096x128xbf16>) {
-    ^bb0(%in: bf16, %out: bf16):
-      linalg.yield %in : bf16
-    } -> tensor<8x4096x128xbf16>
-    %3 = tensor.empty() : tensor<8x1024x128xbf16>
-    %4 = linalg.fill ins(%cst : bf16) outs(%3 : tensor<8x1024x128xbf16>) -> tensor<8x1024x128xbf16>
-    %5 = linalg.batch_matmul ins(%arg0, %2 : tensor<8x1024x4096xbf16>, tensor<8x4096x128xbf16>) outs(%4 : tensor<8x1024x128xbf16>) -> tensor<8x1024x128xbf16>
-    %collapsed_3 = tensor.collapse_shape %5 [[0, 1], [2]] : tensor<8x1024x128xbf16> into tensor<8192x128xbf16>
-    %expanded_4 = tensor.expand_shape %collapsed_3 [[0, 1], [2, 3]] output_shape [16, 512, 16, 8] : tensor<8192x128xbf16> into tensor<16x512x16x8xbf16>
-    %expanded_5 = tensor.expand_shape %arg3 [[0], [1, 2, 3]] output_shape [16, 1, 16, 1] : tensor<16x16xbf16> into tensor<16x1x16x1xbf16>
-    %6 = tensor.empty() : tensor<16x512x16x8xbf16>
-    %7 = linalg.generic {indexing_maps = [#map2, #map3, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%expanded_4, %expanded_5 : tensor<16x512x16x8xbf16>, tensor<16x1x16x1xbf16>) outs(%6 : tensor<16x512x16x8xbf16>) {
-    ^bb0(%in: bf16, %in_13: bf16, %out: bf16):
-      %40 = arith.mulf %in, %in_13 : bf16
-      linalg.yield %40 : bf16
-    } -> tensor<16x512x16x8xbf16>
-    %8 = tensor.empty() : tensor<16x512x8xbf16>
-    %9 = linalg.fill ins(%cst : bf16) outs(%8 : tensor<16x512x8xbf16>) -> tensor<16x512x8xbf16>
-    %10 = linalg.generic {indexing_maps = [#map2, #map4], iterator_types = ["parallel", "parallel", "reduction", "parallel"]} ins(%7 : tensor<16x512x16x8xbf16>) outs(%9 : tensor<16x512x8xbf16>) {
-    ^bb0(%in: bf16, %out: bf16):
-      %40 = arith.addf %in, %out : bf16
-      linalg.yield %40 : bf16
+    %0 = tensor.empty() : tensor<16x512x8xf32>
+    %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x512x8xf32>) -> tensor<16x512x8xf32>
+    %2 = linalg.batch_matmul ins(%expanded, %arg1 : tensor<16x512x4096xbf16>, tensor<16x4096x8xbf16>) outs(%1 : tensor<16x512x8xf32>) -> tensor<16x512x8xf32>
+    %3 = tensor.empty() : tensor<16x512x8xbf16>
+    %4 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%2 : tensor<16x512x8xf32>) outs(%3 : tensor<16x512x8xbf16>) {
+    ^bb0(%in: f32, %out: bf16):
+      %33 = arith.truncf %in : f32 to bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x8xbf16>
-    %11 = tensor.empty() : tensor<16x512x8xf32>
-    %12 = linalg.generic {indexing_maps = [#map1, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%10 : tensor<16x512x8xbf16>) outs(%11 : tensor<16x512x8xf32>) {
+    %5 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%4 : tensor<16x512x8xbf16>) outs(%0 : tensor<16x512x8xf32>) {
     ^bb0(%in: bf16, %out: f32):
-      %40 = arith.extf %in : bf16 to f32
-      linalg.yield %40 : f32
+      %33 = arith.extf %in : bf16 to f32
+      linalg.yield %33 : f32
     } -> tensor<16x512x8xf32>
-    %13 = tensor.empty() : tensor<16x512xi64>
-    %14 = linalg.fill ins(%c0_i64 : i64) outs(%13 : tensor<16x512xi64>) -> tensor<16x512xi64>
-    %15 = tensor.empty() : tensor<16x512xf32>
-    %16 = linalg.fill ins(%cst_0 : f32) outs(%15 : tensor<16x512xf32>) -> tensor<16x512xf32>
-    %17:2 = linalg.generic {indexing_maps = [#map1, #map5, #map5], iterator_types = ["parallel", "parallel", "reduction"]} ins(%12 : tensor<16x512x8xf32>) outs(%16, %14 : tensor<16x512xf32>, tensor<16x512xi64>) {
-    ^bb0(%in: f32, %out: f32, %out_13: i64):
-      %40 = linalg.index 2 : index
-      %41 = arith.index_cast %40 : index to i64
-      %42 = arith.maximumf %in, %out : f32
-      %43 = arith.cmpf ogt, %in, %out : f32
-      %44 = arith.select %43, %41, %out_13 : i64
-      linalg.yield %42, %44 : f32, i64
+    %6 = tensor.empty() : tensor<16x512xi64>
+    %7 = linalg.fill ins(%c0_i64 : i64) outs(%6 : tensor<16x512xi64>) -> tensor<16x512xi64>
+    %8 = tensor.empty() : tensor<16x512xf32>
+    %9 = linalg.fill ins(%cst_0 : f32) outs(%8 : tensor<16x512xf32>) -> tensor<16x512xf32>
+    %10:2 = linalg.generic {indexing_maps = [#map, #map1, #map1], iterator_types = ["parallel", "parallel", "reduction"]} ins(%5 : tensor<16x512x8xf32>) outs(%9, %7 : tensor<16x512xf32>, tensor<16x512xi64>) {
+    ^bb0(%in: f32, %out: f32, %out_9: i64):
+      %33 = linalg.index 2 : index
+      %34 = arith.index_cast %33 : index to i64
+      %35 = arith.maximumf %in, %out : f32
+      %36 = arith.cmpf ogt, %in, %out : f32
+      %37 = arith.select %36, %34, %out_9 : i64
+      linalg.yield %35, %37 : f32, i64
     } -> (tensor<16x512xf32>, tensor<16x512xi64>)
-    %expanded_6 = tensor.expand_shape %17#0 [[0], [1, 2]] output_shape [16, 512, 1] : tensor<16x512xf32> into tensor<16x512x1xf32>
-    %18 = linalg.generic {indexing_maps = [#map1, #map6, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%12, %expanded_6 : tensor<16x512x8xf32>, tensor<16x512x1xf32>) outs(%11 : tensor<16x512x8xf32>) {
-    ^bb0(%in: f32, %in_13: f32, %out: f32):
-      %40 = arith.subf %in, %in_13 : f32
-      linalg.yield %40 : f32
+    %expanded_2 = tensor.expand_shape %10#0 [[0], [1, 2]] output_shape [16, 512, 1] : tensor<16x512xf32> into tensor<16x512x1xf32>
+    %11 = linalg.generic {indexing_maps = [#map, #map2, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%5, %expanded_2 : tensor<16x512x8xf32>, tensor<16x512x1xf32>) outs(%0 : tensor<16x512x8xf32>) {
+    ^bb0(%in: f32, %in_9: f32, %out: f32):
+      %33 = arith.subf %in, %in_9 : f32
+      linalg.yield %33 : f32
     } -> tensor<16x512x8xf32>
-    %19 = linalg.generic {indexing_maps = [#map1, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%18 : tensor<16x512x8xf32>) outs(%11 : tensor<16x512x8xf32>) {
+    %12 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%11 : tensor<16x512x8xf32>) outs(%0 : tensor<16x512x8xf32>) {
     ^bb0(%in: f32, %out: f32):
-      %40 = math.exp %in : f32
-      linalg.yield %40 : f32
+      %33 = math.exp %in : f32
+      linalg.yield %33 : f32
     } -> tensor<16x512x8xf32>
-    %20 = tensor.empty() : tensor<16x512x1xf32>
-    %21 = linalg.fill ins(%cst_1 : f32) outs(%20 : tensor<16x512x1xf32>) -> tensor<16x512x1xf32>
-    %22 = linalg.generic {indexing_maps = [#map1, #map6], iterator_types = ["parallel", "parallel", "reduction"]} ins(%19 : tensor<16x512x8xf32>) outs(%21 : tensor<16x512x1xf32>) {
+    %13 = tensor.empty() : tensor<16x512x1xf32>
+    %14 = linalg.fill ins(%cst : f32) outs(%13 : tensor<16x512x1xf32>) -> tensor<16x512x1xf32>
+    %15 = linalg.generic {indexing_maps = [#map, #map2], iterator_types = ["parallel", "parallel", "reduction"]} ins(%12 : tensor<16x512x8xf32>) outs(%14 : tensor<16x512x1xf32>) {
     ^bb0(%in: f32, %out: f32):
-      %40 = arith.addf %in, %out : f32
-      linalg.yield %40 : f32
+      %33 = arith.addf %in, %out : f32
+      linalg.yield %33 : f32
     } -> tensor<16x512x1xf32>
-    %23 = linalg.generic {indexing_maps = [#map1, #map6, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%19, %22 : tensor<16x512x8xf32>, tensor<16x512x1xf32>) outs(%11 : tensor<16x512x8xf32>) {
-    ^bb0(%in: f32, %in_13: f32, %out: f32):
-      %40 = arith.divf %in, %in_13 : f32
-      linalg.yield %40 : f32
+    %16 = linalg.generic {indexing_maps = [#map, #map2, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%12, %15 : tensor<16x512x8xf32>, tensor<16x512x1xf32>) outs(%0 : tensor<16x512x8xf32>) {
+    ^bb0(%in: f32, %in_9: f32, %out: f32):
+      %33 = arith.divf %in, %in_9 : f32
+      linalg.yield %33 : f32
     } -> tensor<16x512x8xf32>
-    %24 = linalg.generic {indexing_maps = [#map1, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%23 : tensor<16x512x8xf32>) outs(%8 : tensor<16x512x8xbf16>) {
+    %17 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%16 : tensor<16x512x8xf32>) outs(%3 : tensor<16x512x8xbf16>) {
     ^bb0(%in: f32, %out: bf16):
-      %40 = arith.truncf %in : f32 to bf16
-      linalg.yield %40 : bf16
+      %33 = arith.truncf %in : f32 to bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x8xbf16>
-    %25 = tensor.empty() : tensor<16x512x24576xf32>
-    %26 = linalg.fill ins(%cst_1 : f32) outs(%25 : tensor<16x512x24576xf32>) -> tensor<16x512x24576xf32>
-    %27 = linalg.batch_matmul ins(%expanded, %arg1 : tensor<16x512x4096xbf16>, tensor<16x4096x24576xbf16>) outs(%26 : tensor<16x512x24576xf32>) -> tensor<16x512x24576xf32>
-    %28 = tensor.empty() : tensor<16x512x24576xbf16>
-    %29 = linalg.generic {indexing_maps = [#map1, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%27 : tensor<16x512x24576xf32>) outs(%28 : tensor<16x512x24576xbf16>) {
+    %18 = tensor.empty() : tensor<16x512x24576xf32>
+    %19 = linalg.fill ins(%cst : f32) outs(%18 : tensor<16x512x24576xf32>) -> tensor<16x512x24576xf32>
+    %20 = linalg.batch_matmul ins(%expanded, %arg2 : tensor<16x512x4096xbf16>, tensor<16x4096x24576xbf16>) outs(%19 : tensor<16x512x24576xf32>) -> tensor<16x512x24576xf32>
+    %21 = tensor.empty() : tensor<16x512x24576xbf16>
+    %22 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%20 : tensor<16x512x24576xf32>) outs(%21 : tensor<16x512x24576xbf16>) {
     ^bb0(%in: f32, %out: bf16):
-      %40 = arith.truncf %in : f32 to bf16
-      linalg.yield %40 : bf16
+      %33 = arith.truncf %in : f32 to bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x24576xbf16>
-    %expanded_7 = tensor.expand_shape %29 [[0], [1], [2, 3]] output_shape [16, 512, 8, 3072] : tensor<16x512x24576xbf16> into tensor<16x512x8x3072xbf16>
-    %extracted_slice = tensor.extract_slice %expanded_7[0, 0, 0, 0] [16, 512, 8, 1536] [1, 1, 1, 1] : tensor<16x512x8x3072xbf16> to tensor<16x512x8x1536xbf16>
-    %extracted_slice_8 = tensor.extract_slice %expanded_7[0, 0, 0, 1536] [16, 512, 8, 1536] [1, 1, 1, 1] : tensor<16x512x8x3072xbf16> to tensor<16x512x8x1536xbf16>
-    %30 = tensor.empty() : tensor<16x512x8x1536xbf16>
-    %31 = linalg.generic {indexing_maps = [#map2, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice : tensor<16x512x8x1536xbf16>) outs(%30 : tensor<16x512x8x1536xbf16>) {
+    %expanded_3 = tensor.expand_shape %22 [[0], [1], [2, 3]] output_shape [16, 512, 8, 3072] : tensor<16x512x24576xbf16> into tensor<16x512x8x3072xbf16>
+    %extracted_slice = tensor.extract_slice %expanded_3[0, 0, 0, 0] [16, 512, 8, 1536] [1, 1, 1, 1] : tensor<16x512x8x3072xbf16> to tensor<16x512x8x1536xbf16>
+    %extracted_slice_4 = tensor.extract_slice %expanded_3[0, 0, 0, 1536] [16, 512, 8, 1536] [1, 1, 1, 1] : tensor<16x512x8x3072xbf16> to tensor<16x512x8x1536xbf16>
+    %23 = tensor.empty() : tensor<16x512x8x1536xbf16>
+    %24 = linalg.generic {indexing_maps = [#map3, #map3], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%extracted_slice : tensor<16x512x8x1536xbf16>) outs(%23 : tensor<16x512x8x1536xbf16>) {
     ^bb0(%in: bf16, %out: bf16):
-      %40 = arith.negf %in : bf16
-      %41 = math.exp %40 : bf16
-      %42 = arith.addf %41, %cst_2 : bf16
-      %43 = arith.divf %cst_2, %42 : bf16
-      linalg.yield %43 : bf16
+      %33 = arith.negf %in : bf16
+      %34 = math.exp %33 : bf16
+      %35 = arith.addf %34, %cst_1 : bf16
+      %36 = arith.divf %cst_1, %35 : bf16
+      linalg.yield %36 : bf16
     } -> tensor<16x512x8x1536xbf16>
-    %32 = linalg.generic {indexing_maps = [#map2, #map2, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%31, %extracted_slice : tensor<16x512x8x1536xbf16>, tensor<16x512x8x1536xbf16>) outs(%30 : tensor<16x512x8x1536xbf16>) {
-    ^bb0(%in: bf16, %in_13: bf16, %out: bf16):
-      %40 = arith.mulf %in, %in_13 : bf16
-      linalg.yield %40 : bf16
+    %25 = linalg.generic {indexing_maps = [#map3, #map3, #map3], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%24, %extracted_slice : tensor<16x512x8x1536xbf16>, tensor<16x512x8x1536xbf16>) outs(%23 : tensor<16x512x8x1536xbf16>) {
+    ^bb0(%in: bf16, %in_9: bf16, %out: bf16):
+      %33 = arith.mulf %in, %in_9 : bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x8x1536xbf16>
-    %33 = linalg.generic {indexing_maps = [#map2, #map2, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%32, %extracted_slice_8 : tensor<16x512x8x1536xbf16>, tensor<16x512x8x1536xbf16>) outs(%30 : tensor<16x512x8x1536xbf16>) {
-    ^bb0(%in: bf16, %in_13: bf16, %out: bf16):
-      %40 = arith.mulf %in, %in_13 : bf16
-      linalg.yield %40 : bf16
+    %26 = linalg.generic {indexing_maps = [#map3, #map3, #map3], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%25, %extracted_slice_4 : tensor<16x512x8x1536xbf16>, tensor<16x512x8x1536xbf16>) outs(%23 : tensor<16x512x8x1536xbf16>) {
+    ^bb0(%in: bf16, %in_9: bf16, %out: bf16):
+      %33 = arith.mulf %in, %in_9 : bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x8x1536xbf16>
-    %expanded_9 = tensor.expand_shape %24 [[0], [1], [2, 3]] output_shape [16, 512, 8, 1] : tensor<16x512x8xbf16> into tensor<16x512x8x1xbf16>
-    %34 = linalg.generic {indexing_maps = [#map2, #map7, #map2], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%33, %expanded_9 : tensor<16x512x8x1536xbf16>, tensor<16x512x8x1xbf16>) outs(%30 : tensor<16x512x8x1536xbf16>) {
-    ^bb0(%in: bf16, %in_13: bf16, %out: bf16):
-      %40 = arith.mulf %in, %in_13 : bf16
-      linalg.yield %40 : bf16
+    %expanded_5 = tensor.expand_shape %17 [[0], [1], [2, 3]] output_shape [16, 512, 8, 1] : tensor<16x512x8xbf16> into tensor<16x512x8x1xbf16>
+    %27 = linalg.generic {indexing_maps = [#map3, #map4, #map3], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%26, %expanded_5 : tensor<16x512x8x1536xbf16>, tensor<16x512x8x1xbf16>) outs(%23 : tensor<16x512x8x1536xbf16>) {
+    ^bb0(%in: bf16, %in_9: bf16, %out: bf16):
+      %33 = arith.mulf %in, %in_9 : bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x8x1536xbf16>
-    %collapsed_10 = tensor.collapse_shape %34 [[0], [1], [2, 3]] : tensor<16x512x8x1536xbf16> into tensor<16x512x12288xbf16>
-    %35 = tensor.empty() : tensor<16x512x4096xf32>
-    %36 = linalg.fill ins(%cst_1 : f32) outs(%35 : tensor<16x512x4096xf32>) -> tensor<16x512x4096xf32>
-    %37 = linalg.batch_matmul ins(%collapsed_10, %arg2 : tensor<16x512x12288xbf16>, tensor<16x12288x4096xbf16>) outs(%36 : tensor<16x512x4096xf32>) -> tensor<16x512x4096xf32>
-    %38 = tensor.empty() : tensor<16x512x4096xbf16>
-    %39 = linalg.generic {indexing_maps = [#map1, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%37 : tensor<16x512x4096xf32>) outs(%38 : tensor<16x512x4096xbf16>) {
+    %collapsed_6 = tensor.collapse_shape %27 [[0], [1], [2, 3]] : tensor<16x512x8x1536xbf16> into tensor<16x512x12288xbf16>
+    %28 = tensor.empty() : tensor<16x512x4096xf32>
+    %29 = linalg.fill ins(%cst : f32) outs(%28 : tensor<16x512x4096xf32>) -> tensor<16x512x4096xf32>
+    %30 = linalg.batch_matmul ins(%collapsed_6, %arg3 : tensor<16x512x12288xbf16>, tensor<16x12288x4096xbf16>) outs(%29 : tensor<16x512x4096xf32>) -> tensor<16x512x4096xf32>
+    %31 = tensor.empty() : tensor<16x512x4096xbf16>
+    %32 = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%30 : tensor<16x512x4096xf32>) outs(%31 : tensor<16x512x4096xbf16>) {
     ^bb0(%in: f32, %out: bf16):
-      %40 = arith.truncf %in : f32 to bf16
-      linalg.yield %40 : bf16
+      %33 = arith.truncf %in : f32 to bf16
+      linalg.yield %33 : bf16
     } -> tensor<16x512x4096xbf16>
-    %collapsed_11 = tensor.collapse_shape %39 [[0, 1], [2]] : tensor<16x512x4096xbf16> into tensor<8192x4096xbf16>
-    %expanded_12 = tensor.expand_shape %collapsed_11 [[0, 1], [2]] output_shape [8, 1024, 4096] : tensor<8192x4096xbf16> into tensor<8x1024x4096xbf16>
-    return %expanded_12, %5 : tensor<8x1024x4096xbf16>, tensor<8x1024x128xbf16>
+    %collapsed_7 = tensor.collapse_shape %32 [[0, 1], [2]] : tensor<16x512x4096xbf16> into tensor<8192x4096xbf16>
+    %expanded_8 = tensor.expand_shape %collapsed_7 [[0, 1], [2]] output_shape [8, 1024, 4096] : tensor<8192x4096xbf16> into tensor<8x1024x4096xbf16>
+    return %expanded_8, %4 : tensor<8x1024x4096xbf16>, tensor<16x512x8xbf16>
   }
 }
