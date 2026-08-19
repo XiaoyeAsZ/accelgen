@@ -59,6 +59,16 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
           UnknownLoc::get(ctx), archCfg.sramWidth, archCfg.sramDepth);
     }
 
+    // DataNode pool
+    llvm::SmallVector<mlir::Operation*> dataNodeVec(archCfg.nDataNode);
+    for (auto [indexReg, itemReg] : llvm::enumerate(dataNodeVec)) {
+      itemReg = builder.create<dap::DataNodeOp>(
+          UnknownLoc::get(ctx),
+          mlir::TypeRange(
+              {mlir::BFloat16Type::get(ctx), mlir::BFloat16Type::get(ctx)}),
+          1);
+    }
+
     // Compute PE pool
     llvm::StringMap<llvm::SmallVector<mlir::Operation*>> computeVec;
     for (auto& [name, num] : archCfg.computeResource) {
@@ -117,6 +127,11 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
                       return builder.create<dap::ExtfOp>(UnknownLoc::get(ctx),
                                                          types[0], types[1]);
                     })
+              .Case("extf",
+                    [&]() {
+                      return builder.create<dap::ErfOp>(UnknownLoc::get(ctx),
+                                                        types[0], types[1]);
+                    })
               .Default(nullptr);
 
       if (!builderFn) {
@@ -136,6 +151,10 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
         mlir::Operation*,
         llvm::DenseMap<mlir::Value, llvm::ArrayRef<mlir::Operation*>>>
         valueSramMap;
+    llvm::DenseMap<
+        mlir::Operation*,
+        llvm::DenseMap<mlir::Value, llvm::ArrayRef<mlir::Operation*>>>
+        valueRegMap;
     llvm::DenseMap<mlir::Operation*,
                    llvm::StringMap<llvm::ArrayRef<mlir::Operation*>>>
         valueComputeResourceMap;
@@ -143,6 +162,7 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
     for (auto [indexFuncOp, itemFuncOp] : llvm::enumerate(funcs)) {
       // Build resource pool
       ResourcePool sramPool(sramVec);
+      ResourcePool regPool(dataNodeVec);
       llvm::StringMap<ResourcePool> computePool;
       for (auto& [compName, compVec] : computeVec) {
         computePool[compName] = ResourcePool(compVec);
@@ -246,13 +266,32 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
           }
         }
 
+        auto unrollFactorAttr =
+            mlir::dyn_cast<ArrayAttr>(genericOp->getAttr("unroll_factor"));
+        uint64_t totalUntrollSize = 1;
+        for (auto attr : unrollFactorAttr) {
+          auto u = mlir::dyn_cast<IntegerAttr>(attr).getValue().getZExtValue();
+          totalUntrollSize *= u;
+        }
+
+        // Allocate register resource
+        for (auto [idxOperand, itemOperand] :
+             llvm::enumerate(genericOp.getOperands())) {
+          auto dataNodeOpVec = regPool.get(totalUntrollSize);
+          valueRegMap[genericOp][itemOperand] = dataNodeOpVec;
+        }
+
         // Allocate compute resources
         genericOp.walk([&](mlir::Operation* op) {
           if (mlir::isa<mlir::arith::ArithDialect>(op->getDialect()) ||
               mlir::isa<mlir::math::MathDialect>(op->getDialect())) {
             llvm::StringRef resourceName = getPeResourceName(op);
-          } else
-            assert(0);
+            valueComputeResourceMap[genericOp][resourceName] =
+                computePool[resourceName].get(totalUntrollSize);
+          } else if (mlir::isa<linalg::YieldOp>(op))
+            ;
+          else
+            ;
         });
       }
 
@@ -276,17 +315,19 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
       while (arraySize.size() < 2) arraySize.push_back(1);
 
       // Build datanodes array for each operand
-      llvm::SmallVector<llvm::SmallVector<dap::DataNodeOp>> dataNodeVecs;
-      for (auto operand : genericOp.getOperands()) {
-        llvm::SmallVector<dap::DataNodeOp> nodes;
-        for (size_t i = 0; i < totalUntrollSize; i++) {
-          auto dataNodeOp = builder.create<dap::DataNodeOp>(
-              UnknownLoc::get(ctx),
-              mlir::TypeRange({operand.getType(), operand.getType()}), 1);
-          nodes.push_back(dataNodeOp);
-        }
-        dataNodeVecs.push_back(nodes);
-      }
+      // llvm::SmallVector<llvm::SmallVector<dap::DataNodeOp>> dataNodeVecs;
+      // for (auto operand : genericOp.getOperands()) {
+      //   llvm::SmallVector<dap::DataNodeOp> nodes;
+      //   for (size_t i = 0; i < totalUntrollSize; i++) {
+      //     auto dataNodeOp = builder.create<dap::DataNodeOp>(
+      //         UnknownLoc::get(ctx),
+      //         mlir::TypeRange({operand.getType(), operand.getType()}), 1);
+      //     nodes.push_back(dataNodeOp);
+      //   }
+      //   dataNodeVecs.push_back(nodes);
+      // }
+
+      llvm::SmallVector<Array2D<mlir::Operation*>> regArrays;
 
       // Routing data from SRAM - > DataNode
       for (auto [idxOperand, itemOperand] :
@@ -306,146 +347,281 @@ class ConvertToDap : public impl::ConvertToDapBase<ConvertToDap> {
         auto sramVec = valueSramMap[genericOp][itemOperand];
         uint64_t nElementSram = sramVec.size() * archCfg.sramWidth /
                                 itemOperand.getType().getIntOrFloatBitWidth();
+        llvm::SmallVector<mlir::Value> sramPortVec(nElementSram);
+        for (auto& sram : sramVec) {
+          uint64_t fanout =
+              archCfg.sramWidth / itemOperand.getType().getIntOrFloatBitWidth();
+          auto decomposeOp =
+              builder.create<dap::DecomposeOp>(UnknownLoc::get(ctx), fanout);
+          builder.create<dap::DataPathOp>(
+              UnknownLoc::get(ctx), mlir::dyn_cast<dap::SramOp>(sram).getDout(),
+              decomposeOp.getDin());
+          auto ports = decomposeOp.getDouts();
+          sramPortVec.append(ports.begin(), ports.end());
+        }
+
+        auto regVec = valueRegMap[genericOp][itemOperand];
+        Array2D<mlir::Operation*> regArray(arraySize, regVec);
+        regArrays.push_back(regArray);
+
+        llvm::SmallVector<mlir::Operation*> boundryDataNodes;
+
+        if (operandSize[0] < arraySize[0] &&
+            operandSize[1] == arraySize[1])  // 1 row -> broadcast -> array
+        {
+          boundryDataNodes = regArray.row(0);
+        } else if (operandSize[0] == arraySize[0] &&
+                   operandSize[1] <
+                       arraySize[1])  // 1 col -> broadcast -> array
+
+        {
+          boundryDataNodes = regArray.col(0);
+        } else if (operandSize[0] == arraySize[0] &&
+                   operandSize[1] == arraySize[1])  // already array
+        {
+          boundryDataNodes = regArray.array();
+        } else
+          assert(0);
 
         if (nElementSram > operandTotalFactor)
           assert(0);
         else if (nElementSram == operandTotalFactor) {
           for (unsigned i = 0; i < nElementSram; i++) {
             builder.create<dap::DataPathOp>(
-                UnknownLoc::get(ctx),
-                mlir::dyn_cast<dap::SramOp>(sramVec[i]).getDout(),
-                dataNodeVecs[idxOperand][i].getSrc());
+                UnknownLoc::get(ctx), sramPortVec[i],
+                mlir::dyn_cast<dap::DataNodeOp>(boundryDataNodes[i]).getSrc());
           }
         } else {
+          assert(operandTotalFactor % nElementSram == 0);
+          auto nDemux = operandTotalFactor / nElementSram;
+          llvm::SmallVector<dap::DemuxOp> demuxOps;
+          llvm::SmallVector<mlir::Value> demuxPorts;
+          for (auto [idxPort, itemPort] : llvm::enumerate(sramPortVec)) {
+            auto demuxOp =
+                builder.create<dap::DemuxOp>(UnknownLoc::get(ctx), nDemux);
+            builder.create<dap::DataPathOp>(UnknownLoc::get(ctx), itemPort,
+                                            demuxOp.getDin());
+            for (uint64_t i = 0; i < nDemux; i++) {
+              demuxPorts[i * sramPortVec.size() + idxPort] =
+                  demuxOp.getDout()[i];
+            }
+          }
+          for (auto [port, op] : llvm::zip(demuxPorts, boundryDataNodes)) {
+            auto dataNodeOp = mlir::dyn_cast<dap::DataNodeOp>(op);
+            builder.create<dap::DataPathOp>(UnknownLoc::get(ctx), port,
+                                            dataNodeOp.getSrc());
+          }
         }
+
+        if (idxOperand >= genericOp.getInputs().size()) continue;
+
+        // Broadcast
+        if (operandSize[0] < arraySize[0] &&
+            operandSize[1] == arraySize[1])  // 1 row -> broadcast -> array
+        {
+          for (uint64_t r = 0; r < arraySize[0]; r++) {
+            for (uint64_t c = 0; r < arraySize[1]; c++) {
+              if (r > 0) {
+                builder.create<dap::DataPathOp>(
+                    UnknownLoc::get(ctx),
+                    mlir::dyn_cast<dap::DataNodeOp>(regArray.at(r - 1, c))
+                        .getResult(),
+                    mlir::dyn_cast<dap::DataNodeOp>(regArray.at(r, c))
+                        .getSrc());
+              }
+            }
+          }
+        } else if (operandSize[0] == arraySize[0] &&
+                   operandSize[1] <
+                       arraySize[1])  // 1 col -> broadcast -> array
+
+        {
+          for (uint64_t r = 0; r < arraySize[0]; r++) {
+            for (uint64_t c = 0; r < arraySize[1]; c++) {
+              if (c > 0) {
+                builder.create<dap::DataPathOp>(
+                    UnknownLoc::get(ctx),
+                    mlir::dyn_cast<dap::DataNodeOp>(regArray.at(r, c - 1))
+                        .getResult(),
+                    mlir::dyn_cast<dap::DataNodeOp>(regArray.at(r, c))
+                        .getSrc());
+              }
+            }
+          }
+        } else if (operandSize[0] == arraySize[0] &&
+                   operandSize[1] == arraySize[1])  // already array
+        {
+        } else
+          assert(0);
+      }
+
+      llvm::SmallVector<mlir::Value> arithResults;
+
+      // Build routing for arith op
+      genericOp.walk([&](mlir::Operation* op) {
+        auto getSourcePorts = [&](mlir::Value value) {
+          llvm::SmallVector<mlir::Value> sourcePorts;
+          if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
+            auto regArray = regArrays[blockArg.getArgNumber()];
+            for (auto reg : regArray.array()) {
+              sourcePorts.push_back(
+                  mlir::cast<dap::DataNodeOp>(reg).getResult());
+            }
+            return sourcePorts;
+          }
+
+          auto* definingOp = value.getDefiningOp();
+          assert(definingOp && "expected a block argument or PE result");
+          auto definingPeResources =
+              valueComputeResourceMap[genericOp][getPeResourceName(definingOp)];
+          Array2D<mlir::Operation*> definingPeArray(arraySize,
+                                                    definingPeResources);
+          for (auto* definingPe : definingPeArray.array())
+            sourcePorts.push_back(definingPe->getResults().back());
+          return sourcePorts;
+        };
+
+        auto routeComputeOp = [&](mlir::Operation* computeOp) {
+          auto peResources =
+              valueComputeResourceMap[genericOp][getPeResourceName(computeOp)];
+          Array2D<mlir::Operation*> peArray(arraySize, peResources);
+          for (auto [idxOperand, operand] :
+               llvm::enumerate(computeOp->getOperands())) {
+            auto sourcePorts = getSourcePorts(operand);
+            for (auto [source, pe] :
+                 llvm::zip_equal(sourcePorts, peArray.array())) {
+              builder.create<dap::DataPathOp>(
+                  UnknownLoc::get(ctx), source,
+                  pe->getResult(static_cast<unsigned>(idxOperand)));
+            }
+          }
+        };
+
+        mlir::TypeSwitch<mlir::Operation*>(op)
+            .Case<mlir::arith::MulFOp, mlir::arith::AddFOp, mlir::arith::SubFOp,
+                  mlir::arith::DivFOp, mlir::arith::MaximumFOp,
+                  mlir::arith::NegFOp, mlir::arith::TruncFOp,
+                  mlir::arith::ExtFOp, mlir::math::ExpOp, mlir::math::RsqrtOp,
+                  mlir::math::SqrtOp, mlir::math::FPowIOp, mlir::math::ErfOp>(
+                [&](auto computeOp) { routeComputeOp(computeOp); })
+            .Case<mlir::linalg::YieldOp>([&](mlir::linalg::YieldOp yieldOp) {
+              auto result = yieldOp.getValues();
+              assert(result.size() == 1);
+              // for (auto [idxResult, result] :
+              //      llvm::enumerate(yieldOp.getValues())) {
+              arithResults = getSourcePorts(result[0]);
+
+              // }
+            })
+            .Default([&](mlir::Operation*) {
+              assert(0 && "unsupported generic body op");
+            });
+      });
+
+      // Build output -> SRAM
+
+      Array2D<mlir::Value> arithResultsArray(arraySize, arithResults);
+      auto outputRegArray = regArrays.back();
+
+      llvm::SmallVector<mlir::Operation*> outputRegs;
+
+      assert(genericOp.getResults().size() == 1);
+      llvm::SmallVector<uint64_t> resultSize;
+      auto dims =
+          getAffineMapAccessDims(genericOp.getIndexingMapsArray().back());
+      for (auto d : dims) {
+        auto u = unrollFactor[d];
+        if (u > 1) resultSize.push_back(u);
+      }
+      assert(resultSize.size() == 1 || resultSize.size() == 2);
+      while (resultSize.size() < 2) resultSize.push_back(1);
+
+      if (resultSize[0] < arraySize[0] &&
+          resultSize[1] == arraySize[1])  // array -> reduction -> 1 row
+      {
+        outputRegs = outputRegArray.row(outputRegArray.getNumRow() - 1);
+        for (uint64_t r = 0; r < arraySize[0]; r++) {
+          for (uint64_t c = 0; r < arraySize[1]; c++) {
+            if (r > 0)
+              builder.create<dap::DataPathOp>(
+                  UnknownLoc::get(ctx), arithResultsArray.at(r - 1, c),
+                  mlir::dyn_cast<dap::DataNodeOp>(outputRegArray.at(r, c))
+                      .getSrc());
+          }
+        }
+      } else if (resultSize[0] == arraySize[0] &&
+                 resultSize[1] < arraySize[1])  // array -> reduction -> 1 col
+      {
+        outputRegs = outputRegArray.row(outputRegArray.getNumCol() - 1);
+        for (uint64_t r = 0; r < arraySize[0]; r++) {
+          for (uint64_t c = 0; r < arraySize[1]; c++) {
+            if (c > 0)
+              builder.create<dap::DataPathOp>(
+                  UnknownLoc::get(ctx), arithResultsArray.at(r, c - 1),
+                  mlir::dyn_cast<dap::DataNodeOp>(outputRegArray.at(r, c))
+                      .getSrc());
+          }
+        }
+      } else if (resultSize[0] == arraySize[0] &&
+                 resultSize[1] == arraySize[1])  // array
+      {
+        outputRegs = outputRegArray.array();
+      } else
+        assert(0);
+
+      llvm::SmallVector<mlir::Value> outputPorts(outputRegs.size());
+      for (auto [reg, port] : llvm::zip(outputRegs, outputPorts)) {
+        auto dataNodeOp = mlir::dyn_cast<dap::DataNodeOp>(reg);
+        port = dataNodeOp.getResult();
+      }
+
+      // outputPorts -> SRAM
+      auto outputSram = valueSramMap[genericOp][genericOp.getOperands().back()];
+      assert(genericOp.getResults().size() == 1);
+      uint64_t nOutputSramElement =
+          outputSram.size() * archCfg.sramWidth /
+          genericOp.getOperands().back().getType().getIntOrFloatBitWidth();
+
+      llvm::SmallVector<mlir::Value> muxPorts(nOutputSramElement);
+      if (outputPorts.size() > nOutputSramElement) {
+        assert(outputPorts.size() % nOutputSramElement == 0);
+        uint64_t fanin = outputPorts.size() / nOutputSramElement;
+
+        for (auto [idxElement, itemElement] : llvm::enumerate(muxPorts)) {
+          auto muxOp = builder.create<dap::MuxOp>(UnknownLoc::get(ctx), fanin);
+          for (uint64_t i = 0; i < fanin; i++) {
+            builder.create<dap::DataPathOp>(UnknownLoc::get(ctx),
+                                            outputPorts[i * fanin + idxElement],
+                                            muxOp.getDins()[i]);
+          }
+          itemElement = muxOp.getDout();
+        }
+      } else if (outputPorts.size() == nOutputSramElement) {
+        for (auto [idxElement, itemElement] : llvm::enumerate(muxPorts)) {
+          itemElement = outputPorts[idxElement];
+        }
+      } else
+        assert(0);
+
+      // Compose
+      assert(muxPorts.size() > outputSram.size());
+      uint64_t nElementPerBank =
+          archCfg.sramWidth /
+          genericOp.getOperands().back().getType().getIntOrFloatBitWidth();
+      assert(muxPorts.size() / nElementPerBank == outputSram.size());
+      for (auto [idxSram, itemSram] : llvm::enumerate(outputSram)) {
+        auto sramOp = mlir::dyn_cast<dap::SramOp>(itemSram);
+        auto composeOp = builder.create<dap::ComposeOp>(UnknownLoc::get(ctx),
+                                                        nElementPerBank);
+        for (uint64_t i = 0; i < nElementPerBank; i++) {
+          builder.create<dap::DataPathOp>(
+              UnknownLoc::get(ctx), muxPorts[idxSram * nElementPerBank + i],
+              composeOp.getDins()[i]);
+        }
+        builder.create<dap::DataPathOp>(UnknownLoc::get(ctx),
+                                        composeOp.getDout(), sramOp.getWaddr());
       }
     }
-
-    //   // Build routing node and arith node
-    //   for (auto genericOp : graph.getGenericOpsInTopoOrder()) {
-    //     // Check arraysize. e.g. For unroll factor (1, 64, 64, 1) -> An array
-    //     of
-    //     // 64x64
-    //     auto unrollFactorAttr =
-    //         mlir::dyn_cast<ArrayAttr>(genericOp->getAttr("unroll_factor"));
-    //     assert(unrollFactorAttr);
-    //     llvm::SmallVector<int64_t> arraySize;
-    //     llvm::SmallVector<int64_t> unrollDims;
-    //     int64_t totalUnrollFactor = 1;
-    //     for (auto [indexAttr, itemAttr] : llvm::enumerate(unrollFactorAttr))
-    //     {
-    //       auto u =
-    //           mlir::dyn_cast<IntegerAttr>(itemAttr).getValue().getZExtValue();
-    //       if (u != 1) {
-    //         arraySize.push_back(u);
-    //         unrollDims.push_back(indexAttr);
-    //       }
-    //       totalUnrollFactor *= u;
-    //     }
-
-    //     // if (arraySize.size() != 2) {
-    //     //   continue;
-    //     // }
-    //     assert(arraySize.size() == 2);
-    //     // if (arraySize.size() == 1) arraySize.insert(arraySize.begin(),1);
-
-    //     // Each operand is corresponding to a block argument
-    //     std::vector<llvm::SmallVector<mlir::Value>> inputPorts(
-    //         genericOp.getOperands().size());
-    //     llvm::SmallVector<mlir::Value> outputPorts;
-    //     for (auto [indexOperand, itemOperand] :
-    //          llvm::enumerate(genericOp->getOpOperands())) {
-    //       auto accDims = getAffineMapAccessDims(
-    //           genericOp.getIndexingMapsArray()[indexOperand]);
-    //       int64_t sramAccessVecLength = 1;
-    //       for (auto dim : accDims) {
-    //         sramAccessVecLength *=
-    //             mlir::dyn_cast<IntegerAttr>(unrollFactorAttr[dim])
-    //                 .getValue()
-    //                 .getZExtValue();
-    //       }
-
-    //       // SRAM -> Compose -> Mux -> Demux -> Decompose
-    //       auto sramOps = valueSramMap[&itemOperand];
-    //       int64_t totalSramWidth = sramOps.size() * archCfg.sramWidth;
-    //       int64_t nElement =
-    //           totalSramWidth /
-    //           getElementTypeOrSelf(itemOperand.get().getType())
-    //                                .getIntOrFloatBitWidth();
-    //       assert(nElement % sramAccessVecLength == 0 ||
-    //              sramAccessVecLength % nElement == 0);
-
-    //       int64_t nBankComposeGroup;
-    //       int64_t nDemuxGroup;
-    //       if (nElement < sramAccessVecLength) {
-    //         nBankComposeGroup = sramOps.size();
-    //         nDemuxGroup = sramAccessVecLength / nElement;
-    //       } else {
-    //         nBankComposeGroup = sramOps.size() / (nElement /
-    //         sramAccessVecLength); nDemuxGroup = 1;
-    //       }
-
-    //       // Build Compose op
-    //       llvm::SmallVector<mlir::Value> composePorts;
-    //       for (int64_t indexStartBank = 0; indexStartBank < sramOps.size();
-    //            indexStartBank += nBankComposeGroup) {
-    //         auto composeOp =
-    //         builder.create<dap::ComposeOp>(UnknownLoc::get(ctx),
-    //                                                         nBankComposeGroup);
-    //         for (auto [indexPort, itemPort] :
-    //              llvm::enumerate(composeOp.getDins())) {
-    //           builder.create<dap::DataPathOp>(
-    //               UnknownLoc::get(ctx),
-    //               mlir::dyn_cast<dap::SramOp>(sramOps[indexStartBank +
-    //               indexPort])
-    //                   .getDout(),
-    //               itemPort);
-    //         }
-    //         composePorts.push_back(composeOp.getDout());
-    //       }
-
-    //       // Build Mux op
-    //       auto muxOp = builder.create<dap::MuxOp>(UnknownLoc::get(ctx),
-    //                                               composePorts.size());
-    //       for (auto [indexPort, itemPort] : llvm::enumerate(composePorts)) {
-    //         builder.create<dap::DataPathOp>(UnknownLoc::get(ctx), itemPort,
-    //                                         muxOp.getDins()[indexPort]);
-    //       }
-
-    //       // Build Demux op
-    //       auto demuxOp =
-    //           builder.create<dap::DemuxOp>(UnknownLoc::get(ctx),
-    //           nDemuxGroup);
-    //       builder.create<dap::DataPathOp>(UnknownLoc::get(ctx),
-    //       muxOp.getDout(),
-    //                                       demuxOp.getDin());
-    //       int64_t nElementComposeGroup =
-    //           nBankComposeGroup * archCfg.sramWidth /
-    //           getElementTypeOrSelf(itemOperand.get().getType())
-    //               .getIntOrFloatBitWidth();
-
-    //       llvm::SmallVector<mlir::Value> ports(sramAccessVecLength);
-    //       for (auto [indexDemuxPort, itemDemuxPort] :
-    //            llvm::enumerate(demuxOp.getDout())) {
-    //         auto decomposeOp = builder.create<dap::DecomposeOp>(
-    //             UnknownLoc::get(ctx), nElementComposeGroup);
-    //         builder.create<dap::DataPathOp>(UnknownLoc::get(ctx),
-    //         itemDemuxPort,
-    //                                         decomposeOp.getDin());
-    //         for (auto [indexDecomposePort, itemDecomposePort] :
-    //              llvm::enumerate(decomposeOp.getDouts())) {
-    //           ports[indexDemuxPort * nElementComposeGroup +
-    //           indexDecomposePort] =
-    //               itemDecomposePort;
-    //         }
-    //       }
-
-    //       inputPorts[indexOperand] = ports;
-    //     }
-
-    //     // Build network for arith op
-    //   }
-    // }
   }
 
 };  // namespace

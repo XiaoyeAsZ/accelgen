@@ -3,12 +3,13 @@
 models=("llama3-8b")
 actions=("prefill")
 blocks=(0)
-layers=("attention" "ffn")
+layers=("attention")
 lengths=(128)
 configs=("edge")
 
-: > ./test/moe_perf.log
-: > ./test/moe.log
+
+: > ./test/dap_lower.log
+# : > ./test/runtime.log
 
 for model in "${models[@]}"
 do
@@ -31,11 +32,10 @@ do
                         {
                             echo "Running: model=$model action=$action block=$block layer=$layer batch=$batch length=$length config=$config"
 
-                            ./build/bin/accelgen-opt ./eval/generic/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic.mlir \
-                            -pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/$config.json max-operation=6}), \
-                                            model-performance{config-path=/home/accelgen/config/$config.json}" \
-                            -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir
-                        } 1>> ./test/moe_perf.log 2>./test/moe.log
+                            ./build/bin/accelgen-opt ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir \
+                            -pass-pipeline="convert-to-dap{config-path=/home/accelgen/config/${config}.json}" \
+                            -o ./eval/dap/${model}-block${block}-${layer}-${action}-b${batch}s${length}-dap-${config}.mlir
+                        } >> ./test/dap_lower.log 2>&1
 
                     done
                 done

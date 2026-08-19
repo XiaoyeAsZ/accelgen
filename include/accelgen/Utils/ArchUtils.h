@@ -28,6 +28,9 @@ class ArchResource {
   size_t nSramBank;
   double_t sramEnergy;
 
+  // Register
+  size_t nDataNode;
+
   // Compute logic
   llvm::StringMap<size_t> computeResource;  // #
   llvm::StringMap<double_t> computeEnergy;  // #

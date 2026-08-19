@@ -16,6 +16,7 @@ void ArchResource::load(llvm::StringRef cfgPath) {
   this->sramWidth = config["sram"]["sram_width"];
   this->sramDepth = config["sram"]["sram_depth"];
   this->sramEnergy = config["sram"]["energy"];
+  this->nDataNode = config["register"]["n"];
 
   auto comps = config["compute"];
 

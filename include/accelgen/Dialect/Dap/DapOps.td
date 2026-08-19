@@ -140,6 +140,20 @@ def ExtfOp : Dap_Op<"extf", []> {
   );
 }
 
+def ErfOp : Dap_Op<"erf", []> {
+  let summary = "Erf";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
+  );
+}
+
 def SramOp : Dap_Op<"sram", []> {
   let summary = "Sram";
   let description = [{
