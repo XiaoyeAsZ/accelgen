@@ -188,7 +188,7 @@ def parse_datamove_ops(content, result):
         })
 
 
-def collect(out_dir):
+def collect(out_dir, title="Llama3-70B"):
     log_dir = os.path.join(out_dir, "logs")
     log_files = sorted(glob.glob(os.path.join(log_dir, "*.log")))
     results = [parse_log(path) for path in log_files]
@@ -200,7 +200,7 @@ def collect(out_dir):
     os.makedirs(out_dir, exist_ok=True)
     write_summary_csv(out_dir, results)
     write_detail_csv(out_dir, results)
-    write_summary_txt(out_dir, results)
+    write_summary_txt(out_dir, results, title)
     print(f"Parsed {len(results)} workloads from {log_dir}")
     print(f"Saved: {out_dir}/summary.csv  {out_dir}/summary_detail.csv  {out_dir}/summary.txt")
 
@@ -240,14 +240,14 @@ def write_detail_csv(out_dir, results):
                     ])
 
 
-def write_summary_txt(out_dir, results):
+def write_summary_txt(out_dir, results, title="Llama3-70B"):
     by_arch = defaultdict(list)
     for r in results:
         by_arch[r["linear_arch"]].append(r)
 
     with open(os.path.join(out_dir, "summary.txt"), "w") as f:
         f.write("=" * 80 + "\n")
-        f.write(f"  Llama3-70B Baseline Summary - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"  {title} Baseline Summary - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write("=" * 80 + "\n\n")
 
         grand_cycles = grand_flops = grand_dram = grand_ok = grand_fail = 0
@@ -308,8 +308,9 @@ def write_summary_txt(out_dir, results):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="baseline_test_70b")
+    parser.add_argument("--title", default="Llama3-70B")
     args = parser.parse_args()
-    collect(args.out_dir)
+    collect(args.out_dir, args.title)
 
 
 if __name__ == "__main__":
