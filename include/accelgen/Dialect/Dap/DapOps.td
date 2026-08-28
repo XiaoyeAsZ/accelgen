@@ -14,8 +14,8 @@ def DataPathOp : Dap_Op<"data_path", []> {
   }];
 
   let arguments = (ins
-    I32:$src,
-    I32:$dest
+    AnyType:$src,
+    AnyType:$dest
   );
 
   let results = (outs
@@ -154,6 +154,63 @@ def ErfOp : Dap_Op<"erf", []> {
   );
 }
 
+def ExpOp : Dap_Op<"exp", []> {
+  let summary = "Exp";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
+  );
+}
+
+def RsqrtOp : Dap_Op<"rsqrt", []> {
+  let summary = "Rsqrt";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
+  );
+}
+
+def SqrtOp : Dap_Op<"sqrt", []> {
+  let summary = "Sqrt";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Src,
+    AnyType:$result
+  );
+}
+
+def FPowIOp : Dap_Op<"fpowi", []> {
+  let summary = "FPowI";
+  let description = [{
+  }];
+
+  let arguments = (ins
+  );
+
+  let results = (outs
+    AnyType:$Lhs,
+    AnyType:$Rhs,
+    AnyType:$result
+  );
+}
+
 def SramOp : Dap_Op<"sram", []> {
   let summary = "Sram";
   let description = [{
@@ -176,7 +233,7 @@ def SramOp : Dap_Op<"sram", []> {
   );
 }
 
-def DataNodeOp : Dap_Op<"data_node", []> {
+def DataNodeOp : Dap_Op<"data_node", [Pure]> {
   let summary = "Data Node";
   let description = [{
   }];
@@ -191,6 +248,20 @@ def DataNodeOp : Dap_Op<"data_node", []> {
   );
 
 }
+
+
+def ConstOp : Dap_Op<"const", []> {
+  let summary = "Constant";
+
+  let arguments = (ins
+    AnyAttr:$value
+  );
+
+  let results = (outs
+    I32:$result
+  );
+}
+
 
 def ConcatOp : Dap_Op<"concat", []> {
   let summary = "Concat";

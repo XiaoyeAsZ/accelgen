@@ -5,7 +5,7 @@ actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
 lengths=(128)
-configs=("edge")
+configs=("orin" "inferentia")
 
 : > ./test/moe_perf.log
 : > ./test/moe.log
@@ -32,8 +32,8 @@ do
                             echo "Running: model=$model action=$action block=$block layer=$layer batch=$batch length=$length config=$config"
 
                             ./build/bin/accelgen-opt ./eval/generic/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic.mlir \
-                            -pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/orin_edge.json max-operation=6}), \
-                                            model-performance{config-path=/home/accelgen/config/orin_edge.json}" \
+                            -pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/edge.json max-operation=6}), \
+                                            model-performance{config-path=/home/accelgen/config/edge.json}" \
                             -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir
                         } 1>> ./test/moe_perf.log 2>./test/moe.log
 

@@ -112,3 +112,9 @@ def ResolveMixedPrecisionPass: Pass<"resolve-mixed-precision", "::mlir::ModuleOp
   let description = [{
   }];
 }
+
+def ModelArea: Pass<"model-area", "::mlir::ModuleOp"> {
+  let summary = "";
+  let description = [{
+  }];
+}

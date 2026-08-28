@@ -8,8 +8,8 @@ lengths=(4096)
 configs=("server")
 
 
-# : > ./test/dap_lower.log
-# : > ./test/runtime.log
+: > ./test/area.log
+
 
 for model in "${models[@]}"
 do
@@ -32,11 +32,9 @@ do
                         {
                             echo "Running: model=$model action=$action block=$block layer=$layer batch=$batch length=$length config=$config"
 
-                            ./build/bin/accelgen-opt ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir \
-                            -pass-pipeline="convert-to-dap{config-path=/home/accelgen/config/${config}.json},model-area" \
-                            -o ./eval/dap/${model}-block${block}-${layer}-${action}-b${batch}s${length}-dap-${config}.mlir
-                        } >> ./test/dap_lower.log 2>&1
-
+                            ./build/bin/accelgen-opt ./eval/dap/${model}-block${block}-${layer}-${action}-b${batch}s${length}-dap-${config}.mlir \
+                            -pass-pipeline="model-area" 
+                        } 1>> ./test/area.log 2>/dev/null
                     done
                 done
             done

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -50,6 +51,8 @@ class ResourcePool {
 
   llvm::ArrayRef<mlir::Operation*> get(size_t nResource);
 
+  void reset();
+
  private:
   size_t _currect;
   llvm::ArrayRef<mlir::Operation*> _resourcesRef;
@@ -74,6 +77,16 @@ inline std::string getPeResourceName(mlir::Operation* op) {
               [](auto) -> llvm::StringRef { return "truncf"; })
           .Case<mlir::arith::ExtFOp>(
               [](auto) -> llvm::StringRef { return "extf"; })
+          .Case<mlir::math::ExpOp>(
+              [](auto) -> llvm::StringRef { return "exp"; })
+          .Case<mlir::math::RsqrtOp>(
+              [](auto) -> llvm::StringRef { return "rsqrt"; })
+          .Case<mlir::math::SqrtOp>(
+              [](auto) -> llvm::StringRef { return "sqrt"; })
+          .Case<mlir::math::FPowIOp>(
+              [](auto) -> llvm::StringRef { return "fpowi"; })
+          .Case<mlir::math::ErfOp>(
+              [](auto) -> llvm::StringRef { return "erf"; })
           .Default([op](mlir::Operation*) -> llvm::StringRef {
             llvm::report_fatal_error(llvm::Twine("unsupported PE operation: ") +
                                      op->getName().getStringRef());
@@ -81,6 +94,12 @@ inline std::string getPeResourceName(mlir::Operation* op) {
   std::string resource = operationName.str();
 
   auto appendType = [&resource](mlir::Type type) {
+    if (auto intType = mlir::dyn_cast<mlir::IntegerType>(type)) {
+      resource.append("_i");
+      resource.append(std::to_string(intType.getWidth()));
+      return;
+    }
+
     llvm::StringRef typeName =
         llvm::TypeSwitch<mlir::Type, llvm::StringRef>(type)
             .Case<mlir::BFloat16Type>(

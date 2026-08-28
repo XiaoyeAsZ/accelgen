@@ -1,15 +1,15 @@
 #!/bin/bash
 
-models=("llama3-8b" "qwen3-8b" "gemma-7b")
+models=("llama3-8b" "qwen3-8b" "gemma-7b" "qwen3-moe")
 actions=("prefill")
 blocks=(0)
-layers=("attention")
-lengths=(128 256 512 1024 4096)
+layers=("attention" "ffn")
+lengths=(4096)
 configs=("edge")
 sizes=(1 2 3 4 5 6)
 
-: > ./test/performance.log
-: > ./test/runtime.log
+: > ./test/performance_breakdown.log
+# : > ./test/breakdown.log
 
 for model in "${models[@]}"
 do

@@ -81,7 +81,7 @@ static std::string toString(mlir::Operation* op) {
   if (mlir::isa<mlir::arith::DivFOp>(op)) return "divf";
   if (mlir::isa<mlir::math::ExpOp>(op)) return "exp";
   if (mlir::isa<mlir::math::RsqrtOp>(op)) return "rsqrt";
-  if (mlir::isa<mlir::math::SqrtOp>(op)) return "rsqrt";
+  if (mlir::isa<mlir::math::SqrtOp>(op)) return "sqrt";
   if (mlir::isa<mlir::math::FPowIOp>(op)) return "fpowi";
   if (mlir::isa<mlir::math::ErfOp>(op)) return "erf";
   // if (mlir::isa<mlir::arith::MulIOp>(op)) return "muli";
@@ -141,6 +141,16 @@ class Array2D {
   }
 
   llvm::SmallVector<_Type> array() { return _dat; }
+
+  llvm::SmallVector<_Type> transpose() {
+    llvm::SmallVector<_Type> vec;
+    for (uint64_t j = 0; j < _bounds[1]; j++) {
+      for (uint64_t i = 0; i < _bounds[0]; i++) {
+        vec.push_back(at(i, j));
+      }
+    }
+    return vec;
+  }
 
   _Type& at(uint64_t d0, uint64_t d1) {
     auto index = d0 * _bounds[1] + d1;

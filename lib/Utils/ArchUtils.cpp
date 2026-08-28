@@ -43,4 +43,6 @@ llvm::ArrayRef<mlir::Operation*> ResourcePool::get(size_t nResource) {
   return result;
 }
 
+void ResourcePool::reset() { _currect = 0; }
+
 }  // namespace mlir::accelgen
