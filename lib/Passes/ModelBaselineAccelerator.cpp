@@ -463,10 +463,12 @@ class ModelBaselineAccelerator
                 // Override batch based on architecture target:
                 //   "edge" architectures → batch=1
                 //   "server" architectures → batch=8
-                if (linearArchName.find("edge") != std::string::npos)
-                  batch = 1;
-                else if (linearArchName.find("server") != std::string::npos)
-                  batch = 8;
+                if (!preserveInputBatch) {
+                  if (linearArchName.find("edge") != std::string::npos)
+                    batch = 1;
+                  else if (linearArchName.find("server") != std::string::npos)
+                    batch = 8;
+                }
 
                 std::string opName =
                     "batch_matmul_" + std::to_string(batchMatmulIdx++);
@@ -533,7 +535,8 @@ class ModelBaselineAccelerator
               }
 
               // Override batch (first dim) based on architecture target
-              if (inShape.size() >= 2 && inShape[0] > 0) {
+              if (!preserveInputBatch && inShape.size() >= 2 &&
+                  inShape[0] > 0) {
                 int64_t origBatch = inShape[0];
                 int64_t newBatch = origBatch;
                 if (dmArchName.find("edge") != std::string::npos)
@@ -577,7 +580,8 @@ class ModelBaselineAccelerator
                 Q = totalElems;
               }
               // Override batch (first dim) based on architecture target
-              if (outShape.size() >= 2 && outShape[0] > 0) {
+              if (!preserveInputBatch && outShape.size() >= 2 &&
+                  outShape[0] > 0) {
                 int64_t origBatch = outShape[0];
                 int64_t newBatch = origBatch;
                 if (dmArchName.find("edge") != std::string::npos)
@@ -654,7 +658,8 @@ class ModelBaselineAccelerator
               }
 
               // Override batch (first dim) based on architecture target
-              if (outShape.size() >= 2 && outShape[0] > 0) {
+              if (!preserveInputBatch && outShape.size() >= 2 &&
+                  outShape[0] > 0) {
                 int64_t origBatch = outShape[0];
                 int64_t newBatch = origBatch;
                 if (nonlinearArchName.find("edge") != std::string::npos)
@@ -709,7 +714,8 @@ class ModelBaselineAccelerator
               }
 
               // Override batch (first dim) based on architecture target
-              if (outShape.size() >= 2 && outShape[0] > 0) {
+              if (!preserveInputBatch && outShape.size() >= 2 &&
+                  outShape[0] > 0) {
                 int64_t origBatch = outShape[0];
                 int64_t newBatch = origBatch;
                 if (nonlinearArchName.find("edge") != std::string::npos)
@@ -777,7 +783,8 @@ class ModelBaselineAccelerator
             // Override batch (first dim) based on architecture target
             // Only for 3D+ tensors where dim[0] is actually a batch dimension.
             // 2D tensors (e.g. weight transpose) have no batch dim — N stays 1.
-            if (outShape.size() >= 3 && outShape[0] > 0) {
+            if (!preserveInputBatch && outShape.size() >= 3 &&
+                outShape[0] > 0) {
               int64_t origBatch = outShape[0];
               int64_t newBatch = origBatch;
               if (dmArchName.find("edge") != std::string::npos)

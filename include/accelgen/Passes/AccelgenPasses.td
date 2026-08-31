@@ -84,6 +84,8 @@ def ModelBaselineAccelerator: Pass<"model-baseline-accelerator", "::mlir::Module
     Option<"mlirFile", "mlir-file", "std::string","", "">,
     Option<"timeloopOutputRoot", "timeloop-output-root", "std::string",
            "\"baseline_test0412\"", "Root directory for generated Timeloop runtime outputs">,
+    Option<"preserveInputBatch", "preserve-input-batch", "bool", "false",
+           "Preserve tensor dimensions from MLIR instead of overriding the first dimension by architecture target">,
     Option<"skipLinear", "skip-linear", "bool", "false",
            "Skip linear (batch_matmul) ops">,
     Option<"skipNonlinear", "skip-nonlinear", "bool", "false",

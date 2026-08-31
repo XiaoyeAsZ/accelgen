@@ -319,7 +319,6 @@ def main():
     write_summary_csv(args.out_dir, results)
     write_detailed_csv(args.out_dir, results)
     write_detailed_summary(args.out_dir, results, args.title)
-    append_failed_rows(args.out_dir, results)
     print(f"Parsed {len(results)} workloads")
     print(f"Saved: {args.out_dir}/summary.csv {args.out_dir}/summary_detail.csv {args.out_dir}/summary.txt")
 
