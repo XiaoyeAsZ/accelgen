@@ -57,6 +57,72 @@ bash script/run_all_ascend_baseline.sh
 
 See `benchmark/ascend/README.md` for environment checks and matrix overrides.
 
+## Ascend 910B3 performance summary
+
+Combine measured attention and FFN mean latency from `test/results_all.jsonl`
+with FLOPs from `test/performance.log`, using a constant 300 W power estimate:
+
+```bash
+python3 evaluation/analyze_ascend_results.py
+```
+
+The generated report and CSV are written to
+`evaluation/results/ascend-910b3/`.
+
+## Model performance summary
+
+Combine attention and FFN latency, energy, and FLOPs from
+`test/performance.log` and compute throughput and energy efficiency:
+
+```bash
+python3 evaluation/analyze_performance_log.py
+```
+
+The generated report and CSV are written to
+`evaluation/results/model-performance/`.
+
+## Orin-scaled edge performance
+
+Scale edge results to the Orin configuration using the valid `config=orin`
+anchors in `test/moe_perf.log`:
+
+```bash
+python3 evaluation/scale_model_performance_orin.py
+```
+
+Llama3-8B anchor ratios are reused for Llama3-8B, Qwen3-8B, and Gemma-7B;
+Qwen3-MoE anchor ratios are reused for Qwen3-MoE. Results are written to
+`evaluation/results/model-performance-orin/`.
+
+## GPU baseline summary
+
+Combine attention and FFN latency from `test/perf_a100.txt` and
+`test/perf_orin.txt` with FLOPs from `test/performance.log`. The default fixed
+power assumptions are 250 W for A100 and 9 W for Orin:
+
+```bash
+python3 evaluation/analyze_gpu_results.py
+```
+
+The generated report and CSV are written to
+`evaluation/results/gpu-baselines/`.
+
+## Qwen3-MoE baseline summary
+
+Combine attention and FFN using baseline latency/energy from
+`baseline_test_qwen3_moe/summary.csv`. The `ours` results and the common FLOP
+counts come from `test/performance.log`:
+
+```bash
+python3 evaluation/analyze_baseline_summary.py
+```
+
+The four generated tables cover prefill/decode and edge/server, with paired
+throughput/energy-efficiency columns for `ours`, `gemmini_os`, `gemmini_ws`, and
+`lego`. Baseline FFN latency and energy use an expert-group approximation: `16x`
+for edge prefill, `2x` for server prefill, and no scaling for decode. Length 2048
+is omitted because `performance.log` has no matching records.
+
 The scheduled pass does not preserve source operation IDs. The analyzer matches
 normalized operation structure and reports structurally ambiguous matches in
 the output. A nonzero unmatched count makes the command fail.
