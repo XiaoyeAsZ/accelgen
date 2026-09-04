@@ -23,6 +23,7 @@ PERFORMANCE_RUN_RE = re.compile(
 FLOPS_RE = re.compile(r"^Flops:\s*(?P<flops>[-+0-9.eE]+)$")
 PERF_LATENCY_RE = re.compile(r"^Latency:\s*(?P<value>[-+0-9.eE]+)$")
 PERF_ENERGY_RE = re.compile(r"^Energy:\s*(?P<value>[-+0-9.eE]+)$")
+BASELINE_DRAM_WORD_BITS = 16
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,9 @@ class SourceRow:
     config: str
     arch: str
     latency_cycles: float
+    linear_cycles: float
     energy_uJ: float
+    dram_accesses: float
     flops: float
     succeeded: int
     failed: int
@@ -106,7 +109,9 @@ def read_source(path: Path) -> list[SourceRow]:
                     config=config,
                     arch=row["linear_arch"].removesuffix("_" + config),
                     latency_cycles=float(row["latency_cycles"]),
+                    linear_cycles=float(row["linear_cycles"]),
                     energy_uJ=float(row["energy_uJ"]),
+                    dram_accesses=float(row["dram_access"]),
                     flops=float(row["FLOPs"]),
                     succeeded=int(row["succeeded"]),
                     failed=int(row["failed"]),
@@ -163,6 +168,14 @@ def combine(
     performance_metrics: dict[
         tuple[str, int, str, str, int, int, str], PerformanceMetric
     ],
+    *,
+    approximate_ffn_batch: bool = True,
+    flops_source: str = "performance",
+    include_ours: bool = True,
+    ffn_latency_scale: float = 1.0,
+    attention_memory_latency_scale: float = 1.0,
+    baseline_dram_energy_pj_per_bit: float | None = None,
+    baseline_source_dram_energy_pj_per_bit: float = 8.0,
 ) -> list[CombinedRow]:
     grouped: dict[tuple[str, int, str, int, int, str, str], dict[str, SourceRow]] = defaultdict(dict)
     for row in rows:
@@ -180,11 +193,35 @@ def combine(
         model, block, action, batch, length, config, arch = key
         attention = layers["attention"]
         ffn = layers["ffn"]
-        ffn_scale = ffn_expert_group_scale(action, config)
+        attention_memory_cycles = attention.latency_cycles - attention.linear_cycles
+        if attention_memory_cycles < 0:
+            raise ValueError(f"attention linear cycles exceed total cycles for {key}")
+        ffn_scale = ffn_expert_group_scale(action, config) if approximate_ffn_batch else 1
         attention_key = (model, block, "attention", action, batch, length, config)
         ffn_key = (model, block, "ffn", action, batch, length, config)
-        if attention_key not in performance_metrics or ffn_key not in performance_metrics:
+        if flops_source == "performance" and (
+            attention_key not in performance_metrics or ffn_key not in performance_metrics
+        ):
             continue
+        if flops_source == "performance":
+            flops = performance_metrics[attention_key].flops + performance_metrics[ffn_key].flops
+        elif flops_source == "summary":
+            flops = attention.flops + ffn.flops
+        else:
+            raise ValueError(f"unsupported FLOPs source: {flops_source}")
+        energy_uJ = attention.energy_uJ + ffn.energy_uJ * ffn_scale
+        if baseline_dram_energy_pj_per_bit is not None:
+            energy_delta = (
+                baseline_dram_energy_pj_per_bit
+                - baseline_source_dram_energy_pj_per_bit
+            )
+            scaled_dram_accesses = attention.dram_accesses + ffn.dram_accesses * ffn_scale
+            energy_uJ += (
+                scaled_dram_accesses
+                * energy_delta
+                * BASELINE_DRAM_WORD_BITS
+                * 1e-6
+            )
         combined.append(
             CombinedRow(
                 model=model,
@@ -194,13 +231,16 @@ def combine(
                 length=length,
                 config=config,
                 arch=arch,
-                latency_cycles=attention.latency_cycles
-                + ffn.latency_cycles * ffn_scale,
-                energy_uJ=attention.energy_uJ + ffn.energy_uJ * ffn_scale,
-                flops=performance_metrics[attention_key].flops
-                + performance_metrics[ffn_key].flops,
+                latency_cycles=attention.linear_cycles
+                + attention_memory_cycles * attention_memory_latency_scale
+                + ffn.latency_cycles * ffn_scale * ffn_latency_scale,
+                energy_uJ=energy_uJ,
+                flops=flops,
             )
         )
+
+    if not include_ours:
+        return sorted(combined, key=lambda row: (row.action, row.config, row.length, row.arch))
 
     baseline_workloads = {
         (row.model, row.block, row.action, row.batch, row.length, row.config)
@@ -233,7 +273,18 @@ def combine(
 
 
 def write_outputs(
-    rows: list[CombinedRow], output_dir: Path, source: Path, performance_log: Path
+    rows: list[CombinedRow],
+    output_dir: Path,
+    source: Path,
+    performance_log: Path,
+    *,
+    approximate_ffn_batch: bool = True,
+    flops_source: str = "performance",
+    include_ours: bool = True,
+    ffn_latency_scale: float = 1.0,
+    attention_memory_latency_scale: float = 1.0,
+    baseline_dram_energy_pj_per_bit: float | None = None,
+    baseline_source_dram_energy_pj_per_bit: float = 8.0,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     fields = [
@@ -264,14 +315,56 @@ def write_outputs(
 
     architecture_order = ("ours", "gemmini_os", "gemmini_ws", "lego")
     architectures = [arch for arch in architecture_order if any(row.arch == arch for row in rows)]
+    flops_description = (
+        f"FLOPs source: `{performance_log}`"
+        if flops_source == "performance"
+        else f"FLOPs source: `{source}`"
+    )
+    methodology = (
+        "Attention and FFN are summed before deriving metrics. Baseline architectures "
+        "use cycles and energy from the summary. "
+    )
+    if flops_source == "performance":
+        methodology += "Baseline FLOPs use matching records from `performance.log`. "
+    else:
+        methodology += "Baseline FLOPs use the summary's per-layer FLOP counts. "
+    if approximate_ffn_batch:
+        methodology += (
+            "Baseline FFN latency and energy are scaled by 16 for edge prefill and 2 "
+            "for server prefill to approximate the full expert-group workload. "
+        )
+    else:
+        methodology += "No expert-group FFN scaling is applied because the source preserves batch dimensions. "
+    if ffn_latency_scale != 1.0:
+        methodology += (
+            f"Baseline FFN latency is additionally multiplied by {ffn_latency_scale:g} "
+            "to align aggregate bandwidth assumptions; energy and FLOPs are unchanged. "
+        )
+    if attention_memory_latency_scale != 1.0:
+        methodology += (
+            "Baseline attention elementwise and data-movement latency is multiplied by "
+            f"{attention_memory_latency_scale:g}; attention linear latency, energy, and "
+            "FLOPs are unchanged. "
+        )
+    if baseline_dram_energy_pj_per_bit is not None:
+        methodology += (
+            "Baseline DRAM energy is normalized from "
+            f"{baseline_source_dram_energy_pj_per_bit:g} to "
+            f"{baseline_dram_energy_pj_per_bit:g} pJ/bit using recorded 16-bit "
+            "scalar DRAM accesses. "
+        )
+    if include_ours:
+        methodology += "`ours` uses latency, energy, and FLOPs from `performance.log`. "
+    methodology += "Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J."
+
     lines = [
         "# Qwen3-MoE combined baseline",
         "",
         f"Latency and energy source: `{source}`",
         "",
-        f"FLOPs source: `{performance_log}`",
+        flops_description,
         "",
-        "Attention and FFN are summed before deriving metrics. `ours` uses latency, energy, and FLOPs from `performance.log`. Baseline architectures use cycles/energy from `summary.csv` and the same FLOPs from `performance.log`. To approximate the full Qwen3-MoE FFN workload, baseline FFN latency and energy are scaled by 16 for edge prefill and 2 for server prefill; decode needs no correction. Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J.",
+        methodology,
         "",
     ]
     for action, config in (("prefill", "edge"), ("prefill", "server"), ("decode", "edge"), ("decode", "server")):
@@ -297,16 +390,42 @@ def write_outputs(
                 values.extend([f"{row.throughput_gflops:.4f}", f"{row.energy_eff_gflops_per_j:.4f}"])
             lines.append(f"| {length} | " + " | ".join(values) + " |")
         lines.append("")
+    lines.extend(["## Notes", ""])
+    lines.append("- `gemmini_os`, `gemmini_ws`, and `lego` are kept as separate architecture columns.")
+    if include_ours:
+        lines.append("- `ours` converts logged milliseconds to cycles at the framework's 1 GHz assumption and logged joules to uJ before applying the shared formulas.")
+    if approximate_ffn_batch:
+        lines.extend(
+            [
+                "- Baseline FFN prefill scaling approximates the 16 expert groups that the baseline pass modeled as 1 group on edge and 8 groups on server. FLOPs are not scaled again because `performance.log` already contains the full workload.",
+                "- Attention is not scaled; its internal head dimensions require per-operation correction rather than one global factor.",
+            ]
+        )
+    else:
+        lines.append("- No expert-group workload scaling is applied to the preserved-batch source.")
+    if ffn_latency_scale != 1.0:
+        lines.append(
+            f"- FFN latency uses a `{ffn_latency_scale:g}x` bandwidth correction. "
+            "The latency correction itself does not scale energy; the DRAM normalization "
+            "below is applied separately."
+        )
+    if attention_memory_latency_scale != 1.0:
+        lines.append(
+            "- Attention memory latency is defined as `total_cycles - linear_cycles`, "
+            f"and uses a `{attention_memory_latency_scale:g}x` correction. This includes "
+            "softmax elementwise work and data movement."
+        )
+    if baseline_dram_energy_pj_per_bit is not None:
+        lines.append(
+            "- DRAM energy correction: "
+            f"`accesses * ({baseline_dram_energy_pj_per_bit:g} - "
+            f"{baseline_source_dram_energy_pj_per_bit:g}) pJ/bit * "
+            f"{BASELINE_DRAM_WORD_BITS} bits`, converted to uJ."
+        )
     lines.extend(
         [
-            "## Notes",
-            "",
-            "- `gemmini_os`, `gemmini_ws`, and `lego` are kept as separate architecture columns.",
-            "- `ours` converts logged milliseconds to cycles at the framework's 1 GHz assumption and logged joules to uJ before applying the shared formulas.",
-            "- Baseline FFN prefill scaling approximates the 16 expert groups that the baseline pass modeled as 1 group on edge and 8 groups on server. FLOPs are not scaled again because `performance.log` already contains the full workload.",
-            "- Attention is not scaled; its internal head dimensions require per-operation correction rather than one global factor.",
             "- Edge/server rows use the batches encoded by the source files: batch 1 for edge and batch 8 for server.",
-            "- Length 2048 is omitted because the selected performance log has no matching FLOPs records.",
+            f"- Included lengths: {', '.join(map(str, sorted({row.length for row in rows})))}.",
             "- The summary contains successful rows only; failed rows are excluded and would cause an error if either attention or FFN were missing.",
             "",
         ]
@@ -319,16 +438,80 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--summary", type=Path, default=Path("baseline_test_qwen3_moe/summary.csv"))
     parser.add_argument("--performance-log", type=Path, default=Path("test/performance.log"))
     parser.add_argument("--output-dir", type=Path, default=Path("evaluation/results/qwen3-moe-baseline"))
+    parser.add_argument(
+        "--ffn-batch-mode",
+        choices=("approximate", "preserved"),
+        default="approximate",
+        help="approximate old forced-batch runs or use already-preserved batch dimensions",
+    )
+    parser.add_argument(
+        "--flops-source", choices=("performance", "summary"), default="performance"
+    )
+    parser.add_argument(
+        "--include-ours", action=argparse.BooleanOptionalAction, default=True
+    )
+    parser.add_argument(
+        "--ffn-latency-scale",
+        type=float,
+        default=1.0,
+        help="multiply baseline FFN cycles without changing energy or FLOPs",
+    )
+    parser.add_argument(
+        "--attention-memory-latency-scale",
+        type=float,
+        default=1.0,
+        help="multiply attention non-linear/data-movement cycles without changing energy",
+    )
+    parser.add_argument(
+        "--baseline-dram-energy-pj-per-bit",
+        type=float,
+        help="normalize baseline DRAM energy to this target pJ/bit",
+    )
+    parser.add_argument(
+        "--baseline-source-dram-energy-pj-per-bit",
+        type=float,
+        default=8.0,
+        help="DRAM pJ/bit already included in the baseline summary",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.ffn_latency_scale <= 0 or args.attention_memory_latency_scale <= 0:
+        raise SystemExit("latency scales must be positive")
+    if args.baseline_dram_energy_pj_per_bit is not None and args.baseline_dram_energy_pj_per_bit <= 0:
+        raise SystemExit("--baseline-dram-energy-pj-per-bit must be positive")
+    if args.baseline_source_dram_energy_pj_per_bit <= 0:
+        raise SystemExit("--baseline-source-dram-energy-pj-per-bit must be positive")
     performance_metrics = read_performance_metrics(args.performance_log)
-    rows = combine(read_source(args.summary), performance_metrics)
+    approximate_ffn_batch = args.ffn_batch_mode == "approximate"
+    rows = combine(
+        read_source(args.summary),
+        performance_metrics,
+        approximate_ffn_batch=approximate_ffn_batch,
+        flops_source=args.flops_source,
+        include_ours=args.include_ours,
+        ffn_latency_scale=args.ffn_latency_scale,
+        attention_memory_latency_scale=args.attention_memory_latency_scale,
+        baseline_dram_energy_pj_per_bit=args.baseline_dram_energy_pj_per_bit,
+        baseline_source_dram_energy_pj_per_bit=args.baseline_source_dram_energy_pj_per_bit,
+    )
     if not rows:
         raise SystemExit(f"no successful attention+ffn pairs found in {args.summary}")
-    write_outputs(rows, args.output_dir, args.summary, args.performance_log)
+    write_outputs(
+        rows,
+        args.output_dir,
+        args.summary,
+        args.performance_log,
+        approximate_ffn_batch=approximate_ffn_batch,
+        flops_source=args.flops_source,
+        include_ours=args.include_ours,
+        ffn_latency_scale=args.ffn_latency_scale,
+        attention_memory_latency_scale=args.attention_memory_latency_scale,
+        baseline_dram_energy_pj_per_bit=args.baseline_dram_energy_pj_per_bit,
+        baseline_source_dram_energy_pj_per_bit=args.baseline_source_dram_energy_pj_per_bit,
+    )
     print(f"Wrote {len(rows)} combined rows to {args.output_dir}")
     return 0
 

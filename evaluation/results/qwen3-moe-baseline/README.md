@@ -4,7 +4,7 @@ Latency and energy source: `baseline_test_qwen3_moe/summary.csv`
 
 FLOPs source: `test/performance.log`
 
-Attention and FFN are summed before deriving metrics. `ours` uses latency, energy, and FLOPs from `performance.log`. Baseline architectures use cycles/energy from `summary.csv` and the same FLOPs from `performance.log`. To approximate the full Qwen3-MoE FFN workload, baseline FFN latency and energy are scaled by 16 for edge prefill and 2 for server prefill; decode needs no correction. Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J.
+Attention and FFN are summed before deriving metrics. Baseline architectures use cycles and energy from the summary. Baseline FLOPs use matching records from `performance.log`. Baseline FFN latency and energy are scaled by 16 for edge prefill and 2 for server prefill to approximate the full expert-group workload. `ours` uses latency, energy, and FLOPs from `performance.log`. Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J.
 
 ## Prefill / edge (batch 1)
 
@@ -53,5 +53,5 @@ Attention and FFN are summed before deriving metrics. `ours` uses latency, energ
 - Baseline FFN prefill scaling approximates the 16 expert groups that the baseline pass modeled as 1 group on edge and 8 groups on server. FLOPs are not scaled again because `performance.log` already contains the full workload.
 - Attention is not scaled; its internal head dimensions require per-operation correction rather than one global factor.
 - Edge/server rows use the batches encoded by the source files: batch 1 for edge and batch 8 for server.
-- Length 2048 is omitted because the selected performance log has no matching FLOPs records.
+- Included lengths: 128, 256, 512, 1024, 4096.
 - The summary contains successful rows only; failed rows are excluded and would cause an error if either attention or FFN were missing.

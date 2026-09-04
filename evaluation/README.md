@@ -123,6 +123,35 @@ throughput/energy-efficiency columns for `ours`, `gemmini_os`, `gemmini_ws`, and
 for edge prefill, `2x` for server prefill, and no scaling for decode. Length 2048
 is omitted because `performance.log` has no matching records.
 
+For the rerun that preserves exact batch dimensions, use the summary's own
+FLOPs without applying the older FFN approximation:
+
+```bash
+python3 evaluation/analyze_baseline_summary.py \
+  --summary baseline_test_qwen3_moe_preserve_batch/summary.csv \
+  --output-dir evaluation/results/qwen3-moe-baseline-preserve-batch \
+  --ffn-batch-mode preserved \
+  --flops-source summary \
+  --no-include-ours
+```
+
+For the quick bandwidth-aligned revision, multiply baseline FFN latency and the
+memory-bound portion of attention latency by two while leaving access energy
+and FLOPs unchanged. Attention memory latency is approximated as total cycles
+minus linear cycles, covering softmax elementwise work and data movement:
+
+```bash
+python3 evaluation/analyze_baseline_summary.py \
+  --summary baseline_test_qwen3_moe_preserve_batch/summary.csv \
+  --output-dir evaluation/results/qwen3-moe-baseline-bandwidth-corrected \
+  --ffn-batch-mode preserved \
+  --ffn-latency-scale 2 \
+  --attention-memory-latency-scale 2 \
+  --baseline-dram-energy-pj-per-bit 16 \
+  --flops-source summary \
+  --no-include-ours
+```
+
 The scheduled pass does not preserve source operation IDs. The analyzer matches
 normalized operation structure and reports structurally ambiguous matches in
 the output. A nonzero unmatched count makes the command fail.
