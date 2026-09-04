@@ -1,50 +1,70 @@
 # AccelGen
 
-AccelGen is an MLIR/CIRCT-based framework for exploring programmable
-accelerator data paths for tensor and language-model workloads. It combines
-kernel scheduling, architecture-aware design-space exploration, a dedicated
-DAP (data-path) dialect, analytical performance/area models, and baseline
-comparisons in one workflow.
+> Automating spatial accelerator generation for large-scale Transformer models.
 
-## Why AccelGen
+AccelGen is the compiler and hardware-generation implementation of TranSAGE,
+an end-to-end framework for automatically generating spatial accelerators for
+large-scale Transformer models. TranSAGE jointly searches operation fusion and
+dataflow under multi-operation pipelining, then lowers the selected design to a
+reconfigurable datapath and RTL-oriented implementation.
 
-Modern DNN layers mix matrix multiplication, elementwise math, reductions,
-reshapes, broadcasts, and data movement. AccelGen represents that structure at
-the MLIR level, searches for a schedule that fits a target resource pool, and
-lowers the scheduled computation into explicit compute, memory, and routing
-operations.
+## Core Idea
+
+Existing accelerator generators commonly optimize one operation at a time or
+support only fixed fusion patterns. TranSAGE instead treats pipeline clusters as
+first-class execution and hardware-generation units. A Transformer computation
+is represented as a dependency graph; connected operations are grouped into
+pipeline-friendly clusters, and the full model executes as a sequence of those
+clusters while reusing shared compute and on-chip memory resources.
+
+The framework addresses two coupled problems:
+
+1. **Operation fusion and dataflow optimization.** A dynamic-programming graph
+   partitioner selects clusters, while a decomposed search optimizes tiling,
+   unrolling, loop ordering, and inter-operation data movement.
+2. **Flexible accelerator generation.** Spatial architecture primitives (SAPs)
+   abstract arithmetic, storage, and routing components. The lowering flow
+   maps scheduled MLIR clusters to a shared, configurable datapath that can
+   support multiple dataflows.
+
+The architectural scope is a single spatial-accelerator compute core with
+distributed compute resources, hierarchical on-chip memory, and configurable
+processing-unit interconnects. The design can be scaled to larger systems, but
+inter-core and inter-package integration is outside this repository's core
+scope.
 
 The framework is intended for architecture studies, not as a production model
-runtime. Its outputs include scheduled MLIR, DAP MLIR, cycle/energy estimates,
-area breakdowns, and editable analysis artifacts.
+runtime. Its outputs include scheduled MLIR, DAP/SAP-level MLIR, cycle/energy
+estimates, area breakdowns, and RTL-generation inputs.
 
 ## Workflow
 
 ```text
-PyTorch/model workload
+PyTorch program / Transformer workload
           |
           v
       Linalg MLIR
           |
           v
-  generic-op fusion/reordering
+  operation graph construction
           |
           v
-  kernel scheduling and DSE
+  DP cluster partitioning
+  + intra-cluster dataflow DSE
           |
           v
-    scheduled MLIR
+  scheduled cluster MLIR
           |
-          +--------------------+
-          |                    |
-          v                    v
-  model-performance     convert-to-dap
+          +----------------------+
+          |                      |
+          v                      v
+  model-performance     SAP/DAP lowering
   cycles/energy/FLOPs          |
                                v
-                           DAP MLIR
+                 shared reconfigurable datapath
                                |
                                v
-                         model-area / analysis
+                    RTL / binary-generation inputs
 ```
 
 The main command-line tool is `accelgen-opt`, an MLIR optimizer extended with
@@ -52,12 +72,16 @@ AccelGen dialects and passes.
 
 ## Capabilities
 
-- Schedule `linalg.generic` kernels against configurable compute, SRAM, register,
-  and bandwidth resources.
-- Explore fusion, loop ordering, tiling, and unrolling choices with the kernel
-  scheduler and DSE engine.
-- Lower arithmetic, math, tensor, memory, and routing structure into the DAP
-  dialect.
+- Partition topologically ordered operation graphs into connected,
+  pipeline-friendly clusters.
+- Explore inter-operation pipelining together with tiling, loop ordering, and
+  unrolling choices.
+- Optimize cluster dataflow under shared compute, SRAM, register, and bandwidth
+  constraints.
+- Lower arithmetic, math, tensor, memory, and routing structure into spatial
+  architecture primitives represented by the DAP dialect.
+- Reorganize primitive graphs to share physical resources across dataflows and
+  expose runtime-selectable routing.
 - Estimate latency, FLOPs, SRAM/DRAM traffic, energy, and area.
 - Compare the generated design with Timeloop/Accelergy baselines.
 - Benchmark the same PyTorch model layers on CUDA, AWS Neuron, and Ascend
@@ -172,7 +196,9 @@ can be reused in reports or post-processed with other tools.
 
 ## DAP Dialect
 
-DAP makes the hardware-facing structure explicit. Its operations include:
+The paper uses SAP (spatial architecture primitive) for the hardware
+abstraction. In this repository, the hardware-facing lowering is represented by
+the DAP dialect and its operations:
 
 - Arithmetic and math operations such as `dap.mulf`, `dap.add`, `dap.div`,
   `dap.exp`, and `dap.rsqrt`.
