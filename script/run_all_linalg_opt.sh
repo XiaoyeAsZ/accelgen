@@ -1,15 +1,15 @@
 #!/bin/bash
 
 
-models=("qwen3-moe")
+models=("llama3-70b")
 actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
 lengths=(128 256 512 1024 4096)
 configs=("edge" "server")
 
-: > ./test/performance.log
-: > ./test/runtime.log
+# : > ./test/performance.log
+# : > ./test/runtime.log
 
 for model in "${models[@]}"
 do
