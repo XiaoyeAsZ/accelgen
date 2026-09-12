@@ -1,14 +1,14 @@
 #!/bin/bash
 
-models=("llama3-8b")
-actions=("prefill")
+models=("llama3-70b")
+actions=("prefill" "decode")
 blocks=(0)
 layers=("attention" "ffn")
-lengths=(128)
-configs=("edge")
+lengths=(128 256 512 1024 4096)
+configs=("edge" "server")
 
-: > ./test/moe_perf.log
-: > ./test/moe.log
+: > ./test/llama_70b.log
+# : > ./test/moe.log
 
 for model in "${models[@]}"
 do
@@ -35,7 +35,7 @@ do
                             -pass-pipeline="func.func(kernel-schedule{config-path=/home/accelgen/config/$config.json max-operation=6}), \
                                             model-performance{config-path=/home/accelgen/config/$config.json}" \
                             -o ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir
-                        } 1>> ./test/moe_perf.log 2>./test/moe.log
+                        } 1>> ./test/llama_70b.log 2>/dev/null
 
                     done
                 done

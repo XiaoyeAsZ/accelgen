@@ -74,28 +74,32 @@ def config_for_batch(batch: int) -> str:
     raise ValueError(f"cannot infer edge/server config for batch {batch}")
 
 
-def read_flops(path: Path) -> dict[LayerKey, float]:
+def read_flops(paths: list[Path]) -> dict[LayerKey, float]:
     result: dict[LayerKey, float] = {}
-    current: LayerKey | None = None
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        run = PERF_RUN_RE.match(line)
-        if run:
-            current = (
-                run["model"],
-                int(run["block"]),
-                run["action"],
-                run["layer"],
-                int(run["batch"]),
-                int(run["length"]),
-                run["config"],
-            )
-            continue
-        flops = FLOPS_RE.match(line)
-        if flops and current is not None:
-            if current in result:
-                raise ValueError(f"duplicate FLOP record for {current} at {path}:{line_number}")
-            result[current] = float(flops["value"])
-            current = None
+    for path in paths:
+        current: LayerKey | None = None
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            run = PERF_RUN_RE.match(line)
+            if run:
+                current = (
+                    run["model"],
+                    int(run["block"]),
+                    run["action"],
+                    run["layer"],
+                    int(run["batch"]),
+                    int(run["length"]),
+                    run["config"],
+                )
+                continue
+            flops = FLOPS_RE.match(line)
+            if flops and current is not None:
+                value = float(flops["value"])
+                if current in result and result[current] != value:
+                    raise ValueError(
+                        f"conflicting FLOP record for {current} at {path}:{line_number}"
+                    )
+                result[current] = value
+                current = None
     return result
 
 
@@ -191,7 +195,7 @@ def write_csv(rows: list[CombinedResult], path: Path) -> None:
         "energy_efficiency_GFLOPS_per_J",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(
@@ -220,7 +224,7 @@ def write_report(
     path: Path,
     a100_source: Path,
     orin_source: Path,
-    performance_log: Path,
+    performance_logs: list[Path],
 ) -> None:
     lines = [
         "# GPU baseline performance",
@@ -229,7 +233,7 @@ def write_report(
         "",
         f"Orin latency source: `{orin_source}`",
         "",
-        f"FLOPs source: `{performance_log}`",
+        "FLOPs sources: " + ", ".join(f"`{source}`" for source in performance_logs),
         "",
         "Attention and FFN mean latency and FLOPs are added before computing throughput. "
         "Energy uses a fixed-power estimate and is not a measured value.",
@@ -285,6 +289,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--a100-log", type=Path, default=Path("test/perf_a100.txt"))
     parser.add_argument("--orin-log", type=Path, default=Path("test/perf_orin.txt"))
     parser.add_argument("--performance-log", type=Path, default=Path("test/performance.log"))
+    parser.add_argument(
+        "--llama70b-performance-log",
+        type=Path,
+        default=Path("test/llama_70b.log"),
+    )
     parser.add_argument("--a100-power-w", type=float, default=250.0)
     parser.add_argument("--orin-power-w", type=float, default=9.0)
     parser.add_argument(
@@ -297,7 +306,8 @@ def main() -> int:
     args = parse_args()
     if args.a100_power_w <= 0 or args.orin_power_w <= 0:
         raise SystemExit("power assumptions must be positive")
-    flops = read_flops(args.performance_log)
+    performance_logs = [args.performance_log, args.llama70b_performance_log]
+    flops = read_flops(performance_logs)
     grouped = read_gpu_log(args.a100_log, "A100", flops)
     for key, layers in read_gpu_log(args.orin_log, "Orin", flops).items():
         if key in grouped:
@@ -313,7 +323,7 @@ def main() -> int:
         args.output_dir / "README.md",
         args.a100_log,
         args.orin_log,
-        args.performance_log,
+        performance_logs,
     )
     print(f"Wrote {len(rows)} combined rows to {args.output_dir}")
     return 0

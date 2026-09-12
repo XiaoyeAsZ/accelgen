@@ -1,15 +1,12 @@
 #!/bin/bash
 
 
-models=("qwen3-moe")
-actions=("decode")
+models=("llama3-70b")
+actions=("prefill" "decode")
 blocks=(0)
-layers=("ffn")
-lengths=(128 256 512 1024 2048)
+layers=("attention" "ffn")
+lengths=(128 256 512 1024 4096)
 configs=("server" "edge")
-
-: > ./test/performance.log
-: > ./test/runtime.log
 
 for model in "${models[@]}"
 do

@@ -1,5 +1,17 @@
 # Evaluation analyses
 
+## Llama3-70B appendix table
+
+Combine attention and FFN metrics from `test/llama_70b.log` and generate an
+appendix-ready Excel workbook:
+
+```bash
+python3 evaluation/analyze_llama70b.py
+```
+
+The workbook and detailed CSV are written to
+`evaluation/results/llama3-70b/`.
+
 ## Llama3-8B cluster topology
 
 Generate topology figures and cluster statistics from the generic and scheduled
@@ -97,8 +109,9 @@ Qwen3-MoE anchor ratios are reused for Qwen3-MoE. Results are written to
 ## GPU baseline summary
 
 Combine attention and FFN latency from `test/perf_a100.txt` and
-`test/perf_orin.txt` with FLOPs from `test/performance.log`. The default fixed
-power assumptions are 250 W for A100 and 9 W for Orin:
+`test/perf_orin.txt` with FLOPs from `test/performance.log` and
+`test/llama_70b.log`. The default fixed power assumptions are 250 W for A100
+and 9 W for Orin:
 
 ```bash
 python3 evaluation/analyze_gpu_results.py

@@ -17,6 +17,18 @@ if __name__ == "__main__":
     if args.model == "llama3-8b":
         config_path = Path(__file__).resolve().parent.parent / "model/llama3_8b"
         from benchmark.model.llama3_8b import build_model
+    elif args.model == "llama3-70b":
+        config_path = Path(__file__).resolve().parent.parent / "model/llama3_70b"
+        from benchmark.model.llama3_70b import build_model
+    elif args.model == "qwen3-8b":
+        config_path = Path(__file__).resolve().parent.parent / "model/qwen3_8b"
+        from benchmark.model.qwen3_8b import build_model
+    elif args.model == "qwen3-8b":
+        config_path = Path(__file__).resolve().parent.parent / "model/qwen3_8b"
+        from benchmark.model.qwen3_8b import build_model
+    elif args.model == "qwen3-8b":
+        config_path = Path(__file__).resolve().parent.parent / "model/qwen3_8b"
+        from benchmark.model.qwen3_8b import build_model
     elif args.model == "qwen3-8b":
         config_path = Path(__file__).resolve().parent.parent / "model/qwen3_8b"
         from benchmark.model.qwen3_8b import build_model

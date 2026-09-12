@@ -4,7 +4,7 @@ A100 latency source: `test/perf_a100.txt`
 
 Orin latency source: `test/perf_orin.txt`
 
-FLOPs source: `test/performance.log`
+FLOPs sources: `test/performance.log`, `test/llama_70b.log`
 
 Attention and FFN mean latency and FLOPs are added before computing throughput. Energy uses a fixed-power estimate and is not a measured value.
 
@@ -24,6 +24,19 @@ Power assumption: `250 W`
 | decode | server | 8 | 256 | 0.9576 | 4.4646 | 4662.3226 | 0.239400 | 18.6493 |
 | decode | server | 8 | 512 | 0.9671 | 4.4985 | 4651.5246 | 0.241775 | 18.6061 |
 | decode | server | 8 | 1024 | 1.1286 | 4.5662 | 4045.8870 | 0.282150 | 16.1835 |
+
+### llama3-70b
+
+| Action | Config | Batch | Length | Latency (ms) | FLOPs (G) | Throughput (GFLOPS) | Estimated energy (J) | Efficiency (GFLOPS/J) |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|
+| prefill | server | 8 | 128 | 4.6574 | 421.0473 | 90403.9378 | 1.164350 | 361.6158 |
+| prefill | server | 8 | 256 | 8.1872 | 846.4734 | 103389.8525 | 2.046800 | 413.5594 |
+| prefill | server | 8 | 512 | 15.0209 | 1710.4621 | 113872.1448 | 3.755225 | 455.4886 |
+| prefill | server | 8 | 1024 | 29.0712 | 3490.9870 | 120084.0351 | 7.267800 | 480.3361 |
+| decode | server | 8 | 128 | 0.8709 | 3.2726 | 3757.7701 | 0.217725 | 15.0311 |
+| decode | server | 8 | 256 | 0.8815 | 3.2897 | 3731.9875 | 0.220375 | 14.9280 |
+| decode | server | 8 | 512 | 0.9771 | 3.3240 | 3401.8596 | 0.244275 | 13.6074 |
+| decode | server | 8 | 1024 | 1.2967 | 3.3924 | 2616.1610 | 0.324175 | 10.4646 |
 
 ### llama3-8b
 
@@ -80,6 +93,19 @@ Power assumption: `9 W`
 | decode | edge | 1 | 256 | 8.8775 | 0.5581 | 62.8645 | 0.079898 | 6.9849 |
 | decode | edge | 1 | 512 | 8.6269 | 0.5623 | 65.1811 | 0.077642 | 7.2423 |
 | decode | edge | 1 | 1024 | 9.1266 | 0.5708 | 62.5396 | 0.082139 | 6.9488 |
+
+### llama3-70b
+
+| Action | Config | Batch | Length | Latency (ms) | FLOPs (G) | Throughput (GFLOPS) | Estimated energy (J) | Efficiency (GFLOPS/J) |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|
+| prefill | edge | 1 | 128 | 9.3414 | 52.6309 | 5634.1576 | 0.084073 | 626.0175 |
+| prefill | edge | 1 | 256 | 13.6348 | 105.8092 | 7760.2297 | 0.122713 | 862.2477 |
+| prefill | edge | 1 | 512 | 25.9164 | 213.8070 | 8249.8731 | 0.233248 | 916.6526 |
+| prefill | edge | 1 | 1024 | 59.0590 | 436.3717 | 7388.7418 | 0.531531 | 820.9713 |
+| decode | edge | 1 | 128 | 7.4916 | 0.4112 | 54.8853 | 0.067424 | 6.0984 |
+| decode | edge | 1 | 256 | 7.5172 | 0.4133 | 54.9828 | 0.067655 | 6.1092 |
+| decode | edge | 1 | 512 | 7.7343 | 0.4176 | 53.9923 | 0.069609 | 5.9991 |
+| decode | edge | 1 | 1024 | 8.2961 | 0.4261 | 51.3670 | 0.074665 | 5.7074 |
 
 ### llama3-8b
 
