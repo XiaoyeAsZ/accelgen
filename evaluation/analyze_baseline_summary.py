@@ -285,6 +285,7 @@ def write_outputs(
     attention_memory_latency_scale: float = 1.0,
     baseline_dram_energy_pj_per_bit: float | None = None,
     baseline_source_dram_energy_pj_per_bit: float = 8.0,
+    combined_name: str = "qwen3_moe_combined.csv",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     fields = [
@@ -292,7 +293,7 @@ def write_outputs(
         "total_latency_cycles", "total_energy_uJ", "total_flops",
         "throughput_GFLOPS", "energy_eff_GFLOPS_per_J",
     ]
-    with (output_dir / "qwen3_moe_combined.csv").open("w", newline="", encoding="utf-8") as handle:
+    with (output_dir / combined_name).open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for row in rows:
@@ -468,6 +469,11 @@ def parse_args() -> argparse.Namespace:
         help="normalize baseline DRAM energy to this target pJ/bit",
     )
     parser.add_argument(
+        "--combined-name",
+        default="qwen3_moe_combined.csv",
+        help="file name for the combined CSV inside --output-dir",
+    )
+    parser.add_argument(
         "--baseline-source-dram-energy-pj-per-bit",
         type=float,
         default=8.0,
@@ -511,6 +517,7 @@ def main() -> int:
         attention_memory_latency_scale=args.attention_memory_latency_scale,
         baseline_dram_energy_pj_per_bit=args.baseline_dram_energy_pj_per_bit,
         baseline_source_dram_energy_pj_per_bit=args.baseline_source_dram_energy_pj_per_bit,
+        combined_name=args.combined_name,
     )
     print(f"Wrote {len(rows)} combined rows to {args.output_dir}")
     return 0
