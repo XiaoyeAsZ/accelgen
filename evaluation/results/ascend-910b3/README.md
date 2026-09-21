@@ -1,8 +1,8 @@
 # Ascend 910B3 performance
 
-Latency source: `test/results_all.jsonl` (mean latency)
+Latency sources: `test/results_all.jsonl`, `test/perf_910b_llama70b.log` (mean latency)
 
-FLOPs source: `test/performance.log`
+FLOPs sources: `test/performance.log`, `test/llama_70b.log`
 
 Power assumption: `300 W` constant board power
 
@@ -20,6 +20,19 @@ Attention and FFN latency and FLOPs are added before computing throughput. Energ
 | decode | server | 8 | 256 | 1.2955 | 4.4646 | 3446.3794 | 0.388637 | 11.4879 |
 | decode | server | 8 | 512 | 1.3057 | 4.4985 | 3445.3647 | 0.391699 | 11.4845 |
 | decode | server | 8 | 1024 | 1.3481 | 4.5662 | 3387.1614 | 0.404426 | 11.2905 |
+
+## llama3-70b
+
+| Action | Config | Batch | Length | Latency (ms) | FLOPs (G) | Throughput (GFLOPS) | Estimated energy (J) | Efficiency (GFLOPS/J) |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|
+| prefill | server | 8 | 128 | 8.7525 | 1756.9345 | 200736.0168 | 2.625739 | 669.1201 |
+| prefill | server | 8 | 256 | 17.1929 | 3522.6268 | 204888.3132 | 5.157874 | 682.9610 |
+| prefill | server | 8 | 512 | 36.4981 | 7080.2850 | 193990.2965 | 10.949442 | 646.6343 |
+| prefill | server | 8 | 1024 | 79.9770 | 14300.6920 | 178810.1471 | 23.993088 | 596.0338 |
+| decode | server | 8 | 128 | 2.2646 | 13.7261 | 6061.1370 | 0.679380 | 20.2038 |
+| decode | server | 8 | 256 | 2.4187 | 13.7603 | 5689.0745 | 0.725615 | 18.9636 |
+| decode | server | 8 | 512 | 2.3863 | 13.8287 | 5795.0249 | 0.715891 | 19.3167 |
+| decode | server | 8 | 1024 | 2.6291 | 13.9655 | 5311.8067 | 0.788744 | 17.7060 |
 
 ## llama3-8b
 

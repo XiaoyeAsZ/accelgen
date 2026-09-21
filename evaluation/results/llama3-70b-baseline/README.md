@@ -1,10 +1,10 @@
-# Qwen3-MoE combined baseline
+# Llama3-70B combined baseline
 
 Latency and energy source: `baseline_test_70b_new/summary.csv`
 
 FLOPs source: `baseline_test_70b_new/summary.csv`
 
-Attention and FFN are summed before deriving metrics. Baseline architectures use cycles and energy from the summary. Baseline FLOPs use the summary's per-layer FLOP counts. No expert-group FFN scaling is applied because the source preserves batch dimensions. Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J.
+Attention and FFN are summed before deriving metrics. Baseline architectures use cycles and energy from the summary. Baseline FLOPs use the summary's per-layer FLOP counts. No workload scaling is applied because the source preserves input dimensions. Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J.
 
 ## Prefill / edge (batch 1)
 
@@ -49,7 +49,7 @@ Attention and FFN are summed before deriving metrics. Baseline architectures use
 ## Notes
 
 - `gemmini_os`, `gemmini_ws`, and `lego` are kept as separate architecture columns.
-- No expert-group workload scaling is applied to the preserved-batch source.
+- No workload scaling is applied because the source preserves input dimensions.
 - Edge/server rows use the batches encoded by the source files: batch 1 for edge and batch 8 for server.
 - Included lengths: 128, 256, 512, 1024, 4096.
 - The summary contains successful rows only; failed rows are excluded and would cause an error if either attention or FFN were missing.

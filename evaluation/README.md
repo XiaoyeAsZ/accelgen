@@ -12,6 +12,35 @@ python3 evaluation/analyze_llama70b.py
 The workbook and detailed CSV are written to
 `evaluation/results/llama3-70b/`.
 
+## Llama3-70B accelerator baselines
+
+Combine attention and FFN latency, energy, and FLOPs from the preserved-input
+baseline sweep:
+
+```bash
+python3 evaluation/analyze_baseline_summary.py \
+  --summary baseline_test_70b_new/summary.csv \
+  --output-dir evaluation/results/llama3-70b-baseline \
+  --performance-log /dev/null \
+  --ffn-batch-mode preserved \
+  --combined-name llama3_70b_baseline_combined.csv \
+  --report-title "Llama3-70B combined baseline" \
+  --flops-source summary \
+  --no-include-ours
+```
+
+The generated Markdown and CSV cover Gemmini-OS, Gemmini-WS, and LEGO for
+edge/server prefill and decode workloads.
+
+## Figure workbook model replacement
+
+Replace the first model slot in the original `evaluation/fig/*.xlsx` workbooks
+with Llama3-70B while preserving their filenames, formulas, and average rows:
+
+```bash
+python3 evaluation/update_fig_model_slot.py
+```
+
 ## Llama3-8B cluster topology
 
 Generate topology figures and cluster statistics from the generic and scheduled
@@ -72,7 +101,8 @@ See `benchmark/ascend/README.md` for environment checks and matrix overrides.
 ## Ascend 910B3 performance summary
 
 Combine measured attention and FFN mean latency from `test/results_all.jsonl`
-with FLOPs from `test/performance.log`, using a constant 300 W power estimate:
+and `test/perf_910b_llama70b.log` with FLOPs from `test/performance.log` and
+`test/llama_70b.log`, using a constant 300 W power estimate:
 
 ```bash
 python3 evaluation/analyze_ascend_results.py
@@ -84,7 +114,8 @@ The generated report and CSV are written to
 ## Model performance summary
 
 Combine attention and FFN latency, energy, and FLOPs from
-`test/performance.log` and compute throughput and energy efficiency:
+`test/performance.log` and `test/llama_70b.log`, then compute throughput and
+energy efficiency:
 
 ```bash
 python3 evaluation/analyze_performance_log.py

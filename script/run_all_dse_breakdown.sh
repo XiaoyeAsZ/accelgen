@@ -1,6 +1,6 @@
 #!/bin/bash
 
-models=("llama3-8b" "qwen3-8b" "gemma-7b" "qwen3-moe")
+models=("llama3-70b")
 actions=("prefill")
 blocks=(0)
 layers=("attention" "ffn")

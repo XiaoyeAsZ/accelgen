@@ -34,6 +34,21 @@ The edge results are scaled to an Orin configuration using per-layer ratios at l
 | decode | orin | 1 | 1024 | 4.497032 | 0.076352 | 0.570774 | 126.9223 | 7.4756 |
 | decode | orin | 1 | 4096 | 4.902480 | 0.085181 | 0.621548 | 126.7823 | 7.2968 |
 
+## llama3-70b
+
+| Action | Config | Batch | Length | Latency (ms) | Energy (J) | FLOPs (G) | Throughput (GFLOPS) | Efficiency (GFLOPS/J) |
+|:--|:--|--:|--:|--:|--:|--:|--:|--:|
+| prefill | orin | 1 | 128 | 15.418267 | 0.577104 | 219.616790 | 14243.9344 | 380.5499 |
+| prefill | orin | 1 | 256 | 30.986646 | 0.990282 | 440.328400 | 14210.2633 | 444.6493 |
+| prefill | orin | 1 | 512 | 62.583106 | 1.862973 | 885.035600 | 14141.7653 | 475.0663 |
+| prefill | orin | 1 | 1024 | 127.479643 | 3.790954 | 1787.586500 | 14022.5251 | 471.5400 |
+| prefill | orin | 1 | 4096 | 570.966880 | 18.660935 | 7570.717000 | 13259.4679 | 405.6987 |
+| decode | orin | 1 | 128 | 13.495968 | 0.227103 | 1.715756 | 127.1310 | 7.5550 |
+| decode | orin | 1 | 256 | 13.565078 | 0.228493 | 1.720033 | 126.7986 | 7.5277 |
+| decode | orin | 1 | 512 | 13.703299 | 0.231273 | 1.728585 | 126.1437 | 7.4742 |
+| decode | orin | 1 | 1024 | 13.979789 | 0.236863 | 1.745692 | 124.8726 | 7.3700 |
+| decode | orin | 1 | 4096 | 15.703936 | 0.270731 | 1.848319 | 117.6978 | 6.8271 |
+
 ## llama3-8b
 
 | Action | Config | Batch | Length | Latency (ms) | Energy (J) | FLOPs (G) | Throughput (GFLOPS) | Efficiency (GFLOPS/J) |

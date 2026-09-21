@@ -1,11 +1,11 @@
 #!/bin/bash
 
-models=("gemma-7b" "qwen3-moe")
+models=("llama3-70b")
 actions=("prefill")
 blocks=(0)
 layers=("attention")
 lengths=(4096)
-configs=("server")
+configs=("edge" "server")
 
 
 # : > ./test/dap_lower.log
@@ -35,7 +35,7 @@ do
                             ./build/bin/accelgen-opt ./eval/model/${model}-block${block}-${layer}-${action}-b${batch}s${length}-generic-scheduled-${config}-6.mlir \
                             -pass-pipeline="convert-to-dap{config-path=/home/accelgen/config/${config}.json},model-area" \
                             -o ./eval/dap/${model}-block${block}-${layer}-${action}-b${batch}s${length}-dap-${config}.mlir
-                        } >> ./test/dap_lower.log 2>&1
+                        } >> ./test/dap_lower.log
 
                     done
                 done

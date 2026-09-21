@@ -286,6 +286,7 @@ def write_outputs(
     baseline_dram_energy_pj_per_bit: float | None = None,
     baseline_source_dram_energy_pj_per_bit: float = 8.0,
     combined_name: str = "qwen3_moe_combined.csv",
+    report_title: str = "Qwen3-MoE combined baseline",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     fields = [
@@ -335,7 +336,7 @@ def write_outputs(
             "for server prefill to approximate the full expert-group workload. "
         )
     else:
-        methodology += "No expert-group FFN scaling is applied because the source preserves batch dimensions. "
+        methodology += "No workload scaling is applied because the source preserves input dimensions. "
     if ffn_latency_scale != 1.0:
         methodology += (
             f"Baseline FFN latency is additionally multiplied by {ffn_latency_scale:g} "
@@ -359,7 +360,7 @@ def write_outputs(
     methodology += "Throughput is reported in GFLOPS and energy efficiency in GFLOPS/J."
 
     lines = [
-        "# Qwen3-MoE combined baseline",
+        f"# {report_title}",
         "",
         f"Latency and energy source: `{source}`",
         "",
@@ -403,7 +404,7 @@ def write_outputs(
             ]
         )
     else:
-        lines.append("- No expert-group workload scaling is applied to the preserved-batch source.")
+        lines.append("- No workload scaling is applied because the source preserves input dimensions.")
     if ffn_latency_scale != 1.0:
         lines.append(
             f"- FFN latency uses a `{ffn_latency_scale:g}x` bandwidth correction. "
@@ -474,6 +475,11 @@ def parse_args() -> argparse.Namespace:
         help="file name for the combined CSV inside --output-dir",
     )
     parser.add_argument(
+        "--report-title",
+        default="Qwen3-MoE combined baseline",
+        help="heading used in the generated Markdown report",
+    )
+    parser.add_argument(
         "--baseline-source-dram-energy-pj-per-bit",
         type=float,
         default=8.0,
@@ -518,6 +524,7 @@ def main() -> int:
         baseline_dram_energy_pj_per_bit=args.baseline_dram_energy_pj_per_bit,
         baseline_source_dram_energy_pj_per_bit=args.baseline_source_dram_energy_pj_per_bit,
         combined_name=args.combined_name,
+        report_title=args.report_title,
     )
     print(f"Wrote {len(rows)} combined rows to {args.output_dir}")
     return 0

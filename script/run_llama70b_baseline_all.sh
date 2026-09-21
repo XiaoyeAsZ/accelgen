@@ -112,6 +112,7 @@ python3 evaluation/analyze_baseline_summary.py \
   --performance-log /dev/null \
   --ffn-batch-mode preserved \
   --combined-name llama3_70b_baseline_combined.csv \
+  --report-title "Llama3-70B combined baseline" \
   --flops-source summary \
   --no-include-ours
 

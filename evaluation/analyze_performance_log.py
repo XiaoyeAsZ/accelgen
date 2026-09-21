@@ -175,7 +175,7 @@ def write_csv(rows: list[CombinedRecord], path: Path) -> None:
         "throughput_GFLOPS", "energy_efficiency_GFLOPS_per_J",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(
@@ -199,11 +199,11 @@ def write_csv(rows: list[CombinedRecord], path: Path) -> None:
             )
 
 
-def write_report(rows: list[CombinedRecord], path: Path, source: Path) -> None:
+def write_report(rows: list[CombinedRecord], path: Path, sources: list[Path]) -> None:
     lines = [
         "# AccelGen model performance",
         "",
-        f"Source: `{source}`",
+        "Sources: " + ", ".join(f"`{source}`" for source in sources),
         "",
         "Attention and FFN latency, energy, and FLOPs are added before computing "
         "throughput and energy efficiency.",
@@ -246,6 +246,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--log", type=Path, default=Path("test/performance.log"))
     parser.add_argument(
+        "--llama70b-log", type=Path, default=Path("test/llama_70b.log")
+    )
+    parser.add_argument(
         "--output-dir", type=Path, default=Path("evaluation/results/model-performance")
     )
     return parser.parse_args()
@@ -253,12 +256,30 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    rows = combine(parse_log(args.log))
+    sources = [args.log, args.llama70b_log]
+    records: list[LayerRecord] = []
+    seen: set[tuple[str, int, str, str, int, int, str]] = set()
+    for source in sources:
+        for record in parse_log(source):
+            key = (
+                record.model,
+                record.block,
+                record.action,
+                record.layer,
+                record.batch,
+                record.length,
+                record.config,
+            )
+            if key in seen:
+                raise ValueError(f"duplicate workload across performance logs: {key}")
+            seen.add(key)
+            records.append(record)
+    rows = combine(records)
     if not rows:
         raise SystemExit(f"no complete records found in {args.log}")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     write_csv(rows, args.output_dir / "model_performance.csv")
-    write_report(rows, args.output_dir / "README.md", args.log)
+    write_report(rows, args.output_dir / "README.md", sources)
     print(f"Wrote {len(rows)} combined rows to {args.output_dir}")
     return 0
 
