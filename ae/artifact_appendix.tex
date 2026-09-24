@@ -1,0 +1,118 @@
+\section{Artifact Appendix}
+\label{app:artifact}
+
+\subsection{Abstract}
+
+The artifact provides Accelgen, the compiler framework for \name{}. Starting
+from PyTorch model code, the workflow generates Linalg-based MLIR, optimizes
+Linalg operations, schedules kernels, and lowers the scheduled computation to
+a Spatial Architecture Primitive (SAP) graph for performance modeling. The
+outputs include intermediate MLIR and performance metrics such as latency,
+energy, FLOPs, throughput, and energy efficiency. These outputs can be
+inspected independently of the figures and tables in the paper.
+
+\subsection{Artifact Checklist}
+
+The artifact produces the following outputs to support reproducibility and
+inspection of each compilation stage.
+\begin{itemize}[leftmargin=2em,itemsep=0.25em]
+  \item \textbf{Generated Linalg MLIR.} The Linalg representation generated
+    from the input model.
+  \item \textbf{Optimized Linalg MLIR.} The Linalg representation after
+    Linalg-level optimizations.
+  \item \textbf{Scheduled Clusters.} Computation clusters with their schedules
+    and associated dataflow parameters.
+  \item \textbf{SAP Graph.} The generated SAP graph representing the
+    accelerator architecture.
+  \item \textbf{Performance Report.} Modeled performance metrics for the
+    generated accelerator.
+\end{itemize}
+
+\subsection{Installation}
+
+We provide two Docker-based methods for installing and running \name{}.
+
+\textbf{Using the Prebuilt Docker Image (Recommended).} Pull the prebuilt
+image and launch a container with the repository mounted as the working
+directory.
+
+\begin{verbatim}
+$ git clone https://github.com/XiaoyeAsZ/accelgen.git
+$ cd accelgen
+$ docker pull xiaoyeasz/accelgen:latest
+$ docker run --gpus all -it --rm \
+    -v $(pwd):/workspace/accelgen \
+    -w /workspace/accelgen \
+    xiaoyeasz/accelgen:latest
+\end{verbatim}
+
+\textbf{Building from the Dockerfile.} Alternatively, build the image locally
+and launch a container using the same repository mount.
+
+\begin{verbatim}
+$ git clone https://github.com/XiaoyeAsZ/accelgen.git
+$ cd accelgen
+$ docker build -f accelgen.dockerfile -t accelgen:latest .
+$ docker run --gpus all -it --rm \
+    -v $(pwd):/workspace/accelgen \
+    -w /workspace/accelgen \
+    accelgen:latest
+\end{verbatim}
+
+\subsection{Experimental Workflow}
+
+The workflow consists of five stages that can be run separately to inspect
+and reuse intermediate outputs. Each stage requires the output of the
+preceding stage. Two evaluation modes are available: \texttt{rapid} for a
+quick evaluation of the block~0 FFN workload in Llama3-8B, and \texttt{full}
+for the complete evaluation suite. The full mode can take substantially
+longer, particularly during kernel scheduling.
+
+Inside the container, enter the artifact evaluation directory:
+
+\begin{verbatim}
+$ cd ae
+\end{verbatim}
+
+In the commands below, replace \texttt{MODE} with \texttt{rapid} or
+\texttt{full}. All output directories are relative to
+\texttt{ae/results/MODE/} in the repository.
+
+\begin{enumerate}[leftmargin=2.4em,itemsep=0.45em]
+  \item \textbf{Generate MLIR.}\\
+  {\small \texttt{\$ bash MODE/01\_generate\_mlir.sh}}\\
+  The script invokes \texttt{benchmark/dump\_mlir.py} for each selected
+  combination of model, action, block, layer, batch size, and sequence
+  length. The generated MLIR files are written to \texttt{mlir/}.
+
+  \item \textbf{Optimize Linalg.}\\
+  {\small \texttt{\$ bash MODE/02\_linalg\_opt.sh}}\\
+  The optimizer performs mixed-precision resolution, named-operation
+  generalization, generic marking, dead-operation elimination, generic
+  fusion, and tensor-operation folding. The optimized MLIR files are
+  written to \texttt{generic/}.
+
+  \item \textbf{Schedule Kernels.}\\
+  {\small \texttt{\$ bash MODE/03\_kernel\_schedule.sh}}\\
+  The \texttt{func.func(kernel-schedule\{...\})} pass searches over tiling,
+  loop, unrolling, and cluster choices using the selected edge or server
+  resource configuration. The scheduled MLIR files are written to
+  \texttt{scheduled/}. By default, each cluster contains at most six
+  operations (\texttt{MAX\_OPERATION=6}).
+
+  \item \textbf{Lower to DAP.}\\
+  {\small \texttt{\$ bash MODE/04\_lower\_to\_dap.sh}}\\
+  The \texttt{convert-to-dap\{config-path=...\}} pass lowers each scheduled
+  workload to the hardware-facing DAP dialect. The resulting MLIR files
+  are written to \texttt{dap/} and contain operations such as
+  \texttt{dap.sram}, \texttt{dap.data\_path}, arithmetic operations, and
+  routing operations.
+
+  \item \textbf{Model Performance.}\\
+  {\small \texttt{\$ bash MODE/05\_model\_performance.sh}}\\
+  The \texttt{model-performance\{config-path=...\}} pass estimates latency,
+  energy, and FLOPs and emits annotated MLIR files in \texttt{performance/}.
+  The accompanying \texttt{logs/performance.log} contains workload headers
+  and metric records suitable for processing with the repository's
+  analysis scripts.
+\end{enumerate}
